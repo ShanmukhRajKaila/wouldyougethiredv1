@@ -132,7 +132,7 @@ export const mockAnalysisResult = {
     },
     {
       original: 'Managed team of analysts for strategic project',
-      improved: 'Recruited and managed cross-functional team of 8 analysts to deliver strategic market entry recommendation under tight 4-week deadline, resulting in successful $50M acquisition that expanded client's market share by 12%',
+      improved: "Recruited and managed cross-functional team of 8 analysts to deliver strategic market entry recommendation under tight 4-week deadline, resulting in successful $50M acquisition that expanded client's market share by 12%",
       feedback: 'Too vague; needs context, challenge overcome, and concrete outcomes'
     }
   ],
@@ -157,7 +157,7 @@ export const mockAnalysisResult = {
         date: '2014-2018',
         highlights: [
           'GPA: 3.7/4.0, magna cum laude',
-          'Honors: Dean's List (all semesters)',
+          "Honors: Dean's List (all semesters)",
           'Activities: Investment Club, Debate Team'
         ]
       }
