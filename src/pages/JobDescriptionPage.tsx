@@ -1,0 +1,68 @@
+
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/input';
+import { useAppContext } from '@/context/AppContext';
+import PageContainer from '@/components/PageContainer';
+import CompanySelector from '@/components/CompanySelector';
+
+const JobDescriptionPage: React.FC = () => {
+  const { 
+    jobDescription, 
+    setJobDescription, 
+    setCurrentStage,
+    setProgress
+  } = useAppContext();
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (jobDescription.trim().length > 0) {
+      setCurrentStage('resumeUpload');
+      setProgress(50);
+    }
+  };
+  
+  return (
+    <PageContainer>
+      <div className="step-container animate-slide-in">
+        <h1 className="text-3xl font-serif font-bold text-consulting-navy mb-6">
+          Job Description
+        </h1>
+        <p className="text-consulting-gray mb-8">
+          Paste the job description for the role you're applying to. If you're not applying to a specific role, 
+          you can select one of our pre-defined companies below.
+        </p>
+        
+        <CompanySelector />
+        
+        <form onSubmit={handleSubmit}>
+          <div className="mb-6">
+            <label htmlFor="jobDescription" className="block text-consulting-charcoal font-medium mb-2">
+              Job Description <span className="text-red-500">*</span>
+            </label>
+            <Textarea
+              id="jobDescription"
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+              placeholder="Paste the job description here..."
+              className="min-h-[200px]"
+              required
+            />
+          </div>
+          
+          <div className="flex justify-end">
+            <Button 
+              type="submit"
+              disabled={jobDescription.trim().length === 0}
+              className="bg-consulting-navy hover:bg-consulting-blue"
+            >
+              Continue to Resume Upload
+            </Button>
+          </div>
+        </form>
+      </div>
+    </PageContainer>
+  );
+};
+
+export default JobDescriptionPage;
