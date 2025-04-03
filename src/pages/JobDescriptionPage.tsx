@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useAppContext } from '@/context/AppContext';
 import PageContainer from '@/components/PageContainer';
 import CompanySelector from '@/components/CompanySelector';
