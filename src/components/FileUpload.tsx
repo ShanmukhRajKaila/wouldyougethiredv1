@@ -51,6 +51,12 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const removeFile = () => {
     onChange(null);
   };
+  
+  // Get accepted file types as a readable string
+  const getAcceptedTypes = () => {
+    const types = accept.split(',').map(type => type.trim().replace('.', '').toUpperCase());
+    return types.join(', ');
+  };
 
   return (
     <div className="mb-6">
@@ -83,7 +89,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
               <span className="font-medium">Click to upload</span> or drag and drop
             </p>
             <p className="text-xs text-gray-500">
-              PDF (MAX. 10MB)
+              {getAcceptedTypes()} (MAX. 10MB)
             </p>
           </div>
         </div>

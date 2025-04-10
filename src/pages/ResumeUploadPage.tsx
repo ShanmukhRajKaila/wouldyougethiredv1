@@ -6,6 +6,7 @@ import PageContainer from '@/components/PageContainer';
 import FileUpload from '@/components/FileUpload';
 import { toast } from 'sonner';
 import * as PDFJS from 'pdfjs-dist';
+import PDFExtractor from '@/utils/PDFExtractor';
 
 const ResumeUploadPage: React.FC = () => {
   const { 
@@ -24,12 +25,11 @@ const ResumeUploadPage: React.FC = () => {
   } = useAppContext();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [extractionMethod, setExtractionMethod] = useState<'pdfjs' | 'text'>('pdfjs');
   
-  // Initialize PDF.js worker properly
   useEffect(() => {
-    const workerUrl = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS.version}/pdf.worker.min.js`;
-    console.log('Setting PDF.js worker URL:', workerUrl);
-    PDFJS.GlobalWorkerOptions.workerSrc = workerUrl;
+    // Initialize PDF extractor
+    PDFExtractor.initialize();
   }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,23 +64,39 @@ const ResumeUploadPage: React.FC = () => {
         if (jobDescId) {
           console.log('Job description saved successfully with ID:', jobDescId);
           
-          // Extract text from resume PDF
-          console.log('Starting text extraction from PDF file:', resumeFile.name);
-          const resumeText = await extractTextFromPDF(resumeFile);
+          // Extract text from resume file
+          console.log(`Starting text extraction from file: ${resumeFile.name} using ${extractionMethod} method`);
+          
+          let resumeText: string | null = null;
+          
+          // Try the primary extraction method first
+          try {
+            resumeText = await PDFExtractor.extractText(resumeFile, extractionMethod);
+          } catch (error) {
+            console.error('Error with primary extraction method:', error);
+            
+            // If the primary method fails, try the alternative method
+            try {
+              const altMethod = extractionMethod === 'pdfjs' ? 'text' : 'pdfjs';
+              console.log(`Trying alternative extraction method: ${altMethod}`);
+              setExtractionMethod(altMethod);
+              resumeText = await PDFExtractor.extractText(resumeFile, altMethod);
+            } catch (fallbackError) {
+              console.error('Error with fallback extraction method:', fallbackError);
+              resumeText = null;
+            }
+          }
           
           if (!resumeText) {
             console.error('Text extraction failed - resumeText is null or empty');
-            toast.error('Could not extract text from your resume. Please check the file format.');
+            toast.error('Could not extract text from your resume. Please try uploading a text or Word document instead.');
             setCurrentStage('resumeUpload');
             setIsSubmitting(false);
             return;
           }
           
-          console.log('Extracted text from PDF. First 100 chars:', resumeText.substring(0, 100) + '...');
+          console.log('Extracted text from file. First 100 chars:', resumeText.substring(0, 100) + '...');
           console.log('Text length:', resumeText.length);
-          
-          // Use mock text for testing if needed
-          // const mockText = "This is a mock resume text for testing purposes. It contains professional experience and skills.";
           
           // Analyze the resume against the job description
           console.log('Starting resume analysis...');
@@ -113,60 +129,6 @@ const ResumeUploadPage: React.FC = () => {
     }
   };
   
-  // Function to extract text from PDF using PDF.js
-  const extractTextFromPDF = async (file: File): Promise<string | null> => {
-    try {
-      console.log('Starting PDF text extraction for file:', file.name);
-      
-      const arrayBuffer = await file.arrayBuffer();
-      console.log('File loaded as ArrayBuffer, size:', arrayBuffer.byteLength);
-      
-      // Handle the PDF processing in a more robust way
-      try {
-        console.log('Creating PDF document');
-        const loadingTask = PDFJS.getDocument({data: arrayBuffer});
-        const pdf = await loadingTask.promise;
-        
-        console.log('PDF loaded successfully with', pdf.numPages, 'pages');
-        
-        let fullText = '';
-        
-        // Extract text from each page
-        for (let i = 1; i <= pdf.numPages; i++) {
-          console.log('Processing page', i, 'of', pdf.numPages);
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageText = textContent.items
-            .map((item: any) => item.str)
-            .join(' ');
-          
-          fullText += pageText + '\n';
-          console.log(`Page ${i} text extraction complete. Length: ${pageText.length}`);
-        }
-        
-        console.log('Text extraction complete. Total text length:', fullText.length);
-        return fullText.trim();
-      } catch (pdfError) {
-        console.error('Error in PDF processing:', pdfError);
-        
-        // Fallback: try to use browser's built-in PDF parsing if available
-        if (window.FileReader && file.type === 'application/pdf') {
-          console.log('Attempting fallback method for PDF extraction');
-          
-          // This is a simple placeholder - in a real app, we'd implement
-          // alternative PDF text extraction here
-          
-          toast.error('PDF processing failed. Please try a different file format.');
-        }
-        
-        throw pdfError;
-      }
-    } catch (error) {
-      console.error('Error extracting text from PDF:', error);
-      return null;
-    }
-  };
-  
   return (
     <PageContainer>
       <div className="step-container animate-slide-in">
@@ -175,13 +137,13 @@ const ResumeUploadPage: React.FC = () => {
         </h1>
         <p className="text-consulting-gray mb-8">
           Upload your resume and, optionally, your cover letter for analysis. 
-          For best results, upload PDF files.
+          For best results, upload PDF, DOC, DOCX, or TXT files.
         </p>
         
         <form onSubmit={handleSubmit}>
           <FileUpload
             label="Resume"
-            accept=".pdf,.doc,.docx,.txt"
+            accept=".pdf,.doc,.docx,.txt,.rtf"
             onChange={setResumeFile}
             value={resumeFile}
             required
@@ -189,7 +151,7 @@ const ResumeUploadPage: React.FC = () => {
           
           <FileUpload
             label="Cover Letter (Optional)"
-            accept=".pdf,.doc,.docx,.txt"
+            accept=".pdf,.doc,.docx,.txt,.rtf"
             onChange={setCoverLetterFile}
             value={coverLetterFile}
           />
