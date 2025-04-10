@@ -18,7 +18,15 @@ const ResultsPage: React.FC = () => {
   useEffect(() => {
     // Use real analysis results if available, otherwise fall back to mock data
     if (analysisResults) {
-      setAnalysisData(analysisResults);
+      // Merge the results with mock data to ensure all required properties are present
+      setAnalysisData({
+        ...mockAnalysisResult,
+        ...analysisResults,
+        // These fields might not be in analysisResults, so ensure they're set
+        success: mockAnalysisResult.success,
+        company: selectedCompany,
+        role: selectedRole
+      });
     }
     
     // Extract company and role from job description
@@ -35,6 +43,7 @@ const ResultsPage: React.FC = () => {
     }
   }, [jobDescription, analysisResults]);
   
+  // Now extract values from the merged analysisData
   const {
     verdict,
     alignmentScore,

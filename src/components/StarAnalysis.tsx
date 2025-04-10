@@ -10,6 +10,14 @@ interface StarAnalysisProps {
 }
 
 const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
+  if (!starAnalysis || starAnalysis.length === 0) {
+    return (
+      <div className="p-6 bg-white rounded-lg shadow mb-4">
+        <p className="text-consulting-gray">No STAR analysis available for this resume.</p>
+      </div>
+    );
+  }
+  
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-serif font-bold text-consulting-navy">

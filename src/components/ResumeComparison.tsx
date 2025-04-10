@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { mockAnalysisResult } from '@/data/mockData';
 import { Card } from '@/components/ui/card';
@@ -61,7 +60,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
               <ul className="list-disc pl-5 text-sm">
                 {exp.bullets.map((bullet, idx) => (
                   <li key={idx} className={`${tailored && idx === 1 ? 'text-consulting-accent font-medium' : ''}`}>
-                    {tailored && idx === 1 && starAnalysis && starAnalysis.length > idx
+                    {tailored && idx === 1 && starAnalysis && idx < starAnalysis.length
                       ? starAnalysis[idx].improved 
                       : bullet}
                   </li>
