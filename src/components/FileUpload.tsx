@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface FileUploadProps {
   label: string;
@@ -9,6 +10,7 @@ interface FileUploadProps {
   onChange: (file: File | null) => void;
   value: File | null;
   required?: boolean;
+  maxSizeMB?: number;
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({ 
@@ -16,7 +18,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
   accept, 
   onChange, 
   value,
-  required = false
+  required = false,
+  maxSizeMB = 10
 }) => {
   const [dragActive, setDragActive] = useState<boolean>(false);
   
@@ -37,15 +40,36 @@ const FileUpload: React.FC<FileUploadProps> = ({
     setDragActive(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      onChange(e.dataTransfer.files[0]);
+      handleFileSelection(e.dataTransfer.files[0]);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
-      onChange(e.target.files[0]);
+      handleFileSelection(e.target.files[0]);
     }
+  };
+
+  const handleFileSelection = (file: File) => {
+    // Validate file size
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      toast.error(`File is too large. Maximum size is ${maxSizeMB}MB.`);
+      return;
+    }
+    
+    // Validate file type
+    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+    const acceptedTypes = accept.split(',').map(type => 
+      type.trim().replace('.', '').toLowerCase()
+    );
+    
+    if (!acceptedTypes.includes(fileExtension) && !accept.includes(file.type)) {
+      toast.error(`Invalid file type. Accepted types: ${getAcceptedTypes()}`);
+      return;
+    }
+    
+    onChange(file);
   };
 
   const removeFile = () => {
@@ -89,7 +113,10 @@ const FileUpload: React.FC<FileUploadProps> = ({
               <span className="font-medium">Click to upload</span> or drag and drop
             </p>
             <p className="text-xs text-gray-500">
-              {getAcceptedTypes()} (MAX. 10MB)
+              {getAcceptedTypes()} (MAX. {maxSizeMB}MB)
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              For best results, prefer TXT or DOC/DOCX files
             </p>
           </div>
         </div>

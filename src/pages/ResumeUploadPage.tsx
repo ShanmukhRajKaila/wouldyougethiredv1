@@ -5,7 +5,6 @@ import { useAppContext } from '@/context/AppContext';
 import PageContainer from '@/components/PageContainer';
 import FileUpload from '@/components/FileUpload';
 import { toast } from 'sonner';
-import * as PDFJS from 'pdfjs-dist';
 import PDFExtractor from '@/utils/PDFExtractor';
 
 const ResumeUploadPage: React.FC = () => {
@@ -25,11 +24,16 @@ const ResumeUploadPage: React.FC = () => {
   } = useAppContext();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [extractionMethod, setExtractionMethod] = useState<'pdfjs' | 'text'>('pdfjs');
+  const [extractionMethod, setExtractionMethod] = useState<'pdfjs' | 'text'>('text'); // Default to text method
   
   useEffect(() => {
     // Initialize PDF extractor
-    PDFExtractor.initialize();
+    try {
+      PDFExtractor.initialize();
+    } catch (error) {
+      console.error('Failed to initialize PDF extractor:', error);
+      toast.error('PDF processing initialization failed. Text extraction will be used.');
+    }
   }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,27 +73,39 @@ const ResumeUploadPage: React.FC = () => {
           
           let resumeText: string | null = null;
           
-          // Try the primary extraction method first
+          // First try text extraction for all files (more reliable)
           try {
-            resumeText = await PDFExtractor.extractText(resumeFile, extractionMethod);
-          } catch (error) {
-            console.error('Error with primary extraction method:', error);
+            console.log('Attempting text extraction first');
+            resumeText = await PDFExtractor.extractText(resumeFile, 'text');
+          } catch (initialError) {
+            console.error('Error with text extraction method:', initialError);
             
-            // If the primary method fails, try the alternative method
-            try {
-              const altMethod = extractionMethod === 'pdfjs' ? 'text' : 'pdfjs';
-              console.log(`Trying alternative extraction method: ${altMethod}`);
-              setExtractionMethod(altMethod);
-              resumeText = await PDFExtractor.extractText(resumeFile, altMethod);
-            } catch (fallbackError) {
-              console.error('Error with fallback extraction method:', fallbackError);
+            // If text extraction fails for PDF, try PDF.js
+            if (resumeFile.type === 'application/pdf') {
+              try {
+                console.log('Falling back to PDF.js for PDF file');
+                resumeText = await PDFExtractor.extractText(resumeFile, 'pdfjs');
+              } catch (fallbackError) {
+                console.error('Error with PDF.js extraction method:', fallbackError);
+                resumeText = null;
+              }
+            } else {
               resumeText = null;
             }
           }
           
           if (!resumeText) {
             console.error('Text extraction failed - resumeText is null or empty');
-            toast.error('Could not extract text from your resume. Please try uploading a text or Word document instead.');
+            
+            // Provide specific error based on file type
+            if (resumeFile.type === 'application/pdf') {
+              toast.error('Could not extract text from your PDF. Please try uploading a text or Word document instead.');
+            } else if (resumeFile.type.includes('word') || resumeFile.name.endsWith('.docx') || resumeFile.name.endsWith('.doc')) {
+              toast.error('Could not process your Word document. Please try saving it as a plain text (.txt) file.');
+            } else {
+              toast.error('Could not extract text from your file. Please try a different format.');
+            }
+            
             setCurrentStage('resumeUpload');
             setIsSubmitting(false);
             return;
@@ -98,31 +114,39 @@ const ResumeUploadPage: React.FC = () => {
           console.log('Extracted text from file. First 100 chars:', resumeText.substring(0, 100) + '...');
           console.log('Text length:', resumeText.length);
           
-          // Analyze the resume against the job description
-          console.log('Starting resume analysis...');
-          const analysisResults = await analyzeResume(resumeText, jobDescription);
-          
-          if (analysisResults) {
-            console.log('Analysis complete. Results received.');
-            // Save the analysis results
-            await saveAnalysisResults({
-              leadId: currentLeadId,
-              resumeId: resumeId,
-              jobDescriptionId: jobDescId,
-              results: analysisResults
-            });
+          // Check if the extracted text is valid (not binary/corrupted)
+          if (resumeText.length > 0 && !/^PK/.test(resumeText) && !/^\uFEFF/.test(resumeText)) {
+            // Analyze the resume against the job description
+            console.log('Starting resume analysis...');
+            const analysisResults = await analyzeResume(resumeText, jobDescription);
             
-            setCurrentStage('results');
-            setProgress(100);
+            if (analysisResults) {
+              console.log('Analysis complete. Results received.');
+              // Save the analysis results
+              await saveAnalysisResults({
+                leadId: currentLeadId,
+                resumeId: resumeId,
+                jobDescriptionId: jobDescId,
+                results: analysisResults
+              });
+              
+              setCurrentStage('results');
+              setProgress(100);
+              toast.success('Analysis complete!');
+            } else {
+              setCurrentStage('resumeUpload');
+              toast.error('Failed to analyze your resume. Please try again.');
+            }
           } else {
+            console.error('Extracted text appears to be binary or corrupted');
+            toast.error('Your document appears to be in an unsupported format. Please upload a plain text file.');
             setCurrentStage('resumeUpload');
-            toast.error('Failed to analyze your resume. Please try again.');
           }
         }
       }
     } catch (error) {
       console.error('Error during resume upload process:', error);
-      toast.error('An error occurred. Please try again.');
+      toast.error('An error occurred. Please try again with a different file format.');
       setCurrentStage('resumeUpload');
     } finally {
       setIsSubmitting(false);
@@ -137,7 +161,7 @@ const ResumeUploadPage: React.FC = () => {
         </h1>
         <p className="text-consulting-gray mb-8">
           Upload your resume and, optionally, your cover letter for analysis. 
-          For best results, upload PDF, DOC, DOCX, or TXT files.
+          For best results, upload TXT, DOC, or DOCX files. PDF files may not extract correctly in some cases.
         </p>
         
         <form onSubmit={handleSubmit}>
