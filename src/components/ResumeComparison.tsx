@@ -4,12 +4,14 @@ import { mockAnalysisResult } from '@/data/mockData';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+interface StarAnalysisItem {
+  original: string;
+  improved: string;
+  feedback: string;
+}
+
 interface ResumeComparisonProps {
-  starAnalysis: {
-    original: string;
-    improved: string;
-    feedback: string;
-  }[];
+  starAnalysis: StarAnalysisItem[];
 }
 
 const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => {
@@ -61,7 +63,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
               <ul className="list-disc pl-5 text-sm">
                 {exp.bullets.map((bullet, idx) => {
                   // Find a matching STAR analysis item if possible
-                  const starItem = starAnalysis && idx < starAnalysis.length ? 
+                  const starItem = starAnalysis && Array.isArray(starAnalysis) && idx < starAnalysis.length ? 
                     starAnalysis[idx] : null;
                   
                   return (

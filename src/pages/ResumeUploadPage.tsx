@@ -1,15 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/AppContext';
 import PageContainer from '@/components/PageContainer';
 import FileUpload from '@/components/FileUpload';
 import { toast } from 'sonner';
 import * as PDFJS from 'pdfjs-dist';
-
-// Initialize PDF.js worker
-const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
-PDFJS.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 const ResumeUploadPage: React.FC = () => {
   const { 
@@ -28,6 +24,20 @@ const ResumeUploadPage: React.FC = () => {
   } = useAppContext();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Initialize PDF.js worker properly
+  useEffect(() => {
+    const initializeWorker = async () => {
+      try {
+        // We don't directly import the worker - instead we set the worker URL to a CDN
+        PDFJS.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS.version}/pdf.worker.min.js`;
+      } catch (error) {
+        console.error('Error initializing PDF.js worker:', error);
+      }
+    };
+    
+    initializeWorker();
+  }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
