@@ -17,6 +17,9 @@ interface ResumeComparisonProps {
 const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => {
   const [activeTab, setActiveTab] = useState<string>('original');
   
+  // Ensure starAnalysis is properly initialized
+  const validStarAnalysis = Array.isArray(starAnalysis) ? starAnalysis : [];
+  
   const renderResume = (tailored: boolean) => {
     const { tailoredResume } = mockAnalysisResult;
     
@@ -63,8 +66,8 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
               <ul className="list-disc pl-5 text-sm">
                 {exp.bullets.map((bullet, idx) => {
                   // Find a matching STAR analysis item if possible
-                  const starItem = starAnalysis && Array.isArray(starAnalysis) && idx < starAnalysis.length ? 
-                    starAnalysis[idx] : null;
+                  const starItem = validStarAnalysis.length > 0 && idx < validStarAnalysis.length ? 
+                    validStarAnalysis[idx] : null;
                   
                   return (
                     <li key={idx} className={`${tailored && idx === 1 ? 'text-consulting-accent font-medium' : ''}`}>

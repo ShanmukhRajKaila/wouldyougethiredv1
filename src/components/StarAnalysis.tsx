@@ -1,16 +1,21 @@
 
 import React from 'react';
 
+interface StarAnalysisItem {
+  original: string;
+  improved: string;
+  feedback: string;
+}
+
 interface StarAnalysisProps {
-  starAnalysis: {
-    original: string;
-    improved: string;
-    feedback: string;
-  }[];
+  starAnalysis: StarAnalysisItem[];
 }
 
 const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
-  if (!starAnalysis || starAnalysis.length === 0) {
+  // Ensure starAnalysis is properly initialized
+  const validStarAnalysis = Array.isArray(starAnalysis) ? starAnalysis : [];
+  
+  if (validStarAnalysis.length === 0) {
     return (
       <div className="p-6 bg-white rounded-lg shadow mb-4">
         <p className="text-consulting-gray">No STAR analysis available for this resume.</p>
@@ -28,7 +33,7 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
         Here's how your experience could be better communicated:
       </p>
       
-      {starAnalysis.map((item, index) => (
+      {validStarAnalysis.map((item, index) => (
         <div key={index} className="p-6 bg-white rounded-lg shadow mb-4">
           <div className="space-y-4">
             <div>

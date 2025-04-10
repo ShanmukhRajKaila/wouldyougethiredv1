@@ -29,8 +29,8 @@ const ResumeUploadPage: React.FC = () => {
   useEffect(() => {
     const initializeWorker = async () => {
       try {
-        // We don't directly import the worker - instead we set the worker URL to a CDN
-        PDFJS.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS.version}/pdf.worker.min.js`;
+        // Set the worker URL directly to avoid dynamic imports that can fail
+        PDFJS.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS.version}/build/pdf.worker.min.js`;
       } catch (error) {
         console.error('Error initializing PDF.js worker:', error);
       }
@@ -111,23 +111,39 @@ const ResumeUploadPage: React.FC = () => {
   // Function to extract text from PDF using PDF.js
   const extractTextFromPDF = async (file: File): Promise<string | null> => {
     try {
+      console.log('Starting PDF extraction for file:', file.name);
+      
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await PDFJS.getDocument({data: arrayBuffer}).promise;
+      console.log('File loaded as ArrayBuffer, size:', arrayBuffer.byteLength);
       
-      let fullText = '';
-      
-      // Extract text from each page
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ');
+      // Use a try-catch specifically for the getDocument call which might fail
+      try {
+        console.log('Creating PDF document with PDF.js version:', PDFJS.version);
+        const loadingTask = PDFJS.getDocument({data: arrayBuffer});
+        const pdf = await loadingTask.promise;
         
-        fullText += pageText + '\n';
+        console.log('PDF loaded successfully with', pdf.numPages, 'pages');
+        
+        let fullText = '';
+        
+        // Extract text from each page
+        for (let i = 1; i <= pdf.numPages; i++) {
+          console.log('Processing page', i, 'of', pdf.numPages);
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item: any) => item.str)
+            .join(' ');
+          
+          fullText += pageText + '\n';
+        }
+        
+        console.log('Text extraction complete, length:', fullText.length);
+        return fullText;
+      } catch (pdfError) {
+        console.error('Error in PDF.js processing:', pdfError);
+        throw pdfError;
       }
-      
-      return fullText;
     } catch (error) {
       console.error('Error extracting text from PDF:', error);
       return null;
