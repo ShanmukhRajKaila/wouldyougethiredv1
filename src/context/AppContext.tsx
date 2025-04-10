@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -185,11 +186,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const analyzeResume = async (resumeText: string, jobDescription: string): Promise<AnalysisResult | null> => {
     try {
+      // Update to use the correct method to get the auth session
+      const { data: sessionData } = await supabase.auth.getSession();
+      
       const response = await fetch('https://mqvstzxrxrmgdseepwzh.supabase.co/functions/v1/analyze-resume', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.auth.session()?.access_token || ''}`,
+          'Authorization': `Bearer ${sessionData?.session?.access_token || ''}`,
         },
         body: JSON.stringify({
           resumeText,
