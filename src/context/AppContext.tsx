@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -10,6 +9,19 @@ interface Company {
   id: string;
   name: string;
   logo: string;
+}
+
+interface AnalysisResult {
+  alignmentScore: number;
+  verdict: boolean;
+  strengths: string[];
+  weaknesses: string[];
+  recommendations: string[];
+  starAnalysis: {
+    original: string;
+    improved: string;
+    feedback: string;
+  }[];
 }
 
 interface AppContextType {
@@ -39,8 +51,9 @@ interface AppContextType {
     leadId: string;
     resumeId: string;
     jobDescriptionId: string;
-    results: any;
+    results: AnalysisResult;
   }) => Promise<void>;
+  analyzeResume: (resumeText: string, jobDescription: string) => Promise<AnalysisResult | null>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -68,7 +81,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentLeadId(null);
   };
 
-  // Save user contact information to the leads table
   const saveLeadInfo = async (): Promise<string | null> => {
     try {
       if (!userName || !userEmail) {
@@ -96,7 +108,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Save job description to the job_descriptions table
   const saveJobDescription = async (leadId: string): Promise<string | null> => {
     try {
       if (!jobDescription) {
@@ -128,7 +139,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Save resume to storage and metadata to the resumes table
   const saveResume = async (leadId: string): Promise<string | null> => {
     try {
       if (!resumeFile) {
@@ -136,11 +146,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return null;
       }
 
-      // Create a unique file path
       const fileExt = resumeFile.name.split('.').pop();
       const filePath = `${leadId}/${Date.now()}.${fileExt}`;
 
-      // Upload file to storage
       const { error: uploadError } = await supabase.storage
         .from('resumes')
         .upload(filePath, resumeFile);
@@ -151,7 +159,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return null;
       }
 
-      // Save metadata to database
       const { data, error } = await supabase
         .from('resumes')
         .insert([{ 
@@ -176,7 +183,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Save analysis results to the analysis_results table
+  const analyzeResume = async (resumeText: string, jobDescription: string): Promise<AnalysisResult | null> => {
+    try {
+      const response = await fetch('https://mqvstzxrxrmgdseepwzh.supabase.co/functions/v1/analyze-resume', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabase.auth.session()?.access_token || ''}`,
+        },
+        body: JSON.stringify({
+          resumeText,
+          jobDescription,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze resume');
+      }
+
+      const analysisResult = await response.json();
+      return analysisResult as AnalysisResult;
+    } catch (error) {
+      console.error('Error analyzing resume:', error);
+      toast.error('Failed to analyze your resume. Please try again.');
+      return null;
+    }
+  };
+
   const saveAnalysisResults = async ({
     leadId,
     resumeId,
@@ -186,7 +220,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     leadId: string;
     resumeId: string;
     jobDescriptionId: string;
-    results: any;
+    results: AnalysisResult;
   }): Promise<void> => {
     try {
       const { error } = await supabase
@@ -239,6 +273,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         saveJobDescription,
         saveResume,
         saveAnalysisResults,
+        analyzeResume,
       }}
     >
       {children}

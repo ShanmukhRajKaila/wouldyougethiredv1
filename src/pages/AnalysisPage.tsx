@@ -4,17 +4,18 @@ import PageContainer from '@/components/PageContainer';
 import { useAppContext } from '@/context/AppContext';
 
 const AnalysisPage: React.FC = () => {
-  const [loadingMessage, setLoadingMessage] = useState<string>("Analyzing resume...");
+  const [loadingMessage, setLoadingMessage] = useState<string>("Extracting text from resume...");
   const [progress, setProgressLocal] = useState<number>(0);
   
   useEffect(() => {
     const messages = [
-      "Analyzing resume...",
-      "Extracting experience...",
+      "Extracting text from resume...",
+      "Connecting to OpenAI GPT-4o...",
+      "Analyzing resume content...",
       "Comparing to job description...",
       "Applying STAR methodology...",
       "Evaluating alignment...",
-      "Generating tailored resume...",
+      "Generating recommendations...",
       "Finalizing assessment..."
     ];
     
@@ -27,7 +28,7 @@ const AnalysisPage: React.FC = () => {
       } else {
         clearInterval(interval);
       }
-    }, 400);
+    }, 1200); // Slowed down to give user a better sense of the analysis happening
     
     return () => clearInterval(interval);
   }, []);
@@ -55,7 +56,8 @@ const AnalysisPage: React.FC = () => {
           
           <div className="mt-8">
             <p className="text-sm text-consulting-gray">
-              Our AI is analyzing your resume against the job description and applying industry-standard evaluation criteria.
+              Our AI is using GPT-4o to analyze your resume against the job description, 
+              applying industry-standard evaluation criteria and the STAR method.
             </p>
           </div>
         </div>

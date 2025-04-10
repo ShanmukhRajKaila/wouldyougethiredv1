@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/AppContext';
 import PageContainer from '@/components/PageContainer';
@@ -9,17 +9,35 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ResumeComparison from '@/components/ResumeComparison';
 import StarAnalysis from '@/components/StarAnalysis';
 
+// Use mock data as a fallback if real data isn't available
 const ResultsPage: React.FC = () => {
-  const { resetApplication } = useAppContext();
+  const { resetApplication, jobDescription } = useAppContext();
+  const [analysisData, setAnalysisData] = useState(mockAnalysisResult);
+  const [selectedCompany, setSelectedCompany] = useState('Sample Company');
+  const [selectedRole, setSelectedRole] = useState('Software Developer');
+  
+  useEffect(() => {
+    // Extract company and role from job description
+    if (jobDescription) {
+      // Simple heuristic to extract company/role - in a real app, this would be more sophisticated
+      const lines = jobDescription.split('\n');
+      if (lines.length >= 2) {
+        const possibleCompany = lines[0].trim();
+        const possibleRole = lines[1].trim();
+        
+        if (possibleCompany) setSelectedCompany(possibleCompany);
+        if (possibleRole) setSelectedRole(possibleRole);
+      }
+    }
+  }, [jobDescription]);
+  
   const {
-    company,
-    role,
     verdict,
     alignmentScore,
     strengths,
     weaknesses,
     recommendations
-  } = mockAnalysisResult;
+  } = analysisData;
   
   return (
     <PageContainer>
@@ -30,7 +48,7 @@ const ResultsPage: React.FC = () => {
               Your Application Results
             </h1>
             <p className="text-consulting-gray">
-              <span className="font-medium">Company:</span> {company} | <span className="font-medium">Role:</span> {role}
+              <span className="font-medium">Company:</span> {selectedCompany} | <span className="font-medium">Role:</span> {selectedRole}
             </p>
           </div>
           
