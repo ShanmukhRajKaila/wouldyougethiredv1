@@ -9,7 +9,161 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      analysis_results: {
+        Row: {
+          alignment_score: number
+          created_at: string
+          id: string
+          job_description_id: string
+          lead_id: string
+          match_score: number
+          recommendations: Json
+          resume_id: string
+          strengths: Json
+          verdict: boolean
+          weaknesses: Json
+        }
+        Insert: {
+          alignment_score: number
+          created_at?: string
+          id?: string
+          job_description_id: string
+          lead_id: string
+          match_score: number
+          recommendations: Json
+          resume_id: string
+          strengths: Json
+          verdict: boolean
+          weaknesses: Json
+        }
+        Update: {
+          alignment_score?: number
+          created_at?: string
+          id?: string
+          job_description_id?: string
+          lead_id?: string
+          match_score?: number
+          recommendations?: Json
+          resume_id?: string
+          strengths?: Json
+          verdict?: boolean
+          weaknesses?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_results_job_description_id_fkey"
+            columns: ["job_description_id"]
+            isOneToOne: false
+            referencedRelation: "job_descriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analysis_results_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analysis_results_resume_id_fkey"
+            columns: ["resume_id"]
+            isOneToOne: false
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_descriptions: {
+        Row: {
+          company: string | null
+          created_at: string
+          description: string
+          id: string
+          lead_id: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          lead_id: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          lead_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_descriptions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      resumes: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          lead_id: string
+          original_text: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          lead_id: string
+          original_text?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          lead_id?: string
+          original_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resumes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

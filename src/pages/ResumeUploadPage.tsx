@@ -1,9 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/AppContext';
 import PageContainer from '@/components/PageContainer';
 import FileUpload from '@/components/FileUpload';
+import { toast } from 'sonner';
+import { mockAnalysisResult } from '@/data/mockData';
 
 const ResumeUploadPage: React.FC = () => {
   const { 
@@ -12,20 +14,63 @@ const ResumeUploadPage: React.FC = () => {
     coverLetterFile, 
     setCoverLetterFile,
     setCurrentStage,
-    setProgress
+    setProgress,
+    currentLeadId,
+    saveResume,
+    saveJobDescription,
+    saveAnalysisResults
   } = useAppContext();
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (resumeFile) {
-      setCurrentStage('analysis');
-      setProgress(75);
+    
+    if (!resumeFile) {
+      toast.error('Please upload your resume');
+      return;
+    }
+    
+    if (!currentLeadId) {
+      toast.error('Session information is missing. Please restart the application.');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Save the resume
+      const resumeId = await saveResume(currentLeadId);
       
-      // Simulate analysis delay - in a real app this would be an API call
-      setTimeout(() => {
-        setCurrentStage('results');
-        setProgress(100);
-      }, 3000);
+      if (resumeId) {
+        // Move to analysis stage
+        setCurrentStage('analysis');
+        setProgress(75);
+        
+        // Get the job description ID (in real app this would be retrieved from context)
+        const jobDescId = await saveJobDescription(currentLeadId);
+        
+        if (jobDescId) {
+          // Simulate analysis delay - in a real app this would be an API call
+          setTimeout(async () => {
+            // Save the analysis results using mock data for now
+            await saveAnalysisResults({
+              leadId: currentLeadId,
+              resumeId: resumeId,
+              jobDescriptionId: jobDescId,
+              results: mockAnalysisResult
+            });
+            
+            setCurrentStage('results');
+            setProgress(100);
+          }, 3000);
+        }
+      }
+    } catch (error) {
+      console.error('Error during resume upload process:', error);
+      toast.error('An error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -65,15 +110,16 @@ const ResumeUploadPage: React.FC = () => {
                 setProgress(25);
               }}
               className="mr-4"
+              disabled={isSubmitting}
             >
               Back
             </Button>
             <Button 
               type="submit"
-              disabled={!resumeFile}
+              disabled={!resumeFile || isSubmitting}
               className="bg-consulting-navy hover:bg-consulting-blue"
             >
-              Run AI Analysis
+              {isSubmitting ? 'Processing...' : 'Run AI Analysis'}
             </Button>
           </div>
         </form>

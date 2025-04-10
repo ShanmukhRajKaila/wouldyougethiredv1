@@ -1,14 +1,46 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/AppContext';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 const LandingPage: React.FC = () => {
-  const { setCurrentStage, setProgress } = useAppContext();
+  const { 
+    setCurrentStage, 
+    setProgress, 
+    userName, 
+    setUserName, 
+    userEmail, 
+    setUserEmail,
+    setCurrentLeadId,
+    saveLeadInfo
+  } = useAppContext();
   
-  const handleGetStarted = () => {
-    setCurrentStage('jobDescription');
-    setProgress(25);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleGetStarted = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!userName.trim() || !userEmail.trim()) {
+      toast.error('Please enter your name and email to continue');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const leadId = await saveLeadInfo();
+      
+      if (leadId) {
+        setCurrentLeadId(leadId);
+        setCurrentStage('jobDescription');
+        setProgress(25);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (
@@ -22,17 +54,48 @@ const LandingPage: React.FC = () => {
             Find out if your resume makes the cut at top consulting and tech firms with our AI-powered recruiter simulation.
           </p>
           
-          <div className="flex flex-col md:flex-row gap-4 justify-center items-center mb-12">
+          <form 
+            onSubmit={handleGetStarted}
+            className="bg-white/10 backdrop-blur-sm p-6 rounded-lg max-w-md mx-auto mb-12"
+          >
+            <h2 className="text-2xl font-serif font-bold mb-4">Get Started</h2>
+            <div className="space-y-4 mb-6">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-white">Your Name</Label>
+                <Input
+                  id="name"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  placeholder="Enter your name"
+                  className="bg-white/20 border-white/30 text-white placeholder:text-white/50"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-white">Your Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={userEmail}
+                  onChange={(e) => setUserEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="bg-white/20 border-white/30 text-white placeholder:text-white/50"
+                  required
+                />
+              </div>
+            </div>
+            
             <Button 
-              size="lg" 
-              onClick={handleGetStarted}
-              className="bg-white text-consulting-navy hover:bg-consulting-lightblue hover:text-consulting-blue transition-colors px-8 py-6 text-lg"
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full bg-white text-consulting-navy hover:bg-consulting-lightblue hover:text-consulting-blue transition-colors px-8 py-6 text-lg"
             >
-              Start Your Simulation
+              {isSubmitting ? 'Starting...' : 'Start Your Simulation'}
             </Button>
-          </div>
+          </form>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto mt-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
               <h3 className="text-xl font-serif font-bold mb-3">Resume Analysis</h3>
               <p className="text-white/80">
