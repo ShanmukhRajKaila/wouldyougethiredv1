@@ -44,7 +44,7 @@ serve(async (req) => {
           {
             role: 'system',
             content: `You are an expert resume analyst and career consultant. Your task is to analyze a resume against a job description and provide detailed feedback. 
-            Format your response as a JSON object with the following structure:
+            Format your response as a valid JSON object with the following structure, and nothing else:
             {
               "alignmentScore": A number from 0-100 representing how well the resume matches the job description,
               "verdict": A boolean indicating if the person would likely be hired based on their resume,
@@ -57,7 +57,9 @@ serve(async (req) => {
                   "improved": A rewritten version using the STAR method,
                   "feedback": Explanation of why the improved version is better
                 }
-            }`
+            }
+            
+            Return ONLY the JSON object with no markdown formatting, no code blocks, no explanations before or after.`
           },
           {
             role: 'user',
@@ -79,15 +81,39 @@ serve(async (req) => {
       );
     }
     
-    // Parse the content from the OpenAI response which should be in JSON format
+    // Parse the content from the OpenAI response
     let analysisResult;
     try {
-      analysisResult = JSON.parse(data.choices[0].message.content);
+      const content = data.choices[0].message.content;
+      console.log('Raw OpenAI response:', content);
+      
+      // First try direct parsing
+      try {
+        analysisResult = JSON.parse(content);
+      } catch (parseError) {
+        // If direct parsing fails, try to extract JSON from markdown code blocks
+        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (jsonMatch && jsonMatch[1]) {
+          analysisResult = JSON.parse(jsonMatch[1]);
+        } else {
+          // If no code blocks, remove any markdown artifacts and try again
+          const cleanedContent = content
+            .replace(/^```json\s*/, '')
+            .replace(/\s*```$/, '');
+          analysisResult = JSON.parse(cleanedContent);
+        }
+      }
+      
       console.log('Analysis complete');
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
+      console.error('Response content:', data.choices[0].message.content);
       return new Response(
-        JSON.stringify({ error: 'Failed to parse analysis results' }),
+        JSON.stringify({ 
+          error: 'Failed to parse analysis results',
+          details: error.message,
+          responseContent: data.choices[0].message.content 
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
