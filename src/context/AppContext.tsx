@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
 
 type AppStage = 'landing' | 'jobDescription' | 'resumeUpload' | 'analysis' | 'results';
 
@@ -87,7 +88,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return null;
       }
 
-      return data.id;
+      return data?.id || null;
     } catch (error) {
       console.error('Exception saving lead:', error);
       toast.error('An unexpected error occurred');
@@ -119,7 +120,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return null;
       }
 
-      return data.id;
+      return data?.id || null;
     } catch (error) {
       console.error('Exception saving job description:', error);
       toast.error('An unexpected error occurred');
@@ -167,7 +168,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return null;
       }
 
-      return data.id;
+      return data?.id || null;
     } catch (error) {
       console.error('Exception saving resume:', error);
       toast.error('An unexpected error occurred');
