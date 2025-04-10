@@ -31,6 +31,8 @@ serve(async (req) => {
     }
 
     console.log('Analyzing resume against job description');
+    console.log(`Resume text length: ${resumeText.length}`);
+    console.log(`Job description length: ${jobDescription.length}`);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -85,7 +87,7 @@ serve(async (req) => {
     let analysisResult;
     try {
       const content = data.choices[0].message.content;
-      console.log('Raw OpenAI response:', content);
+      console.log('Raw OpenAI response:', content.substring(0, 200) + '...');
       
       // First try direct parsing
       try {
@@ -105,6 +107,9 @@ serve(async (req) => {
       }
       
       console.log('Analysis complete');
+      console.log('Analysis result keys:', Object.keys(analysisResult));
+      console.log('Has starAnalysis:', analysisResult.hasOwnProperty('starAnalysis'));
+      console.log('StarAnalysis length:', analysisResult.starAnalysis?.length || 0);
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
       console.error('Response content:', data.choices[0].message.content);

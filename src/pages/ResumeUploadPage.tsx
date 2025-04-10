@@ -5,7 +5,11 @@ import { useAppContext } from '@/context/AppContext';
 import PageContainer from '@/components/PageContainer';
 import FileUpload from '@/components/FileUpload';
 import { toast } from 'sonner';
-// import { mockAnalysisResult } from '@/data/mockData';
+import * as PDFJS from 'pdfjs-dist';
+
+// Initialize PDF.js worker
+const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
+PDFJS.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 const ResumeUploadPage: React.FC = () => {
   const { 
@@ -63,6 +67,8 @@ const ResumeUploadPage: React.FC = () => {
             return;
           }
           
+          console.log('Extracted text from PDF:', resumeText.substring(0, 100) + '...');
+          
           // Analyze the resume against the job description
           const analysisResults = await analyzeResume(resumeText, jobDescription);
           
@@ -92,40 +98,26 @@ const ResumeUploadPage: React.FC = () => {
     }
   };
   
-  // Function to extract text from PDF
+  // Function to extract text from PDF using PDF.js
   const extractTextFromPDF = async (file: File): Promise<string | null> => {
     try {
-      // For now, we'll just simulate extracting text
-      // In a real application, you would use a library like pdf.js or a service to extract text
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await PDFJS.getDocument({data: arrayBuffer}).promise;
       
-      // Simulated delay to mimic processing time
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      let fullText = '';
       
-      // Return simulated text from the PDF
-      return `Resume for John Doe
+      // Extract text from each page
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        
+        fullText += pageText + '\n';
+      }
       
-      Professional Summary
-      Experienced software engineer with 5+ years of experience in full-stack development, specializing in React, TypeScript, and Node.js.
-      
-      Work Experience
-      Senior Software Engineer, Tech Company Inc.
-      January 2020 - Present
-      - Led development of a customer-facing web application that increased user engagement by 45%
-      - Implemented CI/CD pipeline that reduced deployment time by 60%
-      - Mentored junior developers and conducted code reviews
-      
-      Software Engineer, Startup Solutions
-      March 2017 - December 2019
-      - Developed RESTful APIs for mobile applications
-      - Optimized database queries resulting in 30% performance improvement
-      - Collaborated with design team to implement responsive UI
-      
-      Education
-      Bachelor of Science in Computer Science
-      University of Technology, 2017
-      
-      Skills
-      JavaScript, TypeScript, React, Node.js, Express, MongoDB, PostgreSQL, Git, Docker, AWS`;
+      return fullText;
     } catch (error) {
       console.error('Error extracting text from PDF:', error);
       return null;

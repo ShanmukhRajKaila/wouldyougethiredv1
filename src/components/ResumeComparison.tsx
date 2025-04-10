@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { mockAnalysisResult } from '@/data/mockData';
 import { Card } from '@/components/ui/card';
@@ -58,13 +59,17 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
               </div>
               <p className="font-medium">{exp.role}</p>
               <ul className="list-disc pl-5 text-sm">
-                {exp.bullets.map((bullet, idx) => (
-                  <li key={idx} className={`${tailored && idx === 1 ? 'text-consulting-accent font-medium' : ''}`}>
-                    {tailored && idx === 1 && starAnalysis && idx < starAnalysis.length
-                      ? starAnalysis[idx].improved 
-                      : bullet}
-                  </li>
-                ))}
+                {exp.bullets.map((bullet, idx) => {
+                  // Find a matching STAR analysis item if possible
+                  const starItem = starAnalysis && idx < starAnalysis.length ? 
+                    starAnalysis[idx] : null;
+                  
+                  return (
+                    <li key={idx} className={`${tailored && idx === 1 ? 'text-consulting-accent font-medium' : ''}`}>
+                      {tailored && starItem ? starItem.improved : bullet}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
