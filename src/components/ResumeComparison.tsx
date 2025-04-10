@@ -4,7 +4,15 @@ import { mockAnalysisResult } from '@/data/mockData';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const ResumeComparison: React.FC = () => {
+interface ResumeComparisonProps {
+  starAnalysis: {
+    original: string;
+    improved: string;
+    feedback: string;
+  }[];
+}
+
+const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => {
   const [activeTab, setActiveTab] = useState<string>('original');
   
   const renderResume = (tailored: boolean) => {
@@ -53,9 +61,9 @@ const ResumeComparison: React.FC = () => {
               <ul className="list-disc pl-5 text-sm">
                 {exp.bullets.map((bullet, idx) => (
                   <li key={idx} className={`${tailored && idx === 1 ? 'text-consulting-accent font-medium' : ''}`}>
-                    {tailored && idx === 1 ? 
-                      mockAnalysisResult.starAnalysis[idx].improved : 
-                      bullet}
+                    {tailored && idx === 1 && starAnalysis && starAnalysis.length > idx
+                      ? starAnalysis[idx].improved 
+                      : bullet}
                   </li>
                 ))}
               </ul>

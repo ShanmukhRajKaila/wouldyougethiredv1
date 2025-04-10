@@ -9,14 +9,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ResumeComparison from '@/components/ResumeComparison';
 import StarAnalysis from '@/components/StarAnalysis';
 
-// Use mock data as a fallback if real data isn't available
 const ResultsPage: React.FC = () => {
-  const { resetApplication, jobDescription } = useAppContext();
+  const { resetApplication, jobDescription, analysisResults } = useAppContext();
   const [analysisData, setAnalysisData] = useState(mockAnalysisResult);
   const [selectedCompany, setSelectedCompany] = useState('Sample Company');
   const [selectedRole, setSelectedRole] = useState('Software Developer');
   
   useEffect(() => {
+    // Use real analysis results if available, otherwise fall back to mock data
+    if (analysisResults) {
+      setAnalysisData(analysisResults);
+    }
+    
     // Extract company and role from job description
     if (jobDescription) {
       // Simple heuristic to extract company/role - in a real app, this would be more sophisticated
@@ -29,14 +33,15 @@ const ResultsPage: React.FC = () => {
         if (possibleRole) setSelectedRole(possibleRole);
       }
     }
-  }, [jobDescription]);
+  }, [jobDescription, analysisResults]);
   
   const {
     verdict,
     alignmentScore,
     strengths,
     weaknesses,
-    recommendations
+    recommendations,
+    starAnalysis
   } = analysisData;
   
   return (
@@ -135,11 +140,11 @@ const ResultsPage: React.FC = () => {
           </TabsContent>
           
           <TabsContent value="resume">
-            <ResumeComparison />
+            <ResumeComparison starAnalysis={starAnalysis} />
           </TabsContent>
           
           <TabsContent value="star">
-            <StarAnalysis />
+            <StarAnalysis starAnalysis={starAnalysis} />
           </TabsContent>
         </Tabs>
       </div>

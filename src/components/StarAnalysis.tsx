@@ -1,11 +1,15 @@
 
 import React from 'react';
-import { mockAnalysisResult } from '@/data/mockData';
-import { Card } from '@/components/ui/card';
 
-const StarAnalysis: React.FC = () => {
-  const { starAnalysis } = mockAnalysisResult;
-  
+interface StarAnalysisProps {
+  starAnalysis: {
+    original: string;
+    improved: string;
+    feedback: string;
+  }[];
+}
+
+const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-serif font-bold text-consulting-navy">
@@ -17,7 +21,7 @@ const StarAnalysis: React.FC = () => {
       </p>
       
       {starAnalysis.map((item, index) => (
-        <Card key={index} className="p-6">
+        <div key={index} className="p-6 bg-white rounded-lg shadow mb-4">
           <div className="space-y-4">
             <div>
               <h3 className="font-medium text-consulting-charcoal mb-1">Original Bullet:</h3>
@@ -55,7 +59,7 @@ const StarAnalysis: React.FC = () => {
               </div>
             </div>
           </div>
-        </Card>
+        </div>
       ))}
     </div>
   );

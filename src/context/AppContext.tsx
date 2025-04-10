@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -55,6 +54,8 @@ interface AppContextType {
     results: AnalysisResult;
   }) => Promise<void>;
   analyzeResume: (resumeText: string, jobDescription: string) => Promise<AnalysisResult | null>;
+  analysisResults: AnalysisResult | null;
+  setAnalysisResults: (results: AnalysisResult | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -69,6 +70,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [userName, setUserName] = useState<string>('');
   const [userEmail, setUserEmail] = useState<string>('');
   const [currentLeadId, setCurrentLeadId] = useState<string | null>(null);
+  const [analysisResults, setAnalysisResults] = useState<AnalysisResult | null>(null);
 
   const resetApplication = () => {
     setCurrentStage('landing');
@@ -80,6 +82,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUserName('');
     setUserEmail('');
     setCurrentLeadId(null);
+    setAnalysisResults(null);
   };
 
   const saveLeadInfo = async (): Promise<string | null> => {
@@ -186,7 +189,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const analyzeResume = async (resumeText: string, jobDescription: string): Promise<AnalysisResult | null> => {
     try {
-      // Update to use the correct method to get the auth session
       const { data: sessionData } = await supabase.auth.getSession();
       
       const response = await fetch('https://mqvstzxrxrmgdseepwzh.supabase.co/functions/v1/analyze-resume', {
@@ -207,6 +209,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       const analysisResult = await response.json();
+      setAnalysisResults(analysisResult);
       return analysisResult as AnalysisResult;
     } catch (error) {
       console.error('Error analyzing resume:', error);
@@ -278,6 +281,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         saveResume,
         saveAnalysisResults,
         analyzeResume,
+        analysisResults,
+        setAnalysisResults,
       }}
     >
       {children}
