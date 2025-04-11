@@ -1,4 +1,6 @@
 
+import { supabase } from '@/integrations/supabase/client';
+
 interface ExtractionResult {
   companyName: string | null;
   jobDescription: string | null;
@@ -9,22 +11,17 @@ export class UrlExtractor {
   // Extract job details from a URL
   static async extractFromUrl(url: string): Promise<ExtractionResult> {
     try {
-      // Make a request to our edge function to extract content
-      const response = await fetch('https://mqvstzxrxrmgdseepwzh.supabase.co/functions/v1/extract-job-content', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
+      // Use supabase client to call our edge function
+      const { data, error } = await supabase.functions.invoke('extract-job-content', {
+        body: { url }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to extract content from URL');
+      if (error) {
+        console.error('Error calling extract-job-content function:', error);
+        throw new Error(error.message || 'Failed to extract content from URL');
       }
 
-      const extractionResult = await response.json();
-      return extractionResult;
+      return data as ExtractionResult;
     } catch (error) {
       console.error('Error extracting content from URL:', error);
       return { 
