@@ -46,14 +46,15 @@ class PDFExtractor {
       console.log('File loaded as ArrayBuffer, size:', arrayBuffer.byteLength);
       
       // Create a new PDF document with the loaded data
+      // Use only properties supported by the type definitions
       console.log('Loading PDF document with PDF.js');
       const pdf = await PDFJS.getDocument({ 
         data: arrayBuffer,
-        // Enable additional options to better handle different PDF types
-        nativeImageDecoderSupport: 'none',
-        ignoreErrors: true,
-        disableFontFace: true
-      }).promise;
+        // Remove unsupported properties
+        disableFontFace: true,
+        // Use type assertion to override TypeScript's strict checking for additional options
+        // This is necessary because PDF.js accepts these options even if TypeScript doesn't know about them
+      } as unknown as PDFJS.DocumentInitParameters).promise;
       
       console.log('PDF loaded with', pdf.numPages, 'pages');
       
@@ -67,10 +68,9 @@ class PDFExtractor {
         console.log(`Extracting text from page ${i}/${pdf.numPages}`);
         try {
           const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent({
-            normalizeWhitespace: true,
-            disableCombineTextItems: false
-          });
+          // Use only properties supported by the type definitions
+          // No additional parameters, as normalizeWhitespace isn't recognized
+          const textContent = await page.getTextContent();
           
           if (textContent.items.length > 0) {
             hasExtractedContent = true;
