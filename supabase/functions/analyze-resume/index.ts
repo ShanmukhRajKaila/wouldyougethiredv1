@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -12,6 +11,26 @@ const corsHeaders = {
 interface AnalysisRequest {
   resumeText: string;
   jobDescription: string;
+}
+
+// Function to truncate text to a specific token limit (approximate)
+function truncateText(text: string, maxTokens: number): string {
+  // Rough approximation: 1 token ≈ 4 characters for English text
+  const maxChars = maxTokens * 4;
+  
+  if (text.length <= maxChars) {
+    return text;
+  }
+  
+  // For resumes, keep beginning and end, truncate middle
+  if (maxChars > 3000) {
+    const firstPart = text.substring(0, Math.floor(maxChars * 0.7));
+    const lastPart = text.substring(text.length - Math.floor(maxChars * 0.3));
+    return `${firstPart}\n\n[... content truncated for length ...]\n\n${lastPart}`;
+  }
+  
+  // For shorter texts, just truncate at the end
+  return text.substring(0, maxChars) + "\n[content truncated for length]";
 }
 
 serve(async (req) => {
@@ -31,8 +50,14 @@ serve(async (req) => {
     }
 
     console.log('Analyzing resume against job description');
-    console.log(`Resume text length: ${resumeText.length}`);
-    console.log(`Job description length: ${jobDescription.length}`);
+    
+    // Truncate inputs to prevent token limit issues
+    // Give more space to resume than job description
+    const truncatedResume = truncateText(resumeText, 8000);
+    const truncatedJobDesc = truncateText(jobDescription, 2000);
+    
+    console.log(`Original resume length: ${resumeText.length}, truncated to: ${truncatedResume.length}`);
+    console.log(`Original job description length: ${jobDescription.length}, truncated to: ${truncatedJobDesc.length}`);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -41,7 +66,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini', // Using a smaller model that's faster and has lower token limits
         messages: [
           {
             role: 'system',
@@ -65,11 +90,11 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: `Here is the job description:\n\n${jobDescription}\n\nHere is the resume:\n\n${resumeText}\n\nPlease analyze how well this resume matches the job description and provide detailed feedback.`
+            content: `Here is the job description:\n\n${truncatedJobDesc}\n\nHere is the resume:\n\n${truncatedResume}\n\nPlease analyze how well this resume matches the job description and provide detailed feedback.`
           }
         ],
         temperature: 0.5,
-        max_tokens: 3000,
+        max_tokens: 2000,
       }),
     });
 

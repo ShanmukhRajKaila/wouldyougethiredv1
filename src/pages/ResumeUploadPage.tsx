@@ -25,6 +25,7 @@ const ResumeUploadPage: React.FC = () => {
   } = useAppContext();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [processingError, setProcessingError] = useState<string | null>(null);
   
   useEffect(() => {
     // Initialize PDF extractor
@@ -32,6 +33,7 @@ const ResumeUploadPage: React.FC = () => {
       PDFExtractor.initialize();
       // Reset any previous analysis results when coming to this page
       setAnalysisResults(null);
+      setProcessingError(null);
     } catch (error) {
       console.error('Failed to initialize PDF extractor:', error);
     }
@@ -51,6 +53,7 @@ const ResumeUploadPage: React.FC = () => {
     }
     
     setIsSubmitting(true);
+    setProcessingError(null);
     
     try {
       console.log('Starting submission process...');
@@ -92,29 +95,42 @@ const ResumeUploadPage: React.FC = () => {
           
           // Analyze the resume against the job description
           console.log('Starting resume analysis...');
-          const analysisResults = await analyzeResume(resumeText, jobDescription);
-          
-          if (analysisResults) {
-            console.log('Analysis complete. Results received.');
-            // Save the analysis results
-            await saveAnalysisResults({
-              leadId: currentLeadId,
-              resumeId: resumeId,
-              jobDescriptionId: jobDescId,
-              results: analysisResults
-            });
+          try {
+            const analysisResults = await analyzeResume(resumeText, jobDescription);
             
-            setCurrentStage('results');
-            setProgress(100);
-            toast.success('Analysis complete!');
-          } else {
+            if (analysisResults) {
+              console.log('Analysis complete. Results received.');
+              // Save the analysis results
+              await saveAnalysisResults({
+                leadId: currentLeadId,
+                resumeId: resumeId,
+                jobDescriptionId: jobDescId,
+                results: analysisResults
+              });
+              
+              setCurrentStage('results');
+              setProgress(100);
+              toast.success('Analysis complete!');
+            } else {
+              setCurrentStage('resumeUpload');
+              setProcessingError('Failed to analyze your resume. The analysis service may be temporarily unavailable.');
+              toast.error('Failed to analyze your resume. Please try again later.');
+            }
+          } catch (error: any) {
+            console.error('Resume analysis error:', error);
+            setProcessingError(error.message || 'An unknown error occurred during analysis');
             setCurrentStage('resumeUpload');
-            toast.error('Failed to analyze your resume. Please try again.');
+            if (error.message?.includes('token') || error.message?.includes('too large')) {
+              toast.error('Your resume is too large to analyze. Please try with a shorter or simpler resume.');
+            } else {
+              toast.error('Failed to analyze your resume. Please try again later.');
+            }
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error during resume upload process:', error);
+      setProcessingError(error.message || 'An unknown error occurred');
       toast.error('An error occurred during the analysis. Please try again.');
       setCurrentStage('resumeUpload');
     } finally {
@@ -133,6 +149,16 @@ const ResumeUploadPage: React.FC = () => {
           We support PDF, Word documents (.doc, .docx), and plain text (.txt) files.
         </p>
         
+        {processingError && (
+          <div className="mb-8 p-4 border border-red-300 bg-red-50 rounded-md">
+            <h3 className="font-medium text-red-700 mb-2">Analysis Error</h3>
+            <p className="text-sm text-red-600">{processingError}</p>
+            <p className="text-sm text-gray-600 mt-2">
+              Try simplifying your resume or using a plain text (.txt) format for better results.
+            </p>
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit}>
           <FileUpload
             label="Resume"
@@ -140,6 +166,7 @@ const ResumeUploadPage: React.FC = () => {
             onChange={setResumeFile}
             value={resumeFile}
             required
+            maxSizeMB={5}
           />
           
           <FileUpload
@@ -147,6 +174,7 @@ const ResumeUploadPage: React.FC = () => {
             accept=".pdf,.doc,.docx,.txt,.rtf"
             onChange={setCoverLetterFile}
             value={coverLetterFile}
+            maxSizeMB={5}
           />
           
           <div className="flex justify-end">
