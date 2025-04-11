@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { X, FileText, FilePdf, FileWord } from 'lucide-react';
+import { X, FileText, File } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FileUploadProps {
@@ -52,13 +51,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
   };
 
   const handleFileSelection = (file: File) => {
-    // Validate file size
     if (file.size > maxSizeMB * 1024 * 1024) {
       toast.error(`File is too large. Maximum size is ${maxSizeMB}MB.`);
       return;
     }
     
-    // Validate file type
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
     const acceptedFormats = accept.split(',').map(type => 
       type.trim().replace('.', '').toLowerCase()
@@ -72,7 +69,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
     onChange(file);
   };
 
-  // Get accepted file types as a readable string
   const getAcceptedTypes = () => {
     const types = accept.split(',').map(type => {
       const cleaned = type.trim().replace('.', '').toUpperCase();
@@ -94,9 +90,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
     const extension = value.name.split('.').pop()?.toLowerCase();
     
     if (extension === 'pdf') {
-      return <FilePdf className="h-6 w-6 text-red-500" />;
+      return <FileText className="h-6 w-6 text-red-500" />;
     } else if (extension === 'docx' || extension === 'doc') {
-      return <FileWord className="h-6 w-6 text-blue-500" />;
+      return <FileText className="h-6 w-6 text-blue-500" />;
     } else {
       return <FileText className="h-6 w-6 text-gray-500" />;
     }
@@ -140,8 +136,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
               {getAcceptedTypes()} (MAX. {maxSizeMB}MB)
             </p>
             <div className="flex gap-2 mt-3 text-xs text-gray-500">
-              <FilePdf className="h-5 w-5 text-red-500" /><span>PDF</span>
-              <FileWord className="h-5 w-5 text-blue-500 ml-2" /><span>Word</span>
+              <FileText className="h-5 w-5 text-red-500" /><span>PDF</span>
+              <FileText className="h-5 w-5 text-blue-500 ml-2" /><span>Word</span>
               <FileText className="h-5 w-5 text-gray-500 ml-2" /><span>TXT</span>
             </div>
           </div>
