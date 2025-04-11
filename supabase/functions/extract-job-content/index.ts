@@ -602,7 +602,7 @@ function isLikelyJobDescription(content: string): boolean {
     'job summary',
     'we are looking for',
     'what you will do',
-    'what you'll do',
+    'what you\'ll do', // Fixed the syntax error here
     'who we are looking for',
     'desired skills'
   ];
@@ -745,7 +745,7 @@ function countJobKeywords(text: string): number {
     'skills',
     'job description',
     'about the role',
-    'what you'll do',
+    'what you\'ll do', // Fixed the syntax error here
     'what you will do',
     'required',
     'preferred',
