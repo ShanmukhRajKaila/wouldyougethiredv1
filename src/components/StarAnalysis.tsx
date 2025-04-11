@@ -26,7 +26,7 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-serif font-bold text-consulting-navy">
-        Enhanced Bullet Points
+        Enhanced Experience Statements
       </h2>
       <p className="text-consulting-gray">
         Here's how your experience could be better communicated to highlight relevant skills and achievements:
@@ -36,24 +36,24 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
         <div key={index} className="p-6 bg-white rounded-lg shadow mb-4">
           <div className="space-y-4">
             <div>
-              <h3 className="font-medium text-consulting-charcoal mb-1">Original Bullet:</h3>
+              <h3 className="font-medium text-consulting-charcoal mb-1">Original:</h3>
               <p className="p-3 bg-gray-100 rounded text-consulting-gray">"{item.original}"</p>
             </div>
             
             <div>
-              <h3 className="font-medium text-consulting-charcoal mb-1">Enhanced Version:</h3>
+              <h3 className="font-medium text-consulting-charcoal mb-1">ATS-Optimized Version:</h3>
               <p className="p-3 bg-consulting-lightblue rounded text-consulting-blue font-medium">
                 "{item.improved}"
               </p>
             </div>
             
             <div>
-              <h3 className="font-medium text-consulting-charcoal mb-1">Why It's Better:</h3>
+              <h3 className="font-medium text-consulting-charcoal mb-1">Why It Improves Alignment:</h3>
               <p className="text-consulting-gray">{item.feedback}</p>
             </div>
             
             <div className="bg-gray-50 p-3 rounded mt-2">
-              <p className="text-xs text-consulting-charcoal font-medium">Pro tip: This enhanced bullet point conveys your impact and incorporates relevant keywords for ATS systems, increasing your chances of getting noticed by recruiters.</p>
+              <p className="text-xs text-consulting-charcoal font-medium">Pro tip: This enhanced version better aligns with the role requirements while incorporating industry terminology that helps pass ATS screening and demonstrates your relevant experience.</p>
             </div>
           </div>
         </div>

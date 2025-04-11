@@ -36,15 +36,18 @@ const CompanySelector = () => {
       
       // Show detailed extraction status for debugging purposes
       console.log('Extraction completed:', {
-        companyName: extractionResult.companyName,
-        jobDescriptionLength: extractionResult.jobDescription?.length || 0
+        companyName: extractionResult.companyName || 'Not found',
+        jobDescriptionLength: extractionResult.jobDescription?.length || 0,
+        jobUrl: jobUrl
       });
       
       // Show extraction status
       if (extractionResult.error) {
         toast.error(extractionResult.error);
-      } else {
+      } else if (extractionResult.companyName || extractionResult.jobDescription) {
         toast.success('Job details extracted successfully');
+      } else {
+        toast.warning('Could not extract information from the URL');
       }
 
       // Update company name if available
@@ -54,11 +57,30 @@ const CompanySelector = () => {
           name: extractionResult.companyName,
           logo: ''
         });
+        console.log('Company name extracted:', extractionResult.companyName);
+      } else {
+        // Try to extract company from URL domain if we couldn't get it from the page
+        const urlObj = new URL(jobUrl);
+        const domain = urlObj.hostname.replace('www.', '').split('.')[0];
+        const companyGuess = domain.charAt(0).toUpperCase() + domain.slice(1);
+        
+        if (companyGuess && !['job', 'jobs', 'career', 'careers', 'apply', 'application'].includes(companyGuess.toLowerCase())) {
+          console.log('Using domain as company name fallback:', companyGuess);
+          setSelectedCompany({
+            id: 'extracted',
+            name: companyGuess,
+            logo: ''
+          });
+          toast.info(`Could not extract company name from page. Using "${companyGuess}" from URL domain.`);
+        } else {
+          toast.info('Could not extract company name. Please enter it manually.');
+        }
       }
 
       // Update job description if available
       if (extractionResult.jobDescription) {
         setJobDescription(extractionResult.jobDescription);
+        console.log('Job description extracted successfully, length:', extractionResult.jobDescription.length);
       }
       
       // Show relevant feedback based on what was extracted

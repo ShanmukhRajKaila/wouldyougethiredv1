@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppContext } from '@/context/AppContext';
 import PDFExtractor from '@/utils/PDFExtractor';
 import { AlertCircle } from 'lucide-react';
+import StarAnalysis from '@/components/StarAnalysis';
 
 interface StarAnalysisItem {
   original: string;
@@ -22,6 +24,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [keywordMatches, setKeywordMatches] = useState<string[]>([]);
+  const [missingSkills, setMissingSkills] = useState<string[]>([]);
   
   const validStarAnalysis = Array.isArray(starAnalysis) ? starAnalysis : [];
   
@@ -45,6 +48,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
               
               if (jobDescription) {
                 extractKeywords(text, jobDescription);
+                identifyMissingSkills(text, jobDescription);
               }
             }
           } else {
@@ -114,9 +118,45 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
         const isTechnicalTerm = /(?:data|software|engineer|developer|analyst|manager|lead|api|cloud|agile|design|product|service|solution|strategy|research|marketing|sales|customer|business|financial|compliance|technical|professional|qualification|certification|degree|experience)/i.test(term);
         return isTechnicalTerm || term.includes('-') || term.includes(' ');
       })
-      .slice(0, 10);
+      .slice(0, 15);
     
     setKeywordMatches(relevantKeywords);
+  };
+  
+  const identifyMissingSkills = (resumeText: string, jobDesc: string) => {
+    // Common skills for analytics and AI roles that might be missing
+    const commonSkills = [
+      { term: "data science platform", alias: ["dataiku", "alteryx", "databricks"] },
+      { term: "stakeholder management", alias: ["stakeholder", "stakeholders"] },
+      { term: "commercial acumen", alias: ["business acumen", "commercial sense"] },
+      { term: "ai models", alias: ["artificial intelligence", "machine learning models", "ml models"] },
+      { term: "data modeling", alias: ["data modelling", "data model"] },
+      { term: "proof of concept", alias: ["POC", "proof-of-concept"] },
+      { term: "cross-functional collaboration", alias: ["cross-departmental", "cross functional"] },
+      { term: "retail analytics", alias: ["retail data", "retail metrics"] },
+      { term: "omni-channel", alias: ["omnichannel", "multi-channel"] },
+      { term: "beauty industry", alias: ["beauty sector", "cosmetics"] },
+      { term: "luxury retail", alias: ["luxury brand", "luxury market"] }
+    ];
+    
+    const resumeLower = resumeText.toLowerCase();
+    const jobLower = jobDesc.toLowerCase();
+    
+    // Check if these skills are mentioned in the job description but missing from resume
+    const missing = commonSkills.filter(skill => {
+      // Check if skill or any alias appears in job description
+      const inJobDesc = jobLower.includes(skill.term) || 
+                         skill.alias.some(alias => jobLower.includes(alias));
+      
+      // Check if skill or any alias appears in resume
+      const inResume = resumeLower.includes(skill.term) || 
+                       skill.alias.some(alias => resumeLower.includes(alias));
+      
+      // Return true if it's in job description but not in resume
+      return inJobDesc && !inResume;
+    }).map(skill => skill.term);
+    
+    setMissingSkills(missing);
   };
   
   const renderImprovedResume = () => {
@@ -143,19 +183,60 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
           </div>
         )}
         
-        <div>
+        {missingSkills.length > 0 && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+            <h3 className="text-blue-800 font-medium mb-2">Skills to highlight or develop for this role:</h3>
+            <div className="flex flex-wrap gap-2">
+              {missingSkills.map((skill, idx) => (
+                <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">
+                  {skill}
+                </span>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-gray-600">
+              These skills are mentioned in the job description but not found in your resume. Consider adding relevant experience or future learning plans.
+            </p>
+          </div>
+        )}
+        
+        <div className="bg-white p-5 rounded-lg border border-gray-200">
           <h2 className="text-xl font-bold border-b border-consulting-navy pb-1 mb-3">
-            Experience (Enhanced with Relevant Keywords)
+            Enhanced Experience Bullets
           </h2>
-          <ul className="list-disc pl-5 text-sm space-y-4">
+          <div className="space-y-6">
             {validStarAnalysis.map((item, idx) => (
-              <li key={idx} className="text-consulting-accent font-medium">
-                {item.improved}
-                <div className="mt-1 text-xs text-consulting-gray">
-                  <i>{item.feedback}</i>
+              <div key={idx} className="p-4 bg-gray-50 rounded-lg">
+                <div className="text-consulting-charcoal font-medium mb-2">
+                  <h3 className="text-sm text-gray-500">Original:</h3>
+                  <p className="text-sm italic text-gray-600 mb-3">"{item.original}"</p>
+                  
+                  <h3 className="text-sm text-consulting-blue">Enhanced:</h3>
+                  <p className="font-medium text-consulting-navy">{item.improved}</p>
+                  
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <h4 className="text-xs font-semibold text-gray-500">Why this improves alignment:</h4>
+                    <p className="text-xs text-gray-600 mt-1">{item.feedback}</p>
+                  </div>
                 </div>
-              </li>
+              </div>
             ))}
+          </div>
+        </div>
+        
+        <div className="bg-white p-5 rounded-lg border border-gray-200">
+          <h2 className="text-lg font-semibold text-consulting-navy mb-3">
+            Recommended Additions for this Role
+          </h2>
+          <ul className="list-disc pl-6 space-y-3 text-sm">
+            <li className="text-gray-700">
+              <span className="font-medium">Certifications:</span> Consider AI/ML certifications from cloud providers (AWS, Azure, GCP) or specialized platforms (Dataiku, Alteryx)
+            </li>
+            <li className="text-gray-700">
+              <span className="font-medium">Projects:</span> Highlight any experience with retail analytics, customer segmentation, or product recommendation systems
+            </li>
+            <li className="text-gray-700">
+              <span className="font-medium">Skills to emphasize:</span> Stakeholder management, data modeling, commercial acumen, and experience with omni-channel retail data
+            </li>
           </ul>
         </div>
       </div>
