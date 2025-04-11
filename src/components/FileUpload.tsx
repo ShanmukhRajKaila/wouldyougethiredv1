@@ -60,16 +60,50 @@ const FileUpload: React.FC<FileUploadProps> = ({
     
     // Validate file type
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-    const acceptedTypes = accept.split(',').map(type => 
+    const acceptedFormats = accept.split(',').map(type => 
       type.trim().replace('.', '').toLowerCase()
     );
     
-    if (!acceptedTypes.includes(fileExtension) && !accept.includes(file.type)) {
-      toast.error(`Invalid file type. Accepted types: ${getAcceptedTypes()}`);
+    if (!acceptedFormats.includes(fileExtension) && !accept.includes(file.type)) {
+      toast.error(`Invalid file format. Accepted formats: ${getAcceptedTypes()}`);
+      return;
+    }
+
+    // For text files, validate they contain actual text
+    if (file.type === 'text/plain') {
+      validateTextFile(file)
+        .then(() => onChange(file))
+        .catch(error => {
+          toast.error(`File validation error: ${error.message}`);
+        });
       return;
     }
     
     onChange(file);
+    
+    // Show recommendation for plain text files
+    if (!['text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type)) {
+      toast.info("For best results, use plain text files (.txt) or Word documents (.docx)", {
+        duration: 5000
+      });
+    }
+  };
+
+  // Validate text file has content
+  const validateTextFile = (file: File): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result;
+        if (typeof content === 'string' && content.trim().length > 0) {
+          resolve();
+        } else {
+          reject(new Error('Text file appears to be empty'));
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsText(file);
+    });
   };
 
   const removeFile = () => {
@@ -78,7 +112,17 @@ const FileUpload: React.FC<FileUploadProps> = ({
   
   // Get accepted file types as a readable string
   const getAcceptedTypes = () => {
-    const types = accept.split(',').map(type => type.trim().replace('.', '').toUpperCase());
+    const types = accept.split(',').map(type => {
+      const cleaned = type.trim().replace('.', '').toUpperCase();
+      switch(cleaned) {
+        case 'DOCX': return 'Word (.docx)';
+        case 'DOC': return 'Word (.doc)';
+        case 'PDF': return 'PDF';
+        case 'TXT': return 'Text (.txt)';
+        case 'RTF': return 'Rich Text (.rtf)';
+        default: return cleaned;
+      }
+    });
     return types.join(', ');
   };
 
@@ -116,7 +160,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
               {getAcceptedTypes()} (MAX. {maxSizeMB}MB)
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              For best results, prefer TXT or DOC/DOCX files
+              <strong>For best results, use TXT files</strong>
             </p>
           </div>
         </div>
