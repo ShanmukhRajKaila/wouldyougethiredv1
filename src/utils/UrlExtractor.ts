@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 interface ExtractionResult {
@@ -13,20 +14,19 @@ export class UrlExtractor {
     try {
       console.log('Extracting content from URL:', url);
       
-      // Use supabase client to call our edge function with enhanced options
+      // First check if this is a LinkedIn URL to apply special extraction
+      const isLinkedIn = url.includes('linkedin.com');
+      
+      // Use supabase client to call our edge function with additional headers
       const { data, error } = await supabase.functions.invoke('extract-job-content', {
         body: { 
           url,
           options: {
-            // Enhanced extraction options
+            // Pass additional options for extraction
             followRedirects: true,
-            extractLinkedInCompanyName: url.includes('linkedin.com'),
+            extractLinkedInCompanyName: isLinkedIn,
             // Add browser-like headers to avoid being blocked
             browserHeaders: true,
-            // Use advanced content detection
-            advancedExtraction: true,
-            // Enable content pattern matching
-            contentPatternMatching: true,
             // Add debug flag to get more information
             debug: true
           }
@@ -153,7 +153,7 @@ export class UrlExtractor {
 }
 
 // Export the extractBulletPoints function as a standalone function
-export function extractBulletPoints(resumeText: string): string[] {
+export const extractBulletPoints = (resumeText: string): string[] => {
   if (!resumeText) return [];
   
   const bullets: string[] = [];
@@ -198,4 +198,4 @@ export function extractBulletPoints(resumeText: string): string[] {
   
   // Deduplicate bullets
   return [...new Set(bullets)];
-}
+};
