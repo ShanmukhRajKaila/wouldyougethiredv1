@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { X, FileText } from 'lucide-react';
+import { X, FileText, FileWord } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FileUploadProps {
@@ -80,6 +80,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
       const cleaned = type.trim().replace('.', '').toUpperCase();
       switch(cleaned) {
         case 'PDF': return 'PDF';
+        case 'DOCX': return 'Word (.docx)';
         case 'TXT': return 'Text (.txt)';
         default: return cleaned;
       }
@@ -94,6 +95,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
     
     if (extension === 'pdf') {
       return <FileText className="h-6 w-6 text-red-500" />;
+    } else if (extension === 'docx') {
+      return <FileWord className="h-6 w-6 text-blue-500" />;
     } else if (extension === 'txt') {
       return <FileText className="h-6 w-6 text-gray-500" />;
     } else {
@@ -140,10 +143,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
             </p>
             <div className="flex gap-2 mt-3 text-xs text-gray-500">
               <FileText className="h-5 w-5 text-red-500" /><span>PDF</span>
+              <FileWord className="h-5 w-5 text-blue-500 ml-2" /><span>DOCX</span>
               <FileText className="h-5 w-5 text-gray-500 ml-2" /><span>TXT</span>
             </div>
             <p className="mt-3 text-xs text-gray-500">
-              For best results, use text-based PDFs (not scanned) or plain text files.
+              For best results, use text-based PDFs, Word documents, or plain text files.
             </p>
           </div>
         </div>

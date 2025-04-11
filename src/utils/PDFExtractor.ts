@@ -1,22 +1,17 @@
 
 import * as PDFJS from 'pdfjs-dist';
+import * as mammoth from 'mammoth';
 
 class PDFExtractor {
   static initialize() {
     try {
-      // Instead of using CDN, we'll use a more reliable method for worker
-      // Either import the worker directly or use a local worker
-      const workerSrc = new URL(
-        'pdfjs-dist/build/pdf.worker.min.js',
-        import.meta.url
-      ).toString();
-      
-      PDFJS.GlobalWorkerOptions.workerSrc = workerSrc;
-      console.log('PDF.js worker initialized with local worker path');
+      // Set worker via direct path to worker
+      PDFJS.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
+      console.log('PDF.js worker initialized with direct path');
     } catch (error) {
-      console.error('Failed to initialize PDF.js worker with local path, falling back to inline worker:', error);
+      console.error('Failed to initialize PDF.js worker, falling back:', error);
       
-      // Fallback: Use the built-in worker loader
+      // Fallback: Use the built-in worker
       PDFJS.GlobalWorkerOptions.workerSrc = '';
     }
   }
@@ -25,13 +20,25 @@ class PDFExtractor {
     console.log(`Extracting text from ${file.name} (type: ${file.type})`);
     
     // For PDF files, use PDF.js
-    if (file.type === 'application/pdf') {
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
       try {
         console.log('Attempting PDF.js extraction for PDF file');
         return await this.extractWithPDFJS(file);
       } catch (error) {
         console.error('PDF extraction error:', error);
         return `Error extracting PDF: ${error.message}. Please try another file format.`;
+      }
+    }
+    
+    // For Word documents (docx)
+    if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
+        file.name.toLowerCase().endsWith('.docx')) {
+      try {
+        console.log('Word document detected, using mammoth');
+        return await this.extractFromWord(file);
+      } catch (error) {
+        console.error('Word document extraction error:', error);
+        return `Error extracting Word document: ${error.message}. Please try another file format.`;
       }
     }
     
@@ -42,7 +49,7 @@ class PDFExtractor {
     }
     
     // Reject other file types
-    return `Unsupported file type: ${file.type || file.name.split('.').pop()}. Please upload a PDF or plain text file.`;
+    return `Unsupported file type: ${file.type || file.name.split('.').pop()}. Please upload a PDF, Word document (.docx), or plain text file.`;
   }
 
   private static async extractWithPDFJS(file: File): Promise<string | null> {
@@ -56,7 +63,7 @@ class PDFExtractor {
       // Create a new PDF document with the loaded data
       console.log('Loading PDF document with PDF.js');
       
-      // Use a minimal set of options to avoid TypeScript errors
+      // Use a minimal set of options
       const loadingTask = PDFJS.getDocument({
         data: arrayBuffer,
       } as any); // Use 'any' type to bypass TypeScript checking for options
@@ -102,12 +109,33 @@ class PDFExtractor {
       
       if (completeText.trim().length < 100 || !hasExtractedContent) {
         console.warn('Insufficient text extracted or content appears to be binary');
-        return 'This PDF appears to be a scanned document or image-based PDF. Please upload a text-based PDF or extract and save the text in a .txt file.';
+        return 'This PDF appears to be a scanned document or image-based PDF. Please upload a text-based PDF, Word document, or save the text in a .txt file.';
       }
       
       return completeText;
     } catch (error) {
       console.error('Error in PDF extraction:', error);
+      throw error;
+    }
+  }
+
+  private static async extractFromWord(file: File): Promise<string | null> {
+    try {
+      console.log('Extracting text from Word document');
+      const arrayBuffer = await file.arrayBuffer();
+      
+      // Use mammoth to extract text from the Word document
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      const text = result.value;
+      console.log(`Word text extracted, length: ${text.length}`);
+      
+      if (text.trim().length < 50) {
+        return 'Insufficient text extracted from the Word document. The file may be corrupt or contain no text content.';
+      }
+      
+      return text;
+    } catch (error) {
+      console.error('Error extracting text from Word document:', error);
       throw error;
     }
   }

@@ -49,13 +49,15 @@ const ResumeUploadPage: React.FC = () => {
       PDFExtractor.extractText(resumeFile)
         .then(text => {
           // Check if we got a valid extraction or an error message
-          if (text && text.includes('Error extracting PDF') || text?.includes('binary file')) {
+          if (text && (text.includes('Error extracting') || 
+                       text.includes('binary file') || 
+                       text.includes('scanned document'))) {
             setExtractionWarning(
-              "Warning: Your file may not be properly readable. For best results, use a text-based PDF or a .txt file."
+              "Warning: Your file may not be properly readable. For best results, use a text-based PDF, Word document (.docx), or a .txt file."
             );
           } else if (!text || text.trim().length < 50) {
             setExtractionWarning(
-              "Warning: Very little text could be extracted from your file. Use a text-based PDF for best results."
+              "Warning: Very little text could be extracted from your file. Use a text-based file for best results."
             );
           }
         })
@@ -116,7 +118,7 @@ const ResumeUploadPage: React.FC = () => {
           if (resumeText.includes('Error extracting') || 
               resumeText.includes('binary file') ||
               resumeText.length < 100) {
-            toast.error('Could not properly read your document. Please try uploading a text-based PDF or a .txt file.');
+            toast.error('Could not properly read your document. Please try uploading a Word document (.docx) or a .txt file instead.');
             setCurrentStage('resumeUpload');
             setIsSubmitting(false);
             return;
@@ -175,7 +177,7 @@ const ResumeUploadPage: React.FC = () => {
         </h1>
         <p className="text-consulting-gray mb-8">
           Upload your resume and, optionally, your cover letter for analysis. 
-          We recommend using text-based PDF files or plain text (.txt) files for best results.
+          We support PDF files, Word documents (.docx), or plain text (.txt) files.
         </p>
         
         {processingError && (
@@ -183,7 +185,7 @@ const ResumeUploadPage: React.FC = () => {
             <h3 className="font-medium text-red-700 mb-2">Analysis Error</h3>
             <p className="text-sm text-red-600">{processingError}</p>
             <p className="text-sm text-gray-600 mt-2">
-              Try simplifying your resume or using a plain text (.txt) format for better results.
+              Try simplifying your resume or using a Word document (.docx) or plain text (.txt) format for better results.
             </p>
           </div>
         )}
@@ -191,7 +193,7 @@ const ResumeUploadPage: React.FC = () => {
         <form onSubmit={handleSubmit}>
           <FileUpload
             label="Resume"
-            accept=".pdf,.txt"
+            accept=".pdf,.txt,.docx"
             onChange={setResumeFile}
             value={resumeFile}
             required
@@ -202,15 +204,15 @@ const ResumeUploadPage: React.FC = () => {
             <div className="mb-6 p-3 border border-yellow-300 bg-yellow-50 rounded-md">
               <p className="text-sm text-yellow-800">{extractionWarning}</p>
               <p className="text-xs text-gray-600 mt-1">
-                If you're uploading a PDF, make sure it's a text-based PDF (not scanned or image-based).
-                For best results, you can export your resume as plain text (.txt).
+                If you're having issues with PDF files, try uploading your resume as a Word document (.docx) 
+                or plain text (.txt) file for better results.
               </p>
             </div>
           )}
           
           <FileUpload
             label="Cover Letter (Optional)"
-            accept=".pdf,.txt"
+            accept=".pdf,.txt,.docx"
             onChange={setCoverLetterFile}
             value={coverLetterFile}
             maxSizeMB={5}

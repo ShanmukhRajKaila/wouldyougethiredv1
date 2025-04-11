@@ -39,7 +39,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
             // Check if the text is an error message from the extractor
             if (text.includes('scanned document') || 
                 text.includes('image-based PDF') || 
-                text.includes('Error extracting PDF') ||
+                text.includes('Error extracting') ||
                 text.includes('binary file')) {
               setExtractionError(text);
               setResumeText('');
@@ -108,8 +108,8 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
                 For best results:
                 <ul className="list-disc pl-5 mt-1">
                   <li>Use text-based PDFs (not scanned documents)</li>
-                  <li>If using Word, save as PDF with text encoding</li>
-                  <li>Try saving your resume as plain text (.txt)</li>
+                  <li>Try Word documents (.docx) for better compatibility</li>
+                  <li>Or save your resume as plain text (.txt)</li>
                 </ul>
               </p>
             </div>
@@ -121,7 +121,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
     if (!resumeText) {
       return (
         <div className="p-4 text-consulting-gray">
-          No resume content available. Please upload a resume file (.pdf or .txt).
+          No resume content available. Please upload a resume file (.pdf, .docx, or .txt).
         </div>
       );
     }
