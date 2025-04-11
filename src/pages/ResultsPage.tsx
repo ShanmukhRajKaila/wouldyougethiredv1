@@ -10,8 +10,8 @@ import StarAnalysis from '@/components/StarAnalysis';
 
 const ResultsPage: React.FC = () => {
   const { resetApplication, jobDescription, analysisResults } = useAppContext();
-  const [selectedCompany, setSelectedCompany] = useState('Sample Company');
-  const [selectedRole, setSelectedRole] = useState('Software Developer');
+  const [selectedCompany, setSelectedCompany] = useState('');
+  const [selectedRole, setSelectedRole] = useState('');
   
   useEffect(() => {
     if (!analysisResults) {
