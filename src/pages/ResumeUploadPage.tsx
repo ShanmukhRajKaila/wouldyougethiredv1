@@ -20,16 +20,18 @@ const ResumeUploadPage: React.FC = () => {
     saveJobDescription,
     saveAnalysisResults,
     jobDescription,
-    analyzeResume
+    analyzeResume,
+    setAnalysisResults
   } = useAppContext();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [extractionMethod] = useState<'pdfjs' | 'text'>('text'); // Default to text method
   
   useEffect(() => {
     // Initialize PDF extractor
     try {
       PDFExtractor.initialize();
+      // Reset any previous analysis results when coming to this page
+      setAnalysisResults(null);
     } catch (error) {
       console.error('Failed to initialize PDF extractor:', error);
     }
@@ -67,12 +69,12 @@ const ResumeUploadPage: React.FC = () => {
         if (jobDescId) {
           console.log('Job description saved successfully with ID:', jobDescId);
           
-          // Extract text from resume file - use the improved extractor that handles Word docs
-          let resumeText = await PDFExtractor.extractText(resumeFile, extractionMethod);
+          // Extract text from resume file using our improved extractor
+          let resumeText = await PDFExtractor.extractText(resumeFile);
           
           if (!resumeText) {
             console.error('Text extraction failed - resumeText is null or empty');
-            toast.error('Could not extract text from your file. Please try a different format.');
+            toast.error('Could not extract text from your file. Please try a different format or convert to plain text (.txt).');
             setCurrentStage('resumeUpload');
             setIsSubmitting(false);
             return;
@@ -80,35 +82,12 @@ const ResumeUploadPage: React.FC = () => {
           
           console.log('Extracted text from file. Length:', resumeText.length);
           
-          // Special handling for Word documents - we created placeholder content in the extractor
-          if (resumeText.includes('(Word document)') || resumeText.includes('(DOCX document)') || resumeText.includes('(binary file)')) {
-            console.log('Using placeholder content for Word document');
-            // For demo purposes, use sample resume text
-            resumeText = `Sample Resume Content
-            
-Name: John Doe
-Email: john.doe@example.com
-Phone: (123) 456-7890
-
-WORK EXPERIENCE
-Senior Developer, ABC Tech (2018-Present)
-- Led development of customer-facing web applications using React and Node.js
-- Implemented CI/CD pipelines, reducing deployment time by 40%
-- Mentored junior developers and conducted code reviews
-
-Software Engineer, XYZ Solutions (2015-2018)
-- Developed RESTful APIs using Python and Django
-- Optimized database queries, improving application performance by 30%
-- Collaborated with product managers to refine feature requirements
-
-EDUCATION
-M.S. Computer Science, University of Technology (2015)
-B.S. Computer Science, State University (2013)
-
-SKILLS
-Programming Languages: JavaScript, TypeScript, Python, Java
-Frameworks: React, Node.js, Express, Django
-Tools: Git, Docker, AWS, Jenkins`;
+          // Handle raw/insufficient content cases
+          if (resumeText.includes('Raw content from') || resumeText.includes('Content extraction failed')) {
+            toast.error('Document content extraction was incomplete. For best results, please convert your document to plain text (.txt) format and try again.');
+            setCurrentStage('resumeUpload');
+            setIsSubmitting(false);
+            return;
           }
           
           // Analyze the resume against the job description
@@ -130,7 +109,7 @@ Tools: Git, Docker, AWS, Jenkins`;
             toast.success('Analysis complete!');
           } else {
             setCurrentStage('resumeUpload');
-            toast.error('Failed to analyze your resume. Please try again.');
+            toast.error('Failed to analyze your resume. Please try again with a different file format.');
           }
         }
       }
@@ -151,7 +130,8 @@ Tools: Git, Docker, AWS, Jenkins`;
         </h1>
         <p className="text-consulting-gray mb-8">
           Upload your resume and, optionally, your cover letter for analysis. 
-          <strong> For best results, upload plain text (.txt) files.</strong> Word and PDF files are supported but may have extraction issues.
+          <strong> For best results, upload plain text (.txt) files.</strong> PDF files also work well.
+          Word documents may have extraction issues.
         </p>
         
         <form onSubmit={handleSubmit}>

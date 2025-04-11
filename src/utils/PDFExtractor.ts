@@ -18,34 +18,32 @@ class PDFExtractor {
     }
   }
 
-  static async extractText(file: File, method: 'pdfjs' | 'text' = 'text'): Promise<string | null> {
-    console.log(`Extracting text from ${file.name} using ${method} method`);
+  static async extractText(file: File): Promise<string | null> {
+    console.log(`Extracting text from ${file.name} using PDF.js`);
     
-    // For Word documents (.docx, .doc), always treat as binary
+    // For Word documents (.docx, .doc), use a specialized extraction method
     if (file.name.toLowerCase().endsWith('.docx') || file.name.toLowerCase().endsWith('.doc') || 
         file.type.includes('word') || file.type.includes('officedocument')) {
-      console.log('Word document detected, treating as binary');
-      return `Content from ${file.name} (Word document)`;
+      console.log('Word document detected, using binary extraction');
+      return this.extractWordDocument(file);
     }
     
-    // For PDF files
+    // For PDF files, use PDF.js
     if (file.type === 'application/pdf') {
       try {
-        if (method === 'pdfjs') {
-          console.log('Attempting PDF.js extraction for PDF file');
-          const text = await this.extractWithPDFJS(file);
-          if (text) return text;
+        console.log('Attempting PDF.js extraction for PDF file');
+        const text = await this.extractWithPDFJS(file);
+        if (text) {
+          console.log('PDF extraction succeeded with length:', text.length);
+          return text;
         }
-        
-        console.log('Falling back to text extraction for PDF');
-        return this.extractAsText(file);
+        console.log('PDF.js extraction failed, falling back to text extraction');
       } catch (error) {
         console.error('PDF extraction failed with error:', error);
-        return this.extractAsText(file);
       }
     }
     
-    // For text files and all other formats
+    // Fallback to text extraction for all other cases
     return this.extractAsText(file);
   }
 
@@ -92,6 +90,36 @@ class PDFExtractor {
     }
   }
 
+  private static async extractWordDocument(file: File): Promise<string | null> {
+    // For Word documents, read the content directly
+    try {
+      console.log('Extracting Word document content');
+      // Since we can't directly extract text from .doc/.docx in the browser,
+      // we'll read the file content and check if it contains some recognizable Word format markers
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      
+      // Check for Word document signatures
+      if (this.isDocxFile(bytes) || this.isDocFile(bytes)) {
+        // Return the raw text as extracted by the browser (will be incomplete but better than nothing)
+        console.log('Confirmed Word document format');
+        const text = await this.extractAsText(file);
+        if (text && text.length > 100) {
+          return text;
+        } else {
+          console.log('Word document text extraction yielded insufficient content, returning raw content');
+          return `Raw content from ${file.name} - please convert to PDF or TXT for better results`;
+        }
+      }
+      
+      console.log('Document does not appear to be a valid Word format');
+      return `Content extraction failed for ${file.name} - please convert to PDF or TXT`;
+    } catch (error) {
+      console.error('Error in Word document extraction:', error);
+      return null;
+    }
+  }
+
   private static async extractAsText(file: File): Promise<string | null> {
     try {
       console.log('Using text extraction for file type:', file.type);
@@ -108,22 +136,8 @@ class PDFExtractor {
             
             if (isBinary) {
               console.log('Detected binary content in text extraction');
-              
-              // For Word documents, return a placeholder content
-              if (file.name.toLowerCase().endsWith('.docx') || 
-                  file.name.toLowerCase().endsWith('.doc') || 
-                  file.type.includes('word') || 
-                  file.type.includes('officedocument')) {
-                console.log('Word document detected, returning placeholder text');
-                resolve(`Content from ${file.name} (Word document)`);
-              } else if (text.startsWith('PK')) {
-                console.log('Detected Office Open XML format (.docx)');
-                resolve(`Content from ${file.name} (DOCX document)`);
-              } else {
-                // For unknown binary content
-                console.log('Unknown binary format');
-                resolve(`Content from ${file.name} (binary file)`);
-              }
+              // For binary content that failed extraction
+              resolve(`Raw content from ${file.name} - please convert to PDF or TXT for better results`);
             } else {
               // For plain text content
               console.log('Plain text content detected, length:', text.length);
@@ -146,6 +160,24 @@ class PDFExtractor {
       console.error('Error in text extraction:', error);
       return null;
     }
+  }
+
+  // Helper method to detect DOCX files by header
+  private static isDocxFile(bytes: Uint8Array): boolean {
+    // DOCX files are ZIP files starting with PK\x03\x04
+    return bytes.length >= 4 && 
+           bytes[0] === 0x50 && bytes[1] === 0x4B && 
+           bytes[2] === 0x03 && bytes[3] === 0x04;
+  }
+  
+  // Helper method to detect DOC files by header
+  private static isDocFile(bytes: Uint8Array): boolean {
+    // DOC files often start with D0 CF 11 E0 A1 B1 1A E1
+    return bytes.length >= 8 && 
+           bytes[0] === 0xD0 && bytes[1] === 0xCF && 
+           bytes[2] === 0x11 && bytes[3] === 0xE0 &&
+           bytes[4] === 0xA1 && bytes[5] === 0xB1 && 
+           bytes[6] === 0x1A && bytes[7] === 0xE1;
   }
 }
 

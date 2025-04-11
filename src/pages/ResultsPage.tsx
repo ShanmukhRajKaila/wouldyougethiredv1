@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/AppContext';
 import PageContainer from '@/components/PageContainer';
-import { mockAnalysisResult } from '@/data/mockData';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ResumeComparison from '@/components/ResumeComparison';
@@ -11,27 +10,17 @@ import StarAnalysis from '@/components/StarAnalysis';
 
 const ResultsPage: React.FC = () => {
   const { resetApplication, jobDescription, analysisResults } = useAppContext();
-  const [analysisData, setAnalysisData] = useState(mockAnalysisResult);
   const [selectedCompany, setSelectedCompany] = useState('Sample Company');
   const [selectedRole, setSelectedRole] = useState('Software Developer');
   
   useEffect(() => {
-    // Use real analysis results if available, otherwise fall back to mock data
-    if (analysisResults) {
-      // Merge the results with mock data to ensure all required properties are present
-      setAnalysisData({
-        ...mockAnalysisResult,
-        ...analysisResults,
-        // These fields might not be in analysisResults, so ensure they're set
-        success: mockAnalysisResult.success,
-        company: selectedCompany,
-        role: selectedRole
-      });
+    if (!analysisResults) {
+      console.error('No analysis results available');
     }
     
     // Extract company and role from job description
     if (jobDescription) {
-      // Simple heuristic to extract company/role - in a real app, this would be more sophisticated
+      // Simple heuristic to extract company/role
       const lines = jobDescription.split('\n');
       if (lines.length >= 2) {
         const possibleCompany = lines[0].trim();
@@ -43,15 +32,39 @@ const ResultsPage: React.FC = () => {
     }
   }, [jobDescription, analysisResults]);
   
-  // Now extract values from the merged analysisData
+  // If no results are available, show an error message
+  if (!analysisResults) {
+    return (
+      <PageContainer>
+        <div className="animate-fade-in text-center py-16">
+          <h1 className="text-3xl font-serif font-bold text-consulting-navy mb-6">
+            Analysis Results Unavailable
+          </h1>
+          <p className="text-consulting-gray mb-8">
+            We couldn't retrieve your analysis results. Please try uploading your resume again.
+          </p>
+          <Button 
+            onClick={() => {
+              resetApplication();
+            }}
+            className="bg-consulting-navy hover:bg-consulting-blue"
+          >
+            Start Over
+          </Button>
+        </div>
+      </PageContainer>
+    );
+  }
+  
+  // Extract values from the analysisResults
   const {
-    verdict,
-    alignmentScore,
-    strengths,
-    weaknesses,
-    recommendations,
-    starAnalysis
-  } = analysisData;
+    verdict = false,
+    alignmentScore = 0,
+    strengths = [],
+    weaknesses = [],
+    recommendations = [],
+    starAnalysis = []
+  } = analysisResults;
   
   return (
     <PageContainer>
@@ -59,7 +72,7 @@ const ResultsPage: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-serif font-bold text-consulting-navy mb-2">
-              Your Application Results
+              Your Resume Analysis Results
             </h1>
             <p className="text-consulting-gray">
               <span className="font-medium">Company:</span> {selectedCompany} | <span className="font-medium">Role:</span> {selectedRole}
@@ -100,12 +113,16 @@ const ResultsPage: React.FC = () => {
                   Key Strengths
                 </h2>
                 <ul className="space-y-2">
-                  {strengths.map((strength, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-green-600 mr-2">✓</span>
-                      <span>{strength}</span>
-                    </li>
-                  ))}
+                  {strengths && strengths.length > 0 ? (
+                    strengths.map((strength, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="text-green-600 mr-2">✓</span>
+                        <span>{strength}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li>No strengths identified</li>
+                  )}
                 </ul>
               </Card>
               
@@ -114,12 +131,16 @@ const ResultsPage: React.FC = () => {
                   Areas for Improvement
                 </h2>
                 <ul className="space-y-2">
-                  {weaknesses.map((weakness, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-red-600 mr-2">✗</span>
-                      <span>{weakness}</span>
-                    </li>
-                  ))}
+                  {weaknesses && weaknesses.length > 0 ? (
+                    weaknesses.map((weakness, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="text-red-600 mr-2">✗</span>
+                        <span>{weakness}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li>No areas for improvement identified</li>
+                  )}
                 </ul>
               </Card>
               
@@ -128,12 +149,16 @@ const ResultsPage: React.FC = () => {
                   Recommendations
                 </h2>
                 <ul className="space-y-2">
-                  {recommendations.map((recommendation, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-consulting-accent mr-2">→</span>
-                      <span>{recommendation}</span>
-                    </li>
-                  ))}
+                  {recommendations && recommendations.length > 0 ? (
+                    recommendations.map((recommendation, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="text-consulting-accent mr-2">→</span>
+                        <span>{recommendation}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li>No recommendations available</li>
+                  )}
                 </ul>
               </Card>
             </div>
