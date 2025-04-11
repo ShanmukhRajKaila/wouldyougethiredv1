@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -24,20 +23,16 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [keywordMatches, setKeywordMatches] = useState<string[]>([]);
   
-  // Ensure starAnalysis is properly initialized
   const validStarAnalysis = Array.isArray(starAnalysis) ? starAnalysis : [];
   
   useEffect(() => {
-    // Extract text from the resume file regardless of format
     if (resumeFile) {
       setIsLoading(true);
       setExtractionError(null);
       
-      // Use our enhanced PDFExtractor for all file types
       PDFExtractor.extractText(resumeFile)
         .then(text => {
           if (text) {
-            // Check if the text is an error message from the extractor
             if (text.includes('scanned document') || 
                 text.includes('image-based PDF') || 
                 text.includes('Error extracting') ||
@@ -48,7 +43,6 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
               setResumeText(text);
               setExtractionError(null);
               
-              // Analyze key terms from job description
               if (jobDescription) {
                 extractKeywords(text, jobDescription);
               }
@@ -67,40 +61,65 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
     }
   }, [resumeFile, jobDescription]);
   
-  // Simple function to extract potential keywords from job description
   const extractKeywords = (resumeText: string, jobDesc: string) => {
-    // Convert both texts to lowercase for case-insensitive comparison
     const resumeLower = resumeText.toLowerCase();
     const jobLower = jobDesc.toLowerCase();
     
-    // Extract potential keywords from job description (words that appear more than once)
-    const jobWords = jobLower.match(/\b[a-z]{4,}\b/g) || [];
+    const stopwords = new Set([
+      'the', 'and', 'a', 'in', 'to', 'of', 'for', 'with', 'on', 'at', 'by', 'from',
+      'this', 'that', 'these', 'those', 'it', 'its', 'they', 'them', 'their', 'we', 'our',
+      'you', 'your', 'he', 'she', 'his', 'her', 'is', 'are', 'was', 'were', 'be', 'been',
+      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may',
+      'might', 'must', 'can', 'about', 'above', 'across', 'after', 'against', 'all', 'almost',
+      'alone', 'along', 'already', 'also', 'although', 'always', 'among', 'an', 'any', 'as', 'through',
+      'company', 'job', 'role', 'position', 'work', 'working', 'new', 'year', 'years', 'day', 'week',
+      'month', 'time'
+    ]);
+    
+    const jobWords = jobLower.match(/\b[a-z0-9]{3,}\b/g) || [];
     const wordCounts: Record<string, number> = {};
     
     jobWords.forEach(word => {
-      if (wordCounts[word]) {
-        wordCounts[word]++;
-      } else {
-        wordCounts[word] = 1;
+      if (!stopwords.has(word)) {
+        wordCounts[word] = (wordCounts[word] || 0) + 1;
       }
     });
     
-    // Get keywords that appear in the job description but not in the resume
-    const missingKeywords = Object.keys(wordCounts)
-      .filter(word => wordCounts[word] > 1) // Only words that appear multiple times
-      .filter(word => !resumeLower.includes(word))
-      .filter(word => {
-        // Filter out common stopwords
-        const stopwords = ['this', 'that', 'then', 'than', 'they', 'them', 'with', 'from'];
-        return !stopwords.includes(word);
-      })
-      .slice(0, 10); // Limit to top 10 keywords
+    const phrases: Record<string, number> = {};
+    const phraseRegex = /\b([a-z0-9]+(?:[-\s][a-z0-9]+){1,2})\b/g;
+    const possiblePhrases = jobLower.match(phraseRegex) || [];
+    
+    possiblePhrases.forEach(phrase => {
+      if (!phrase.split(/[-\s]/).every(word => stopwords.has(word))) {
+        phrases[phrase] = (phrases[phrase] || 0) + 1;
+      }
+    });
+    
+    const relevantPhrases = Object.entries(phrases)
+      .filter(([phrase, count]) => count > 1 && phrase.length > 5)
+      .map(([phrase]) => phrase);
       
-    setKeywordMatches(missingKeywords);
+    const missingWords = Object.entries(wordCounts)
+      .filter(([word, count]) => count > 1)
+      .filter(([word]) => !resumeLower.includes(word))
+      .map(([word]) => word);
+      
+    const technicalTerms = [
+      ...relevantPhrases,
+      ...missingWords
+    ];
+    
+    const relevantKeywords = technicalTerms
+      .filter(term => {
+        const isTechnicalTerm = /(?:data|software|engineer|developer|analyst|manager|lead|api|cloud|agile|design|product|service|solution|strategy|research|marketing|sales|customer|business|financial|compliance|technical|professional|qualification|certification|degree|experience)/i.test(term);
+        return isTechnicalTerm || term.includes('-') || term.includes(' ');
+      })
+      .slice(0, 10);
+    
+    setKeywordMatches(relevantKeywords);
   };
   
   const renderImprovedResume = () => {
-    // Use the star analysis to show an improved version of the resume
     if (validStarAnalysis.length === 0) {
       return (
         <div className="p-6">

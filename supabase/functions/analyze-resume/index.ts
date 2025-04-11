@@ -53,12 +53,14 @@ function cleanupText(text: string): string {
   return cleanText.trim();
 }
 
-// Extract keywords from job description
+// Extract keywords from job description with improved relevance
 function extractKeywords(text: string): string[] {
+  // Expanded stopwords list
   const commonWords = new Set([
     "the", "and", "that", "this", "with", "for", "have", "not", "from", "but", "what", "about", 
     "who", "which", "when", "will", "more", "would", "there", "their", "them", "these", "some", 
-    "your", "into"
+    "your", "into", "has", "may", "such", "than", "its", "been", "were", "are", "our", "then",
+    "how", "well", "where", "why", "should", "could", "year", "years", "can", "able", "any"
   ]);
   
   // Extract potential keywords (focus on nouns/skills)
@@ -71,11 +73,48 @@ function extractKeywords(text: string): string[] {
     }
   });
   
-  // Return words that appear multiple times, likely important keywords
-  return Object.entries(wordCounts)
-    .filter(([_, count]) => count >= 2)
-    .map(([word]) => word)
-    .slice(0, 20); // Top 20 keywords
+  // Extract phrases that might be technical skills (2-3 word phrases)
+  const phrases: Record<string, number> = {};
+  const phraseRegex = /\b([a-z0-9]+(?:[-\s][a-z0-9]+){1,2})\b/g;
+  let match;
+  while ((match = phraseRegex.exec(text.toLowerCase())) !== null) {
+    const phrase = match[1];
+    // Skip phrases that are just stopwords
+    if (!phrase.split(/[-\s]/).every(word => commonWords.has(word))) {
+      phrases[phrase] = (phrases[phrase] || 0) + 1;
+    }
+  }
+  
+  // Combine single words and phrases, prioritizing phrases and technical terms
+  const technicalTermPatterns = [
+    /\b(?:software|hardware|technology|engineering|development|programming|analysis|design|management|leadership|strategy|operations|financial|marketing|sales|product|project|agile|scrum|data|cloud|api|web|mobile|app|database|security|network|system|platform|infrastructure|solution|service|quality|testing|deployment)\b/i
+  ];
+  
+  // Filter and prioritize keywords
+  const keywordCandidates = [
+    ...Object.entries(phrases)
+      .filter(([_, count]) => count >= 1)
+      .map(([phrase]) => phrase),
+    ...Object.entries(wordCounts)
+      .filter(([_, count]) => count >= 2)
+      .filter(([word]) => {
+        // Prioritize technical terms
+        return technicalTermPatterns.some(pattern => pattern.test(word));
+      })
+      .map(([word]) => word)
+  ];
+  
+  // Remove duplicates (phrases that contain single words we've already included)
+  const uniqueKeywords = keywordCandidates.filter((keyword, index) => {
+    for (let i = 0; i < index; i++) {
+      if (keywordCandidates[i].includes(keyword) || keyword.includes(keywordCandidates[i])) {
+        return false;
+      }
+    }
+    return true;
+  });
+  
+  return uniqueKeywords.slice(0, 25); // Top keywords
 }
 
 serve(async (req) => {
@@ -141,8 +180,18 @@ serve(async (req) => {
             role: 'system',
             content: `You are an expert resume analyst and career consultant. Your task is to analyze a resume against a job description and provide detailed feedback. 
             
-            Important: When rewriting resume bullets, DO NOT explicitly mention STAR method components in the output.
-            Instead, craft each bullet to implicitly follow the STAR structure while incorporating relevant keywords from the job description.
+            IMPORTANT GUIDELINES FOR IMPROVING RESUME BULLET POINTS:
+            1. DO NOT explicitly mention STAR method components (Situation, Task, Action, Result) in your output.
+            2. Instead, create professional bullet points that implicitly follow this structure:
+               - Begin with a strong action verb
+               - Include the context/challenge
+               - Describe specific actions taken
+               - Emphasize measurable results/impacts
+            3. Naturally incorporate relevant keywords from the job description
+            4. Focus on quantifiable achievements, metrics, and business impact
+            5. Use industry-standard terminology for the role
+            
+            The key keywords from the job description that should be incorporated where relevant are: ${jobKeywords.join(', ')}
             
             Format your response as a valid JSON object with the following structure, and nothing else:
             {
@@ -154,12 +203,10 @@ serve(async (req) => {
               "starAnalysis": An array of objects, each containing:
                 {
                   "original": A bullet point from the original resume,
-                  "improved": A rewritten version that follows STAR principles WITHOUT explicitly labeling them, and incorporates keywords from the job description,
-                  "feedback": Explanation of why the improved version is better, mentioning relevant keywords it incorporates
+                  "improved": A rewritten version that follows the guidelines above WITHOUT explicitly labeling STAR components, and incorporates relevant keywords from the job description,
+                  "feedback": Explanation of why the improved version is better, mentioning relevant keywords it incorporates and how it better demonstrates your qualifications
                 }
             }
-            
-            The key keywords from the job description that should be incorporated where relevant are: ${jobKeywords.join(', ')}
             
             Return ONLY the JSON object with no markdown formatting, no code blocks, no explanations before or after.`
           },

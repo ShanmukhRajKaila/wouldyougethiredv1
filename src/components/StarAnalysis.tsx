@@ -41,7 +41,7 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
             </div>
             
             <div>
-              <h3 className="font-medium text-consulting-charcoal mb-1">Improved Version:</h3>
+              <h3 className="font-medium text-consulting-charcoal mb-1">Enhanced Version:</h3>
               <p className="p-3 bg-consulting-lightblue rounded text-consulting-blue font-medium">
                 "{item.improved}"
               </p>
@@ -53,7 +53,7 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
             </div>
             
             <div className="bg-gray-50 p-3 rounded mt-2">
-              <p className="text-xs text-consulting-charcoal font-medium">Pro tip: This bullet point uses a narrative format that shows your impact while incorporating relevant keywords for ATS systems.</p>
+              <p className="text-xs text-consulting-charcoal font-medium">Pro tip: This enhanced bullet point conveys your impact and incorporates relevant keywords for ATS systems, increasing your chances of getting noticed by recruiters.</p>
             </div>
           </div>
         </div>
