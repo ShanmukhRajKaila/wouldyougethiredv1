@@ -18,7 +18,7 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
   if (validStarAnalysis.length === 0) {
     return (
       <div className="p-6 bg-white rounded-lg shadow mb-4">
-        <p className="text-consulting-gray">No STAR analysis available for this resume.</p>
+        <p className="text-consulting-gray">No enhanced bullet points available for this resume.</p>
       </div>
     );
   }
@@ -26,11 +26,10 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-serif font-bold text-consulting-navy">
-        STAR Method Analysis
+        Enhanced Bullet Points
       </h2>
       <p className="text-consulting-gray">
-        The STAR method (Situation, Task, Action, Result) helps structure your resume bullets for maximum impact. 
-        Here's how your experience could be better communicated:
+        Here's how your experience could be better communicated to highlight relevant skills and achievements:
       </p>
       
       {validStarAnalysis.map((item, index) => (
@@ -53,23 +52,8 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
               <p className="text-consulting-gray">{item.feedback}</p>
             </div>
             
-            <div className="grid grid-cols-4 gap-2 mt-4">
-              <div className="bg-consulting-navy/10 p-2 rounded">
-                <p className="text-xs font-bold text-consulting-navy">Situation</p>
-                <p className="text-xs">Context & challenge</p>
-              </div>
-              <div className="bg-consulting-navy/10 p-2 rounded">
-                <p className="text-xs font-bold text-consulting-navy">Task</p>
-                <p className="text-xs">Your responsibility</p>
-              </div>
-              <div className="bg-consulting-navy/10 p-2 rounded">
-                <p className="text-xs font-bold text-consulting-navy">Action</p>
-                <p className="text-xs">How you did it</p>
-              </div>
-              <div className="bg-consulting-navy/20 p-2 rounded">
-                <p className="text-xs font-bold text-consulting-navy">Result</p>
-                <p className="text-xs">Quantifiable impact</p>
-              </div>
+            <div className="bg-gray-50 p-3 rounded mt-2">
+              <p className="text-xs text-consulting-charcoal font-medium">Pro tip: This bullet point uses a narrative format that shows your impact while incorporating relevant keywords for ATS systems.</p>
             </div>
           </div>
         </div>

@@ -8,7 +8,7 @@ type AppStage = 'landing' | 'jobDescription' | 'resumeUpload' | 'analysis' | 're
 interface Company {
   id: string;
   name: string;
-  logo: string;
+  logo?: string;
 }
 
 interface AnalysisResult {

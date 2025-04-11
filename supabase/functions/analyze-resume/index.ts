@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -52,6 +53,31 @@ function cleanupText(text: string): string {
   return cleanText.trim();
 }
 
+// Extract keywords from job description
+function extractKeywords(text: string): string[] {
+  const commonWords = new Set([
+    "the", "and", "that", "this", "with", "for", "have", "not", "from", "but", "what", "about", 
+    "who", "which", "when", "will", "more", "would", "there", "their", "them", "these", "some", 
+    "your", "into"
+  ]);
+  
+  // Extract potential keywords (focus on nouns/skills)
+  const words = text.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
+  const wordCounts: Record<string, number> = {};
+  
+  words.forEach(word => {
+    if (!commonWords.has(word)) {
+      wordCounts[word] = (wordCounts[word] || 0) + 1;
+    }
+  });
+  
+  // Return words that appear multiple times, likely important keywords
+  return Object.entries(wordCounts)
+    .filter(([_, count]) => count >= 2)
+    .map(([word]) => word)
+    .slice(0, 20); // Top 20 keywords
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -70,12 +96,16 @@ serve(async (req) => {
 
     console.log('Analyzing resume against job description');
     
+    let cleanedResume = resumeText;
+    let truncatedResume;
+    let truncatedJobDesc;
+    
     // Check if resume text appears to be PDF binary data
     if (resumeText.includes('%PDF') || resumeText.includes('obj') || resumeText.includes('endobj')) {
       console.warn('Resume text appears to contain PDF binary data or syntax');
       
       // Try to clean up the text before proceeding
-      const cleanedResume = cleanupText(resumeText);
+      cleanedResume = cleanupText(resumeText);
       
       if (cleanedResume.length < 200) {
         return new Response(
@@ -85,28 +115,18 @@ serve(async (req) => {
       }
       
       console.log('Cleaned resume text for processing');
-      
-      // Truncate inputs to prevent token limit issues
-      // Give more space to resume than job description
-      const truncatedResume = truncateText(cleanedResume, 6000);
-      const truncatedJobDesc = truncateText(jobDescription, 2000);
-      
-      console.log(`Original resume length: ${resumeText.length}, cleaned to: ${cleanedResume.length}, truncated to: ${truncatedResume.length}`);
-      console.log(`Original job description length: ${jobDescription.length}, truncated to: ${truncatedJobDesc.length}`);
-    } else {
-      // Truncate inputs to prevent token limit issues
-      // Give more space to resume than job description
-      const truncatedResume = truncateText(resumeText, 8000);
-      const truncatedJobDesc = truncateText(jobDescription, 2000);
-      
-      console.log(`Original resume length: ${resumeText.length}, truncated to: ${truncatedResume.length}`);
-      console.log(`Original job description length: ${jobDescription.length}, truncated to: ${truncatedJobDesc.length}`);
     }
     
-    // Process the text with OpenAI
-    const cleanedResume = cleanupText(resumeText);
-    const truncatedResume = truncateText(cleanedResume, 8000); 
-    const truncatedJobDesc = truncateText(jobDescription, 2000);
+    // Extract key terms from job description
+    const jobKeywords = extractKeywords(jobDescription);
+    console.log(`Extracted ${jobKeywords.length} keywords from job description`);
+    
+    // Truncate inputs to prevent token limit issues
+    truncatedResume = truncateText(cleanedResume, 8000);
+    truncatedJobDesc = truncateText(jobDescription, 2000);
+    
+    console.log(`Original resume length: ${resumeText.length}, cleaned to: ${cleanedResume.length}, truncated to: ${truncatedResume.length}`);
+    console.log(`Original job description length: ${jobDescription.length}, truncated to: ${truncatedJobDesc.length}`);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -120,6 +140,10 @@ serve(async (req) => {
           {
             role: 'system',
             content: `You are an expert resume analyst and career consultant. Your task is to analyze a resume against a job description and provide detailed feedback. 
+            
+            Important: When rewriting resume bullets, DO NOT explicitly mention STAR method components in the output.
+            Instead, craft each bullet to implicitly follow the STAR structure while incorporating relevant keywords from the job description.
+            
             Format your response as a valid JSON object with the following structure, and nothing else:
             {
               "alignmentScore": A number from 0-100 representing how well the resume matches the job description,
@@ -130,10 +154,12 @@ serve(async (req) => {
               "starAnalysis": An array of objects, each containing:
                 {
                   "original": A bullet point from the original resume,
-                  "improved": A rewritten version using the STAR method,
-                  "feedback": Explanation of why the improved version is better
+                  "improved": A rewritten version that follows STAR principles WITHOUT explicitly labeling them, and incorporates keywords from the job description,
+                  "feedback": Explanation of why the improved version is better, mentioning relevant keywords it incorporates
                 }
             }
+            
+            The key keywords from the job description that should be incorporated where relevant are: ${jobKeywords.join(', ')}
             
             Return ONLY the JSON object with no markdown formatting, no code blocks, no explanations before or after.`
           },

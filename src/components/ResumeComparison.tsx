@@ -18,10 +18,11 @@ interface ResumeComparisonProps {
 
 const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => {
   const [activeTab, setActiveTab] = useState<string>('original');
-  const { resumeFile } = useAppContext();
+  const { resumeFile, jobDescription } = useAppContext();
   const [resumeText, setResumeText] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [keywordMatches, setKeywordMatches] = useState<string[]>([]);
   
   // Ensure starAnalysis is properly initialized
   const validStarAnalysis = Array.isArray(starAnalysis) ? starAnalysis : [];
@@ -46,6 +47,11 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
             } else {
               setResumeText(text);
               setExtractionError(null);
+              
+              // Analyze key terms from job description
+              if (jobDescription) {
+                extractKeywords(text, jobDescription);
+              }
             }
           } else {
             setExtractionError("Could not extract text from the uploaded file.");
@@ -59,7 +65,39 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
           setIsLoading(false);
         });
     }
-  }, [resumeFile]);
+  }, [resumeFile, jobDescription]);
+  
+  // Simple function to extract potential keywords from job description
+  const extractKeywords = (resumeText: string, jobDesc: string) => {
+    // Convert both texts to lowercase for case-insensitive comparison
+    const resumeLower = resumeText.toLowerCase();
+    const jobLower = jobDesc.toLowerCase();
+    
+    // Extract potential keywords from job description (words that appear more than once)
+    const jobWords = jobLower.match(/\b[a-z]{4,}\b/g) || [];
+    const wordCounts: Record<string, number> = {};
+    
+    jobWords.forEach(word => {
+      if (wordCounts[word]) {
+        wordCounts[word]++;
+      } else {
+        wordCounts[word] = 1;
+      }
+    });
+    
+    // Get keywords that appear in the job description but not in the resume
+    const missingKeywords = Object.keys(wordCounts)
+      .filter(word => wordCounts[word] > 1) // Only words that appear multiple times
+      .filter(word => !resumeLower.includes(word))
+      .filter(word => {
+        // Filter out common stopwords
+        const stopwords = ['this', 'that', 'then', 'than', 'they', 'them', 'with', 'from'];
+        return !stopwords.includes(word);
+      })
+      .slice(0, 10); // Limit to top 10 keywords
+      
+    setKeywordMatches(missingKeywords);
+  };
   
   const renderImprovedResume = () => {
     // Use the star analysis to show an improved version of the resume
@@ -73,9 +111,22 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
 
     return (
       <div className="space-y-6">
+        {keywordMatches.length > 0 && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-md">
+            <h3 className="text-amber-800 font-medium mb-2">Consider adding these keywords from the job description:</h3>
+            <div className="flex flex-wrap gap-2">
+              {keywordMatches.map((keyword, idx) => (
+                <span key={idx} className="px-2 py-1 bg-amber-100 text-amber-800 rounded-md text-sm">
+                  {keyword}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        
         <div>
           <h2 className="text-xl font-bold border-b border-consulting-navy pb-1 mb-3">
-            Experience (Enhanced with STAR Method)
+            Experience (Enhanced with Relevant Keywords)
           </h2>
           <ul className="list-disc pl-5 text-sm space-y-4">
             {validStarAnalysis.map((item, idx) => (
@@ -138,7 +189,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
       <Tabs defaultValue="original" onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="original">Original Resume</TabsTrigger>
-          <TabsTrigger value="tailored">Improved Resume</TabsTrigger>
+          <TabsTrigger value="tailored">Enhanced Resume</TabsTrigger>
         </TabsList>
         <TabsContent value="original">
           <Card className="p-6">

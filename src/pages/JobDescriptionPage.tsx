@@ -14,7 +14,8 @@ const JobDescriptionPage: React.FC = () => {
     setCurrentStage,
     setProgress,
     currentLeadId,
-    saveJobDescription
+    saveJobDescription,
+    selectedCompany
   } = useAppContext();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,6 +25,11 @@ const JobDescriptionPage: React.FC = () => {
     
     if (!jobDescription.trim()) {
       toast.error('Please enter a job description');
+      return;
+    }
+    
+    if (!selectedCompany?.name) {
+      toast.error('Please enter a company name');
       return;
     }
     
@@ -53,13 +59,12 @@ const JobDescriptionPage: React.FC = () => {
           Job Description
         </h1>
         <p className="text-consulting-gray mb-8">
-          Paste the job description for the role you're applying to. If you're not applying to a specific role, 
-          you can select one of our pre-defined companies below.
+          Enter the company name and paste the job description for the role you're applying to. Both fields are required.
         </p>
         
-        <CompanySelector />
-        
         <form onSubmit={handleSubmit}>
+          <CompanySelector />
+          
           <div className="mb-6">
             <label htmlFor="jobDescription" className="block text-consulting-charcoal font-medium mb-2">
               Job Description <span className="text-red-500">*</span>
@@ -77,7 +82,7 @@ const JobDescriptionPage: React.FC = () => {
           <div className="flex justify-end">
             <Button 
               type="submit"
-              disabled={jobDescription.trim().length === 0 || isSubmitting}
+              disabled={!selectedCompany?.name || jobDescription.trim().length === 0 || isSubmitting}
               className="bg-consulting-navy hover:bg-consulting-blue"
             >
               {isSubmitting ? 'Processing...' : 'Continue to Resume Upload'}
