@@ -167,8 +167,13 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
                       </>
                     ) : (
                       <div className="p-3 bg-gray-100 border border-gray-200 rounded text-gray-600">
-                        <p>This bullet point is already well-written and aligns with job requirements.</p>
-                        <p className="mt-1 text-xs">Keep this bullet as is, or consider adding specific metrics or results if available.</p>
+                        <p className="font-medium text-gray-700">This bullet point is already well-written for this role.</p>
+                        <p className="mt-2 text-sm">
+                          <span className="font-semibold">Justification:</span> This experience demonstrates relevant skills and 
+                          uses appropriate terminology for the position. It effectively highlights your capabilities in a 
+                          way that aligns with the job requirements. For maximum impact, consider adding specific metrics 
+                          or quantifiable results if available.
+                        </p>
                       </div>
                     )}
                   </div>
