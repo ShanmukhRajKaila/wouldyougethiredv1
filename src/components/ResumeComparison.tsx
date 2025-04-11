@@ -23,7 +23,6 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
   const [resumeText, setResumeText] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
-  const [keywordMatches, setKeywordMatches] = useState<string[]>([]);
   const [missingSkills, setMissingSkills] = useState<string[]>([]);
   
   const validStarAnalysis = Array.isArray(starAnalysis) ? starAnalysis : [];
@@ -47,7 +46,6 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
               setExtractionError(null);
               
               if (jobDescription) {
-                extractKeywords(text, jobDescription);
                 identifyMissingSkills(text, jobDescription);
               }
             }
@@ -64,64 +62,6 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
         });
     }
   }, [resumeFile, jobDescription]);
-  
-  const extractKeywords = (resumeText: string, jobDesc: string) => {
-    const resumeLower = resumeText.toLowerCase();
-    const jobLower = jobDesc.toLowerCase();
-    
-    const stopwords = new Set([
-      'the', 'and', 'a', 'in', 'to', 'of', 'for', 'with', 'on', 'at', 'by', 'from',
-      'this', 'that', 'these', 'those', 'it', 'its', 'they', 'them', 'their', 'we', 'our',
-      'you', 'your', 'he', 'she', 'his', 'her', 'is', 'are', 'was', 'were', 'be', 'been',
-      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may',
-      'might', 'must', 'can', 'about', 'above', 'across', 'after', 'against', 'all', 'almost',
-      'alone', 'along', 'already', 'also', 'although', 'always', 'among', 'an', 'any', 'as', 'through',
-      'company', 'job', 'role', 'position', 'work', 'working', 'new', 'year', 'years', 'day', 'week',
-      'month', 'time'
-    ]);
-    
-    const jobWords = jobLower.match(/\b[a-z0-9]{3,}\b/g) || [];
-    const wordCounts: Record<string, number> = {};
-    
-    jobWords.forEach(word => {
-      if (!stopwords.has(word)) {
-        wordCounts[word] = (wordCounts[word] || 0) + 1;
-      }
-    });
-    
-    const phrases: Record<string, number> = {};
-    const phraseRegex = /\b([a-z0-9]+(?:[-\s][a-z0-9]+){1,2})\b/g;
-    const possiblePhrases = jobLower.match(phraseRegex) || [];
-    
-    possiblePhrases.forEach(phrase => {
-      if (!phrase.split(/[-\s]/).every(word => stopwords.has(word))) {
-        phrases[phrase] = (phrases[phrase] || 0) + 1;
-      }
-    });
-    
-    const relevantPhrases = Object.entries(phrases)
-      .filter(([phrase, count]) => count > 1 && phrase.length > 5)
-      .map(([phrase]) => phrase);
-      
-    const missingWords = Object.entries(wordCounts)
-      .filter(([word, count]) => count > 1)
-      .filter(([word]) => !resumeLower.includes(word))
-      .map(([word]) => word);
-      
-    const technicalTerms = [
-      ...relevantPhrases,
-      ...missingWords
-    ];
-    
-    const relevantKeywords = technicalTerms
-      .filter(term => {
-        const isTechnicalTerm = /(?:data|software|engineer|developer|analyst|manager|lead|api|cloud|agile|design|product|service|solution|strategy|research|marketing|sales|customer|business|financial|compliance|technical|professional|qualification|certification|degree|experience)/i.test(term);
-        return isTechnicalTerm || term.includes('-') || term.includes(' ');
-      })
-      .slice(0, 15);
-    
-    setKeywordMatches(relevantKeywords);
-  };
   
   const identifyMissingSkills = (resumeText: string, jobDesc: string) => {
     // Common skills for analytics and AI roles that might be missing
@@ -170,19 +110,6 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
 
     return (
       <div className="space-y-6">
-        {keywordMatches.length > 0 && (
-          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-md">
-            <h3 className="text-amber-800 font-medium mb-2">Consider adding these keywords from the job description:</h3>
-            <div className="flex flex-wrap gap-2">
-              {keywordMatches.map((keyword, idx) => (
-                <span key={idx} className="px-2 py-1 bg-amber-100 text-amber-800 rounded-md text-sm">
-                  {keyword}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-        
         {missingSkills.length > 0 && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
             <h3 className="text-blue-800 font-medium mb-2">Skills to highlight or develop for this role:</h3>

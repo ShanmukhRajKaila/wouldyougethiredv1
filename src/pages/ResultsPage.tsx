@@ -9,8 +9,7 @@ import ResumeComparison from '@/components/ResumeComparison';
 import StarAnalysis from '@/components/StarAnalysis';
 
 const ResultsPage: React.FC = () => {
-  const { resetApplication, jobDescription, analysisResults } = useAppContext();
-  const [selectedCompany, setSelectedCompany] = useState('');
+  const { resetApplication, jobDescription, analysisResults, selectedCompany } = useAppContext();
   const [selectedRole, setSelectedRole] = useState('');
   
   useEffect(() => {
@@ -18,19 +17,43 @@ const ResultsPage: React.FC = () => {
       console.error('No analysis results available');
     }
     
-    // Extract company and role from job description
+    // Extract role from job description
     if (jobDescription) {
-      // Simple heuristic to extract company/role
-      const lines = jobDescription.split('\n');
-      if (lines.length >= 2) {
-        const possibleCompany = lines[0].trim();
-        const possibleRole = lines[1].trim();
-        
-        if (possibleCompany) setSelectedCompany(possibleCompany);
-        if (possibleRole) setSelectedRole(possibleRole);
+      const jobTitle = extractJobTitle(jobDescription);
+      if (jobTitle) {
+        setSelectedRole(jobTitle);
+      } else {
+        setSelectedRole('Unspecified Role');
       }
     }
   }, [jobDescription, analysisResults]);
+  
+  // Function to extract job title from job description
+  const extractJobTitle = (description: string): string => {
+    // Common patterns for job titles in descriptions
+    const patterns = [
+      /position:\s*([^\.]+)/i,
+      /job title:\s*([^\.]+)/i,
+      /role:\s*([^\.]+)/i,
+      /we are looking for a[n]?\s+([^\.]+)/i,
+      /hiring a[n]?\s+([^\.]+)/i,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = description.match(pattern);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+    
+    // If no pattern matched, try to use the first line if it's not too long
+    const firstLine = description.split('\n')[0].trim();
+    if (firstLine && firstLine.length < 50) {
+      return firstLine;
+    }
+    
+    return 'Unspecified Role';
+  };
   
   // If no results are available, show an error message
   if (!analysisResults) {
@@ -75,7 +98,7 @@ const ResultsPage: React.FC = () => {
               Your Resume Analysis Results
             </h1>
             <p className="text-consulting-gray">
-              <span className="font-medium">Company:</span> {selectedCompany} | <span className="font-medium">Role:</span> {selectedRole}
+              <span className="font-medium">Company:</span> {selectedCompany?.name || 'Unspecified'} | <span className="font-medium">Role:</span> {selectedRole}
             </p>
           </div>
           
@@ -95,7 +118,7 @@ const ResultsPage: React.FC = () => {
                 style={{ width: `${alignmentScore}%` }}
               ></div>
             </div>
-            <p className="text-xs text-consulting-gray">STAR Alignment: {alignmentScore}%</p>
+            <p className="text-xs text-consulting-gray">Alignment Score: {alignmentScore}%</p>
           </div>
         </div>
         

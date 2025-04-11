@@ -14,6 +14,8 @@ const CompanySelector = () => {
   const [jobUrl, setJobUrl] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('url');
+  const [jobTitle, setJobTitle] = useState('');
+  const [needsJobTitle, setNeedsJobTitle] = useState(false);
   
   const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const companyName = e.target.value;
@@ -31,6 +33,8 @@ const CompanySelector = () => {
     }
 
     setIsExtracting(true);
+    setNeedsJobTitle(false);
+    
     try {
       const extractionResult = await UrlExtractor.extractFromUrl(jobUrl);
       
@@ -81,6 +85,17 @@ const CompanySelector = () => {
       if (extractionResult.jobDescription) {
         setJobDescription(extractionResult.jobDescription);
         console.log('Job description extracted successfully, length:', extractionResult.jobDescription.length);
+        
+        // Check if we can extract job title from job description
+        const jobTitleExtracted = extractJobTitleFromDescription(extractionResult.jobDescription);
+        if (jobTitleExtracted) {
+          setJobTitle(jobTitleExtracted);
+          console.log('Job title extracted from description:', jobTitleExtracted);
+        } else {
+          setNeedsJobTitle(true);
+          console.log('Could not extract job title, prompting user');
+          toast.info('Please enter the job title manually for better resume analysis');
+        }
       }
       
       // Show relevant feedback based on what was extracted
@@ -100,6 +115,44 @@ const CompanySelector = () => {
     } finally {
       setIsExtracting(false);
     }
+  };
+  
+  // Helper function to try to extract job title from job description
+  const extractJobTitleFromDescription = (description: string): string | null => {
+    if (!description) return null;
+    
+    // Common patterns for job titles in descriptions
+    const patterns = [
+      /position:\s*([^\.]+)/i,
+      /job title:\s*([^\.]+)/i,
+      /role:\s*([^\.]+)/i,
+      /we are looking for a[n]?\s+([^\.]+)/i,
+      /hiring a[n]?\s+([^\.]+)/i,
+      /\s+a[n]?\s+([A-Z][a-z]+ [A-Z][a-z]+(?: [A-Z][a-z]+)?(?:\s+\([^)]+\))?)\s+to\s+/i,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = description.match(pattern);
+      if (match && match[1]) {
+        // Clean up the extracted title
+        const title = match[1].trim()
+          .replace(/^[^\w]+|[^\w]+$/g, '') // Remove leading/trailing non-word chars
+          .replace(/\s{2,}/g, ' '); // Normalize spaces
+        
+        // Only return if it looks like a proper title (not too long, not too short)
+        if (title.length > 3 && title.length < 50 && /[A-Z]/.test(title)) {
+          return title;
+        }
+      }
+    }
+    
+    // If no pattern matched, try to use the first line from job description if it's capitalized
+    const firstLine = description.split('\n')[0].trim();
+    if (firstLine && firstLine.length < 50 && /^[A-Z]/.test(firstLine)) {
+      return firstLine;
+    }
+    
+    return null;
   };
   
   return (
@@ -147,7 +200,7 @@ const CompanySelector = () => {
             </p>
           </div>
           
-          {/* Company name field is still visible in URL tab */}
+          {/* Company name field */}
           <div>
             <Label htmlFor="company-url" className="block text-gray-700 font-medium mb-2">
               Company Name <span className="text-red-500">*</span>
@@ -162,6 +215,29 @@ const CompanySelector = () => {
               required
             />
           </div>
+          
+          {/* Job title field - shown when needed */}
+          {(needsJobTitle || jobTitle) && (
+            <div>
+              <Label htmlFor="job-title" className="block text-gray-700 font-medium mb-2">
+                Job Title {needsJobTitle && <span className="text-red-500">*</span>}
+              </Label>
+              <Input
+                id="job-title"
+                type="text"
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+                placeholder="Enter the job title"
+                className={`w-full ${needsJobTitle ? 'border-amber-300' : ''}`}
+                required={needsJobTitle}
+              />
+              {needsJobTitle && (
+                <p className="text-xs text-amber-600 mt-1">
+                  We couldn't detect the job title. Please enter it manually for better analysis.
+                </p>
+              )}
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="manual" className="space-y-4 pt-4">
@@ -175,6 +251,22 @@ const CompanySelector = () => {
               value={selectedCompany?.name || ''}
               onChange={handleCompanyChange}
               placeholder="Enter the company name"
+              className="w-full"
+              required
+            />
+          </div>
+          
+          {/* Job title field in manual tab */}
+          <div>
+            <Label htmlFor="job-title-manual" className="block text-gray-700 font-medium mb-2">
+              Job Title <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="job-title-manual"
+              type="text"
+              value={jobTitle}
+              onChange={(e) => setJobTitle(e.target.value)}
+              placeholder="Enter the job title"
               className="w-full"
               required
             />
