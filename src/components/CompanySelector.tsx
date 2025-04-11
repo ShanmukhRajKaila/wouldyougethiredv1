@@ -14,6 +14,7 @@ const CompanySelector = () => {
   const [jobUrl, setJobUrl] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('url');
+  const [extractionAttempted, setExtractionAttempted] = useState(false);
   
   const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const companyName = e.target.value;
@@ -31,6 +32,7 @@ const CompanySelector = () => {
     }
 
     setIsExtracting(true);
+    setExtractionAttempted(true);
     
     try {
       const extractionResult = await UrlExtractor.extractFromUrl(jobUrl);
@@ -64,6 +66,7 @@ const CompanySelector = () => {
     } catch (error) {
       console.error('Error extracting content:', error);
       toast.error('Failed to extract content from the URL');
+      setActiveTab('manual');
     } finally {
       setIsExtracting(false);
     }
@@ -112,6 +115,17 @@ const CompanySelector = () => {
             <p className="text-xs text-gray-500 mt-1">
               Paste a job posting URL to automatically extract job description
             </p>
+            
+            {extractionAttempted && !isExtracting && !jobDescription && (
+              <div className="mt-2 p-2 bg-amber-50 text-amber-800 rounded-md border border-amber-200 text-sm">
+                <p>Extraction might not work for all job posting sites. If extraction fails:</p>
+                <ul className="list-disc pl-5 mt-1">
+                  <li>Try copying and pasting the job description directly</li>
+                  <li>Try a different job posting URL (LinkedIn often works best)</li>
+                  <li>Some sites use JavaScript which our extractor can't process</li>
+                </ul>
+              </div>
+            )}
           </div>
           
           {/* Company name field (now optional) */}

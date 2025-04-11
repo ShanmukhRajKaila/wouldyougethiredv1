@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface ExtractionResult {
   companyName: string | null;
   jobDescription: string | null;
+  jobTitle?: string | null;
   error?: string;
 }
 
@@ -24,7 +25,9 @@ export class UrlExtractor {
             followRedirects: true,
             extractLinkedInCompanyName: isLinkedIn,
             // Add browser-like headers to avoid being blocked
-            browserHeaders: true
+            browserHeaders: true,
+            // Add debug flag to get more information
+            debug: true
           }
         }
       });
@@ -35,19 +38,13 @@ export class UrlExtractor {
       }
 
       // Log the extraction results for debugging
-      console.log('Extraction results:', data);
-      
-      // Company name is now optional, but we'll still try to extract it
-      let companyName = data.companyName;
-      
-      if (!companyName && data.jobDescription) {
-        companyName = this.extractCompanyFromJobDescription(data.jobDescription);
-      }
+      console.log('Extraction results (detailed):', data);
       
       // Return the extracted data, prioritizing job description
       return {
-        companyName: companyName,
+        companyName: data.companyName || null,
         jobDescription: data.jobDescription || null,
+        jobTitle: data.jobTitle || null,
         error: (!data.jobDescription) ? 
                'Could not extract job description from the provided URL' : 
                undefined
@@ -57,12 +54,13 @@ export class UrlExtractor {
       return { 
         companyName: null, 
         jobDescription: null,
+        jobTitle: null,
         error: error instanceof Error ? error.message : 'Failed to extract content from the provided URL'
       };
     }
   }
   
-  // Extract company name from job description for cases when it's mentioned there
+  // Helper method that stays the same
   private static extractCompanyFromJobDescription(jobDescription: string): string | null {
     if (!jobDescription) return null;
     
@@ -91,7 +89,7 @@ export class UrlExtractor {
     return null;
   }
   
-  // Helper method to extract company name from URL as a fallback
+  // Helper method that stays the same
   private static extractCompanyFromUrl(url: string): string | null {
     try {
       const urlObj = new URL(url);
@@ -137,7 +135,7 @@ export class UrlExtractor {
     }
   }
   
-  // Format company name to be more readable
+  // Helper method that stays the same
   private static formatCompanyName(name: string): string {
     if (!name) return '';
     
