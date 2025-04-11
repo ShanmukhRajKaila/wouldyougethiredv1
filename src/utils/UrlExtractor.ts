@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 interface ExtractionResult {
@@ -38,25 +37,19 @@ export class UrlExtractor {
       // Log the extraction results for debugging
       console.log('Extraction results:', data);
       
+      // Company name is now optional, but we'll still try to extract it
       let companyName = data.companyName;
       
-      // If the extracted company name is "View" (which is likely incorrect from LinkedIn),
-      // or if no company name was found, try our URL-based extraction as fallback
-      if (!companyName || companyName === "View") {
-        companyName = this.extractCompanyFromUrl(url);
-      }
-      
-      // For LinkedIn, do additional parsing of the job description to find company name
-      if (isLinkedIn && data.jobDescription && (!companyName || companyName === "View")) {
+      if (!companyName && data.jobDescription) {
         companyName = this.extractCompanyFromJobDescription(data.jobDescription);
       }
       
-      // Return the extracted data, even if partial
+      // Return the extracted data, prioritizing job description
       return {
-        companyName: companyName || null,
+        companyName: companyName,
         jobDescription: data.jobDescription || null,
-        error: (!companyName && !data.jobDescription) ? 
-               'Could not extract complete information from the provided URL' : 
+        error: (!data.jobDescription) ? 
+               'Could not extract job description from the provided URL' : 
                undefined
       };
     } catch (error) {

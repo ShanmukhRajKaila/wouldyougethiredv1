@@ -98,7 +98,11 @@ const ResultsPage: React.FC = () => {
               Your Resume Analysis Results
             </h1>
             <p className="text-consulting-gray">
-              <span className="font-medium">Company:</span> {selectedCompany?.name || 'Unspecified'} | <span className="font-medium">Role:</span> {selectedRole}
+              {selectedCompany?.name ? (
+                <><span className="font-medium">Company:</span> {selectedCompany.name} | <span className="font-medium">Role:</span> {selectedRole}</>
+              ) : (
+                <><span className="font-medium">Role:</span> {selectedRole}</>
+              )}
             </p>
           </div>
           

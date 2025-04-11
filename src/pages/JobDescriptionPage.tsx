@@ -28,11 +28,6 @@ const JobDescriptionPage: React.FC = () => {
       return;
     }
     
-    if (!selectedCompany?.name) {
-      toast.error('Please enter a company name');
-      return;
-    }
-    
     if (!currentLeadId) {
       toast.error('Session information is missing. Please restart the application.');
       return;
@@ -59,7 +54,7 @@ const JobDescriptionPage: React.FC = () => {
           Job Description
         </h1>
         <p className="text-consulting-gray mb-8">
-          Enter the company name and paste the job description for the role you're applying to. Both fields are required.
+          Paste the job description for the role you're applying to. You can enter company name optionally.
         </p>
         
         <form onSubmit={handleSubmit}>
@@ -82,7 +77,7 @@ const JobDescriptionPage: React.FC = () => {
           <div className="flex justify-end">
             <Button 
               type="submit"
-              disabled={!selectedCompany?.name || jobDescription.trim().length === 0 || isSubmitting}
+              disabled={jobDescription.trim().length === 0 || isSubmitting}
               className="bg-consulting-navy hover:bg-consulting-blue"
             >
               {isSubmitting ? 'Processing...' : 'Continue to Resume Upload'}
