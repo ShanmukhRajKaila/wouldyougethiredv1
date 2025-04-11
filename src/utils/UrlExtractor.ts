@@ -11,9 +11,18 @@ export class UrlExtractor {
   // Extract job details from a URL
   static async extractFromUrl(url: string): Promise<ExtractionResult> {
     try {
-      // Use supabase client to call our edge function
+      console.log('Extracting content from URL:', url);
+      
+      // Use supabase client to call our edge function with additional headers
       const { data, error } = await supabase.functions.invoke('extract-job-content', {
-        body: { url }
+        body: { 
+          url,
+          options: {
+            // Pass additional options for extraction
+            followRedirects: true,
+            extractLinkedInCompanyName: true
+          }
+        }
       });
 
       if (error) {
@@ -24,15 +33,14 @@ export class UrlExtractor {
       // Log the extraction results for debugging
       console.log('Extraction results:', data);
       
-      if (!data.companyName && !data.jobDescription) {
-        return { 
-          companyName: null, 
-          jobDescription: null,
-          error: 'Could not extract company name or job description from the provided URL'
-        };
-      }
-
-      return data as ExtractionResult;
+      // Return the extracted data, even if partial
+      return {
+        companyName: data.companyName || null,
+        jobDescription: data.jobDescription || null,
+        error: (!data.companyName && !data.jobDescription) ? 
+               'Could not extract complete information from the provided URL' : 
+               undefined
+      };
     } catch (error) {
       console.error('Error extracting content from URL:', error);
       return { 
