@@ -1,14 +1,23 @@
+
 import * as PDFJS from 'pdfjs-dist';
 
 class PDFExtractor {
   static initialize() {
     try {
-      // Set the worker source path correctly
-      const workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.js';
+      // Instead of using CDN, we'll use a more reliable method for worker
+      // Either import the worker directly or use a local worker
+      const workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.min.js',
+        import.meta.url
+      ).toString();
+      
       PDFJS.GlobalWorkerOptions.workerSrc = workerSrc;
-      console.log('PDF.js worker initialized successfully with CDN worker');
+      console.log('PDF.js worker initialized with local worker path');
     } catch (error) {
-      console.error('Failed to initialize PDF.js worker:', error);
+      console.error('Failed to initialize PDF.js worker with local path, falling back to inline worker:', error);
+      
+      // Fallback: Use the built-in worker loader
+      PDFJS.GlobalWorkerOptions.workerSrc = '';
     }
   }
 
@@ -47,10 +56,9 @@ class PDFExtractor {
       // Create a new PDF document with the loaded data
       console.log('Loading PDF document with PDF.js');
       
-      // Fix: Use a more generic type assertion that doesn't rely on DocumentInitParameters
+      // Use a minimal set of options to avoid TypeScript errors
       const loadingTask = PDFJS.getDocument({
         data: arrayBuffer,
-        disableFontFace: true,
       } as any); // Use 'any' type to bypass TypeScript checking for options
       
       const pdf = await loadingTask.promise;
@@ -67,7 +75,6 @@ class PDFExtractor {
         console.log(`Extracting text from page ${i}/${pdf.numPages}`);
         try {
           const page = await pdf.getPage(i);
-          // Use only properties supported by the type definitions
           const textContent = await page.getTextContent();
           
           if (textContent.items.length > 0) {
