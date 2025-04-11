@@ -74,7 +74,7 @@ const ResumeUploadPage: React.FC = () => {
           
           if (!resumeText) {
             console.error('Text extraction failed - resumeText is null or empty');
-            toast.error('Could not extract text from your file. Please try a different format or convert to plain text (.txt).');
+            toast.error('Could not extract text from your file. Please try a different format.');
             setCurrentStage('resumeUpload');
             setIsSubmitting(false);
             return;
@@ -84,7 +84,7 @@ const ResumeUploadPage: React.FC = () => {
           
           // Handle raw/insufficient content cases
           if (resumeText.includes('Raw content from') || resumeText.includes('Content extraction failed')) {
-            toast.error('Document content extraction was incomplete. For best results, please convert your document to plain text (.txt) format and try again.');
+            toast.error('Document content extraction was incomplete. Please try with PDF or TXT format for better results.');
             setCurrentStage('resumeUpload');
             setIsSubmitting(false);
             return;
@@ -109,13 +109,13 @@ const ResumeUploadPage: React.FC = () => {
             toast.success('Analysis complete!');
           } else {
             setCurrentStage('resumeUpload');
-            toast.error('Failed to analyze your resume. Please try again with a different file format.');
+            toast.error('Failed to analyze your resume. Please try again.');
           }
         }
       }
     } catch (error) {
       console.error('Error during resume upload process:', error);
-      toast.error('An error occurred. Please try again with a different file format.');
+      toast.error('An error occurred during the analysis. Please try again.');
       setCurrentStage('resumeUpload');
     } finally {
       setIsSubmitting(false);
@@ -130,8 +130,7 @@ const ResumeUploadPage: React.FC = () => {
         </h1>
         <p className="text-consulting-gray mb-8">
           Upload your resume and, optionally, your cover letter for analysis. 
-          <strong> For best results, upload plain text (.txt) files.</strong> PDF files also work well.
-          Word documents may have extraction issues.
+          We support PDF, Word documents (.doc, .docx), and plain text (.txt) files.
         </p>
         
         <form onSubmit={handleSubmit}>

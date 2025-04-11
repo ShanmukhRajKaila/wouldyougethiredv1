@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { X, FileText, FilePdf, FileWord } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FileUploadProps {
@@ -69,47 +69,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
       return;
     }
 
-    // For text files, validate they contain actual text
-    if (file.type === 'text/plain') {
-      validateTextFile(file)
-        .then(() => onChange(file))
-        .catch(error => {
-          toast.error(`File validation error: ${error.message}`);
-        });
-      return;
-    }
-    
     onChange(file);
-    
-    // Show recommendation for plain text files
-    if (!['text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type)) {
-      toast.info("For best results, use plain text files (.txt) or Word documents (.docx)", {
-        duration: 5000
-      });
-    }
   };
 
-  // Validate text file has content
-  const validateTextFile = (file: File): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result;
-        if (typeof content === 'string' && content.trim().length > 0) {
-          resolve();
-        } else {
-          reject(new Error('Text file appears to be empty'));
-        }
-      };
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsText(file);
-    });
-  };
-
-  const removeFile = () => {
-    onChange(null);
-  };
-  
   // Get accepted file types as a readable string
   const getAcceptedTypes = () => {
     const types = accept.split(',').map(type => {
@@ -124,6 +86,24 @@ const FileUpload: React.FC<FileUploadProps> = ({
       }
     });
     return types.join(', ');
+  };
+
+  const getFileIcon = () => {
+    if (!value) return null;
+    
+    const extension = value.name.split('.').pop()?.toLowerCase();
+    
+    if (extension === 'pdf') {
+      return <FilePdf className="h-6 w-6 text-red-500" />;
+    } else if (extension === 'docx' || extension === 'doc') {
+      return <FileWord className="h-6 w-6 text-blue-500" />;
+    } else {
+      return <FileText className="h-6 w-6 text-gray-500" />;
+    }
+  };
+
+  const removeFile = () => {
+    onChange(null);
   };
 
   return (
@@ -159,14 +139,17 @@ const FileUpload: React.FC<FileUploadProps> = ({
             <p className="text-xs text-gray-500">
               {getAcceptedTypes()} (MAX. {maxSizeMB}MB)
             </p>
-            <p className="text-xs text-gray-500 mt-1">
-              <strong>For best results, use TXT files</strong>
-            </p>
+            <div className="flex gap-2 mt-3 text-xs text-gray-500">
+              <FilePdf className="h-5 w-5 text-red-500" /><span>PDF</span>
+              <FileWord className="h-5 w-5 text-blue-500 ml-2" /><span>Word</span>
+              <FileText className="h-5 w-5 text-gray-500 ml-2" /><span>TXT</span>
+            </div>
           </div>
         </div>
       ) : (
         <div className="flex items-center justify-between p-4 border rounded-lg bg-consulting-lightblue/10">
           <div className="flex items-center">
+            {getFileIcon()}
             <div className="ml-3">
               <p className="text-sm font-medium text-consulting-navy">{value.name}</p>
               <p className="text-xs text-gray-500">{(value.size / 1024 / 1024).toFixed(2)} MB</p>

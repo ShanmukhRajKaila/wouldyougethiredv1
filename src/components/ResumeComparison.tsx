@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppContext } from '@/context/AppContext';
+import PDFExtractor from '@/utils/PDFExtractor';
 
 interface StarAnalysisItem {
   original: string;
@@ -18,22 +19,35 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
   const [activeTab, setActiveTab] = useState<string>('original');
   const { resumeFile } = useAppContext();
   const [resumeText, setResumeText] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
   
   // Ensure starAnalysis is properly initialized
   const validStarAnalysis = Array.isArray(starAnalysis) ? starAnalysis : [];
   
   useEffect(() => {
-    // Try to extract text from the resume file to show in the original tab
+    // Extract text from the resume file regardless of format
     if (resumeFile) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          // For text files, this will work directly
-          let content = e.target.result as string;
-          setResumeText(content);
-        }
-      };
-      reader.readAsText(resumeFile);
+      setIsLoading(true);
+      setExtractionError(null);
+      
+      // Use our enhanced PDFExtractor for all file types
+      PDFExtractor.extractText(resumeFile)
+        .then(text => {
+          if (text) {
+            setResumeText(text);
+            setExtractionError(null);
+          } else {
+            setExtractionError("Could not extract text from the uploaded file.");
+          }
+        })
+        .catch(err => {
+          console.error("Error extracting text:", err);
+          setExtractionError(`Error extracting text: ${err.message}`);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
     }
   }, [resumeFile]);
   
@@ -68,6 +82,35 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
     );
   };
 
+  const renderOriginalResume = () => {
+    if (isLoading) {
+      return <div className="p-4 text-center">Extracting resume content...</div>;
+    }
+    
+    if (extractionError) {
+      return (
+        <div className="p-4 text-red-500">
+          <p>{extractionError}</p>
+          <p className="mt-2 text-sm">Try uploading your resume in a different format (.pdf or .txt recommended).</p>
+        </div>
+      );
+    }
+    
+    if (!resumeText) {
+      return (
+        <div className="p-4 text-consulting-gray">
+          No resume content available. Please upload a resume file (.pdf, .docx, or .txt).
+        </div>
+      );
+    }
+    
+    return (
+      <div className="whitespace-pre-wrap font-mono text-sm">
+        {resumeText}
+      </div>
+    );
+  };
+
   return (
     <div className="mt-6">
       <Tabs defaultValue="original" onValueChange={setActiveTab}>
@@ -77,9 +120,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
         </TabsList>
         <TabsContent value="original">
           <Card className="p-6">
-            <div className="whitespace-pre-wrap font-mono text-sm">
-              {resumeText || "Original resume text could not be extracted. Please upload a plain text (.txt) file for best results."}
-            </div>
+            {renderOriginalResume()}
           </Card>
         </TabsContent>
         <TabsContent value="tailored">
