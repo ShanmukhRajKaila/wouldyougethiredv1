@@ -44,6 +44,8 @@ const CompanySelector = () => {
           logo: ''
         });
         toast.success(`Company name extracted: ${extractionResult.companyName}`);
+      } else {
+        toast.warning('Could not extract company name');
       }
 
       if (extractionResult.jobDescription) {

@@ -21,6 +21,17 @@ export class UrlExtractor {
         throw new Error(error.message || 'Failed to extract content from URL');
       }
 
+      // Log the extraction results for debugging
+      console.log('Extraction results:', data);
+      
+      if (!data.companyName && !data.jobDescription) {
+        return { 
+          companyName: null, 
+          jobDescription: null,
+          error: 'Could not extract company name or job description from the provided URL'
+        };
+      }
+
       return data as ExtractionResult;
     } catch (error) {
       console.error('Error extracting content from URL:', error);

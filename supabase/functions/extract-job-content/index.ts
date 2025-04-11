@@ -39,16 +39,25 @@ serve(async (req) => {
 
     console.log('Extracting content from URL:', url);
     
-    // Add user agent and other headers to better mimic a browser
+    // Enhanced user agent and other headers to better mimic a browser
     const fetchHeaders = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.5',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'sec-ch-ua': '"Google Chrome";v="120", "Chromium";v="120", "Not=A?Brand";v="99"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
       'Referer': 'https://www.google.com/'
     };
     
-    // Fetch the content from the URL
-    const response = await fetch(url, { headers: fetchHeaders });
+    // Fetch the content from the URL with improved headers
+    const response = await fetch(url, { 
+      headers: fetchHeaders,
+      redirect: 'follow'
+    });
+    
     if (!response.ok) {
       return new Response(
         JSON.stringify({ error: `Failed to fetch content from URL: ${response.statusText}` }),
@@ -58,15 +67,13 @@ serve(async (req) => {
 
     const html = await response.text();
 
-    // Extract company name - enhanced with more patterns
-    let companyName = extractCompanyName(html, url);
-    
-    // Extract job description - improved extraction
-    const jobDescription = extractJobDescription(html);
+    // More advanced extraction techniques
+    const companyName = extractCompanyName(html, url);
+    const jobDescription = extractJobDescription(html, url);
 
     return new Response(
       JSON.stringify({ 
-        companyName, 
+        companyName: companyName || null, 
         jobDescription: jobDescription || null 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -81,80 +88,147 @@ serve(async (req) => {
   }
 });
 
-// Function to extract company name from HTML or URL - improved with more patterns
+// Enhanced function to extract company name with more dynamic patterns
 function extractCompanyName(html: string, url: string): string | null {
-  // Try to extract from common meta tags
-  const metaCompanyMatches = html.match(/<meta[^>]*(?:property|name)="(?:og:site_name|author|publisher|application-name|copyright|twitter:site)"[^>]*content="([^"]+)"/i);
-  if (metaCompanyMatches && metaCompanyMatches[1]) {
-    return cleanCompanyName(metaCompanyMatches[1]);
+  // Try multiple patterns to better identify company names
+  const extractionPatterns = [
+    // Common meta tags
+    /<meta[^>]*(?:property|name)="(?:og:site_name|author|publisher)"[^>]*content="([^"]+)"/i,
+    
+    // LinkedIn specific company patterns
+    /(?:"companyName"|"company"|"organizationName"|"employerName")(?:\s*[:=]\s*|\s*>\s*)["']([^"']{2,50})["']/i,
+    /<span[^>]*class="[^"]*(?:company-name|employer-name|org-name|company|employer)[^"]*"[^>]*>([^<]{2,50})<\/span>/i,
+    /<div[^>]*class="[^"]*(?:company-name|employer-name|org-name|company|employer)[^"]*"[^>]*>([^<]{2,50})<\/div>/i,
+    /<strong>Company:<\/strong>\s*([^<]{2,50})</i,
+    /<h2[^>]*>About\s+([^<]{2,50})<\/h2>/i,
+    
+    // Standard job boards patterns
+    /(?:data-company-name|class="company-?name"|job-company-name)(?:\s*[:=]\s*|\s*>\s*)["']([^"']{2,50})["']/i,
+    /<div[^>]*class="[^"]*topcard__org-name[^"]*"[^>]*>([^<]{2,50})<\/div>/i,
+    
+    // JSON+LD extraction (common for structured data)
+    /"hiringOrganization"[^}]*"name"\s*:\s*"([^"]{2,50})"/i,
+    /"employer"[^}]*"name"\s*:\s*"([^"]{2,50})"/i
+  ];
+  
+  // Try each extraction pattern
+  for (const pattern of extractionPatterns) {
+    const match = html.match(pattern);
+    if (match && match[1]) {
+      const extracted = cleanCompanyName(match[1]);
+      // Don't return LinkedIn, Facebook, etc. as company names
+      if (!isJobBoardName(extracted, url)) {
+        return extracted;
+      }
+    }
+  }
+
+  // If no pattern matches, try generic title extraction
+  const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
+  if (titleMatch && titleMatch[1]) {
+    const titleParts = titleMatch[1].split(/[\|\-–—@]/);
+    if (titleParts.length > 1) {
+      // Company name is often after the pipe or dash in titles
+      const potentialCompany = cleanCompanyName(titleParts[titleParts.length - 1]);
+      if (potentialCompany && !isJobBoardName(potentialCompany, url)) {
+        return potentialCompany;
+      }
+    }
   }
   
-  // Try to extract from schema.org Organization markup
-  const schemaOrgMatches = html.match(/"organization"[^>]*"name"[^>]*"([^"]+)"/i);
-  if (schemaOrgMatches && schemaOrgMatches[1]) {
-    return cleanCompanyName(schemaOrgMatches[1]);
-  }
-  
-  // Check for common job board patterns
-  const urlObj = new URL(url);
-  const domain = urlObj.hostname.replace('www.', '');
-  
-  // Handle specific job boards
-  if (domain.includes('linkedin')) {
-    // Extract from LinkedIn specific patterns
-    const companyMatch = html.match(/(?:"companyName"|"company"|"organizationName")(?:\s*[:=]\s*|\s*>\s*)["']([^"']+)["']/i);
-    return companyMatch ? cleanCompanyName(companyMatch[1]) : extractFromDomain(domain);
-  } else if (domain.includes('indeed')) {
-    // Extract from Indeed specific patterns
-    const companyMatch = html.match(/(?:data-company-name|class="companyName"|companyName)(?:\s*[:=]\s*|\s*>\s*)["']([^"']+)["']/i);
-    return companyMatch ? cleanCompanyName(companyMatch[1]) : extractFromDomain(domain);
-  } else if (domain.includes('glassdoor')) {
-    // Extract from Glassdoor specific patterns
-    const companyMatch = html.match(/(?:data-employer-name|employerName|"employer"[^>]*"name"[^>]*)(?:\s*[:=]\s*|\s*>\s*)["']([^"']+)["']/i);
-    return companyMatch ? cleanCompanyName(companyMatch[1]) : extractFromDomain(domain);
-  } else if (domain.includes('monster')) {
-    // Extract from Monster specific patterns
-    const companyMatch = html.match(/(?:class="company"|itemprop="hiringOrganization")(?:[^>]*?)>([^<]+)</i);
-    return companyMatch ? cleanCompanyName(companyMatch[1]) : extractFromDomain(domain);
-  } else if (domain.includes('ziprecruiter')) {
-    // Extract from ZipRecruiter specific patterns
-    const companyMatch = html.match(/(?:class="job_company"|data-company)(?:[^>]*?)>([^<]+)</i);
-    return companyMatch ? cleanCompanyName(companyMatch[1]) : extractFromDomain(domain);
-  }
-  
-  // Try more generic approaches - look for company or employer in text
-  const genericCompanyMatch = html.match(/(?:company|employer|organization)(?:\s*[:=]\s*|\s*>\s*)["']([^"']{2,30})["']/i);
-  if (genericCompanyMatch && genericCompanyMatch[1]) {
-    return cleanCompanyName(genericCompanyMatch[1]);
-  }
-  
-  // If all else fails, extract from domain
-  return extractFromDomain(domain);
+  // If still no match, extract from URL domain
+  return extractFromDomain(url);
 }
 
-// Helper to extract company name from domain
-function extractFromDomain(domain: string): string | null {
-  const domainParts = domain.split('.');
-  if (domainParts.length >= 2 && domainParts[0] !== 'www' && !['com', 'org', 'net', 'io', 'co'].includes(domainParts[0])) {
-    return domainParts[0].charAt(0).toUpperCase() + domainParts[0].slice(1);
+// Check if the extracted name is that of a job board rather than an employer
+function isJobBoardName(name: string, url: string): boolean {
+  const jobBoardNames = [
+    'linkedin', 'indeed', 'glassdoor', 'monster', 'ziprecruiter', 
+    'careerbuilder', 'dice', 'simplyhired', 'jobboard', 'jobs',
+    'facebook', 'twitter', 'instagram', 'tiktok', 'youtube',
+    'job description', 'position', 'job details', 'careers'
+  ];
+  
+  // Check if the name is a common job board name
+  const lowerName = name.toLowerCase();
+  if (jobBoardNames.some(board => lowerName.includes(board))) {
+    return true;
   }
+  
+  // Check if name is the same as domain (often happens with job boards)
+  const domain = new URL(url).hostname.replace('www.', '').split('.')[0].toLowerCase();
+  return lowerName.includes(domain) && jobBoardNames.some(board => domain.includes(board));
+}
+
+// Extract company from domain with improved logic
+function extractFromDomain(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    const domain = urlObj.hostname.replace('www.', '');
+    
+    // For LinkedIn job pages, try to extract from the path
+    if (domain.includes('linkedin.com')) {
+      const pathParts = urlObj.pathname.split('/');
+      // LinkedIn company pages often have the company name in the path
+      for (const part of pathParts) {
+        if (part && !['jobs', 'job', 'search', 'company', 'companies', 'in', 'at'].includes(part)) {
+          // Convert dashes to spaces and capitalize
+          const companyName = part.split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+          
+          if (companyName.length > 1) {
+            return companyName;
+          }
+        }
+      }
+    }
+    
+    // For other domains
+    const domainParts = domain.split('.');
+    if (domainParts.length >= 2) {
+      const mainDomain = domainParts[0];
+      // Avoid returning generic parts like "jobs", "careers", etc.
+      const genericTerms = ['jobs', 'careers', 'job', 'career', 'hire', 'apply', 'work', 'employment'];
+      if (!genericTerms.includes(mainDomain)) {
+        return mainDomain.charAt(0).toUpperCase() + mainDomain.slice(1);
+      }
+    }
+  } catch (e) {
+    console.error("Error extracting from domain:", e);
+  }
+  
   return null;
 }
 
-// Clean up company name
+// Clean up company name with improved logic
 function cleanCompanyName(name: string): string {
+  if (!name) return '';
+  
   return name.trim()
-    .replace(/^at\s+/i, '') // Remove leading "at" (common in job listings)
-    .replace(/^\s*-\s*/, '') // Remove leading dash
+    .replace(/^at\s+/i, '') // Remove leading "at"
+    .replace(/^\s*[-–—]\s*/, '') // Remove leading dash
     .replace(/\s*\|\s*.+$/i, '') // Remove pipe and anything after
-    .replace(/\s*-\s*.+$/i, '') // Remove dash and anything after (often taglines)
-    .replace(/™|®|©/g, '') // Remove trademark/copyright symbols
+    .replace(/\s*[-–—]\s*.+$/i, '') // Remove dash and anything after
+    .replace(/\s*[.]\s*$/, '') // Remove trailing period
+    .replace(/™|®|©/g, '') // Remove trademark symbols
+    .replace(/^jobs\s+at\s+/i, '') // Remove "Jobs at" prefix
+    .replace(/^careers\s+at\s+/i, '') // Remove "Careers at" prefix
+    .replace(/^(apply\s+to|join)\s+/i, '') // Remove "Apply to" prefix
+    .replace(/\s+jobs\s*$/i, '') // Remove "Jobs" suffix
+    .replace(/\s+careers\s*$/i, '') // Remove "Careers" suffix
+    .replace(/\s+LLC\s*$/i, '') // Remove LLC
+    .replace(/\s+Inc\s*$/i, '') // Remove Inc
+    .replace(/\s+Corp\.?\s*$/i, '') // Remove Corp/Corp.
+    .replace(/@\s*/, '') // Remove @ symbol
+    .replace(/^\d+\s+/, '') // Remove leading numbers
+    .replace(/\s{2,}/g, ' ') // Normalize spaces
     .trim();
 }
 
-// Function to extract job description from HTML - improved extraction
-function extractJobDescription(html: string): string | null {
-  // Remove script, style, and header elements
+// Enhanced function to extract job description with better pattern matching
+function extractJobDescription(html: string, url: string): string | null {
+  // Remove script, style, header, navigation and footer elements to clean up the HTML
   const cleanedHtml = html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
@@ -162,26 +236,66 @@ function extractJobDescription(html: string): string | null {
     .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, '')
     .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, '');
   
-  // Common job description container patterns - expanded with more patterns
+  // LinkedIn specific extraction patterns
+  if (url.includes('linkedin.com')) {
+    const linkedInPatterns = [
+      /<div[^>]*class="[^"]*show-more-less-html[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+      /<div[^>]*class="[^"]*description__text[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+      /<section[^>]*class="[^"]*description[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
+      /<div[^>]*class="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/i
+    ];
+    
+    for (const pattern of linkedInPatterns) {
+      const match = cleanedHtml.match(pattern);
+      if (match && match[1] && match[1].length > 100) {
+        return convertHtmlToText(match[1]);
+      }
+    }
+  }
+  
+  // Common job description container patterns - enhanced with more patterns
   const patterns = [
-    // Job description specific patterns
-    /<div[^>]*class="[^"]*(?:job-description|jobDescriptionText|description|job-details|details)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    // Job description specific patterns with various class names
+    /<div[^>]*class="[^"]*(?:job-description|jobDescriptionText|description|job-details|details|jobsearch-JobComponent-description)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     /<section[^>]*class="[^"]*(?:job-description|jobDescriptionText|description|job-details|details)[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
     /<div[^>]*id="[^"]*(?:job-description|jobDescriptionText|description|job-details|details)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     /<section[^>]*id="[^"]*(?:job-description|jobDescriptionText|description|job-details|details)[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
-    // LinkedIn specific patterns
-    /<div[^>]*class="[^"]*(?:show-more-less-html|description__text)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    
     // Indeed specific patterns
     /<div[^>]*id="[^"]*(?:jobDescriptionText)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    
     // Glassdoor specific patterns
-    /<div[^>]*class="[^"]*(?:jobDescriptionContent|desc)[^"]*"[^>]*>([\s\S]*?)<\/div>/i
+    /<div[^>]*class="[^"]*(?:jobDescriptionContent|desc)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    
+    // Structured data approach
+    /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i
   ];
   
   // Try each pattern until we find a match
   for (const pattern of patterns) {
     const match = cleanedHtml.match(pattern);
     if (match && match[1]) {
-      return convertHtmlToText(match[1]);
+      // Special handling for JSON-LD structured data
+      if (pattern.toString().includes('ld\\+json')) {
+        try {
+          const jsonData = JSON.parse(match[1]);
+          // Look for job description in schema.org JobPosting format
+          if (jsonData.description) {
+            return typeof jsonData.description === 'string' 
+              ? convertHtmlToText(jsonData.description)
+              : JSON.stringify(jsonData.description);
+          }
+        } catch (e) {
+          console.error('Error parsing JSON-LD data:', e);
+        }
+      } else {
+        // Regular HTML content extraction
+        const extractedText = convertHtmlToText(match[1]);
+        // Only return if we have substantial content
+        if (extractedText && extractedText.length > 100) {
+          return extractedText;
+        }
+      }
     }
   }
   
@@ -195,35 +309,47 @@ function extractJobDescription(html: string): string | null {
   for (const pattern of contentPatterns) {
     const match = cleanedHtml.match(pattern);
     if (match && match[1]) {
-      return convertHtmlToText(match[1]);
+      const text = convertHtmlToText(match[1]);
+      if (text && text.length > 200) {
+        return text;
+      }
     }
   }
   
-  // If still no match, take the longest paragraph that might be a job description
-  const paragraphs = cleanedHtml.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
-  if (paragraphs.length > 0) {
-    // Find the longest paragraph that contains job-related keywords
-    const jobKeywords = ['experience', 'skills', 'requirements', 'responsibilities', 'qualifications', 'job', 'position'];
-    
-    const candidateParagraphs = paragraphs
-      .map(p => {
-        const text = convertHtmlToText(p);
-        const keywordMatches = jobKeywords.filter(keyword => text.toLowerCase().includes(keyword)).length;
-        return { text, keywordMatches, length: text.length };
-      })
-      .filter(p => p.length > 100); // Only consider paragraphs with substantial content
-    
-    // Sort by keyword matches (primary) and length (secondary)
-    candidateParagraphs.sort((a, b) => {
-      if (a.keywordMatches !== b.keywordMatches) {
-        return b.keywordMatches - a.keywordMatches;
-      }
-      return b.length - a.length;
-    });
-    
-    if (candidateParagraphs.length > 0) {
-      return candidateParagraphs[0].text;
-    }
+  // Advanced approach: find the longest text block that has job-related keywords
+  const jobKeywords = ['experience', 'skills', 'requirements', 'responsibilities', 'qualifications', 
+    'job', 'position', 'role', 'background', 'education', 'knowledge', 'ability', 'competenc', 
+    'proficien', 'degree', 'salary', 'work', 'team', 'project', 'develop', 'manage'];
+  
+  // Get all significant text blocks
+  const textBlocks = cleanedHtml.match(/<p[^>]*>([\s\S]*?)<\/p>|<div[^>]*>([\s\S]*?)<\/div>|<section[^>]*>([\s\S]*?)<\/section>/gi) || [];
+  
+  // Process and score text blocks
+  const scoredBlocks = textBlocks
+    .map(block => {
+      const text = convertHtmlToText(block);
+      if (!text || text.length < 100) return null;
+      
+      // Count keyword matches
+      const keywordCount = jobKeywords.reduce((count, keyword) => {
+        const regex = new RegExp(keyword, 'gi');
+        const matches = text.match(regex);
+        return count + (matches ? matches.length : 0);
+      }, 0);
+      
+      return { text, score: keywordCount, length: text.length };
+    })
+    .filter(Boolean);
+  
+  // Sort by keyword score (primary) and length (secondary)
+  scoredBlocks.sort((a, b) => {
+    if (a.score !== b.score) return b.score - a.score;
+    return b.length - a.length;
+  });
+  
+  // Return the best match if it exists
+  if (scoredBlocks.length > 0 && scoredBlocks[0].score > 2) {
+    return scoredBlocks[0].text;
   }
   
   return null;
