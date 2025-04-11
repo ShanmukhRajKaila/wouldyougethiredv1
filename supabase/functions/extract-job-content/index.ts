@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -13,8 +12,6 @@ interface RequestData {
     followRedirects?: boolean;
     extractLinkedInCompanyName?: boolean;
     browserHeaders?: boolean;
-    advancedExtraction?: boolean;
-    contentPatternMatching?: boolean;
     debug?: boolean;
   };
 }
@@ -29,8 +26,6 @@ serve(async (req) => {
     const request = await req.json() as RequestData;
     const { url, options = {} } = request;
     const debug = options.debug || false;
-    const advancedExtraction = options.advancedExtraction || false;
-    const contentPatternMatching = options.contentPatternMatching || false;
 
     if (!url) {
       return new Response(
@@ -81,20 +76,25 @@ serve(async (req) => {
     
     if (debug) {
       console.log(`Received HTML content (length: ${html.length} characters)`);
-      console.log(`URL domain: ${new URL(url).hostname}`);
+      console.log(`First 500 characters of HTML: ${html.substring(0, 500)}...`);
     }
 
-    // General extraction approach
+    // More advanced extraction techniques
     const companyName = extractCompanyName(html, url);
     const jobTitle = extractJobTitle(html, url);
     
-    // NEW: Enhanced multi-stage job description extraction pipeline
-    const jobDescription = extractJobDescriptionMultiStage(html, url, {
-      debug,
-      advancedExtraction,
-      contentPatternMatching,
-      domain: new URL(url).hostname
-    });
+    // IMPROVED: Extract job description with specialized handling for MBA Exchange
+    let jobDescription = null;
+    
+    // Special handling for MBA Exchange website
+    if (url.includes('mba-exchange.com')) {
+      jobDescription = extractMBAExchangeJobDescription(html, debug);
+    } 
+    
+    // If not MBA Exchange or extraction failed, try generic methods
+    if (!jobDescription) {
+      jobDescription = extractJobDescription(html, url, debug);
+    }
 
     // For debugging: return more info about the extraction process
     let debugInfo = {};
@@ -137,33 +137,10 @@ function detectContentPatterns(html: string) {
     divCount: (html.match(/<div/g) || []).length,
     mainContentGuess: html.includes('main-content') ? 'main-content' : 
                       html.includes('content-main') ? 'content-main' : 
-                      html.includes('job-content') ? 'job-content' : 'unknown',
-    potentialContentAreas: findPotentialContentAreas(html)
+                      html.includes('job-content') ? 'job-content' : 'unknown'
   };
   
   return patterns;
-}
-
-// NEW: Find potential content areas for better content extraction
-function findPotentialContentAreas(html: string) {
-  const potentialAreas = [];
-  
-  // Look for common content container patterns
-  const patterns = [
-    { name: 'main-content', regex: /<(?:div|section|main)[^>]*(?:id|class)="[^"]*(?:main-content|mainContent|content-main|contentMain)[^"]*"[^>]*>/i },
-    { name: 'job-content', regex: /<(?:div|section|article)[^>]*(?:id|class)="[^"]*(?:job-content|jobContent|job-details|jobDetails)[^"]*"[^>]*>/i },
-    { name: 'description', regex: /<(?:div|section)[^>]*(?:id|class)="[^"]*(?:description|job-description|jobDescription)[^"]*"[^>]*>/i },
-    { name: 'main-tag', regex: /<main[^>]*>/i },
-    { name: 'article-tag', regex: /<article[^>]*>/i }
-  ];
-  
-  for (const pattern of patterns) {
-    if (pattern.regex.test(html)) {
-      potentialAreas.push(pattern.name);
-    }
-  }
-  
-  return potentialAreas;
 }
 
 // Enhanced job title extraction
@@ -174,8 +151,7 @@ function extractJobTitle(html: string, url: string): string | null {
     const title = titleMatch[1].trim();
     // Check if title has typical job indicators
     const jobTerms = ['software', 'developer', 'engineer', 'manager', 'director', 
-                     'specialist', 'analyst', 'consultant', 'coordinator', 'assistant',
-                     'administrator', 'lead', 'head', 'chief', 'officer', 'designer'];
+                     'specialist', 'analyst', 'consultant', 'coordinator'];
                      
     // Check if title contains job terms
     if (jobTerms.some(term => title.toLowerCase().includes(term))) {
@@ -351,205 +327,108 @@ function cleanCompanyName(name: string): string {
     .trim();
 }
 
-// NEW: Multi-stage job description extraction with fallbacks
-function extractJobDescriptionMultiStage(html: string, url: string, options: {
-  debug?: boolean,
-  advancedExtraction?: boolean,
-  contentPatternMatching?: boolean,
-  domain?: string
-}): string | null {
-  const { debug = false, advancedExtraction = false, domain = '' } = options;
+// ADDED: Specialized extraction function for MBA Exchange website
+function extractMBAExchangeJobDescription(html: string, debug = false): string | null {
+  if (debug) {
+    console.log("Using specialized MBA Exchange extraction method");
+  }
+  
+  // Look for tables with job content
+  const tablePattern = /<table[^>]*class="[^"]*(?:jd|job-description)[^"]*"[^>]*>([\s\S]*?)<\/table>/i;
+  let match = html.match(tablePattern);
+  
+  if (match && match[1]) {
+    return convertHtmlToText(match[1]);
+  }
+  
+  // Try to find job description in specific MBA Exchange structure
+  const jobDetailPattern = /<div[^>]*class="[^"]*jobs?[^"]*"[^>]*>([\s\S]*?)<\/div>/i;
+  match = html.match(jobDetailPattern);
+  
+  if (match && match[1]) {
+    return convertHtmlToText(match[1]);
+  }
+  
+  // Look for TD with content that likely contains job description
+  const tdContentPattern = /<td[^>]*>([\s\S]{200,}?)<\/td>/gi;
+  const tdMatches = [...html.matchAll(tdContentPattern)];
+  
+  for (const tdMatch of tdMatches) {
+    const content = tdMatch[1];
+    if (content && 
+        content.length > 300 && 
+        (content.includes('responsibilities') || 
+         content.includes('requirements') || 
+         content.includes('qualifications') || 
+         content.includes('experience'))) {
+      return convertHtmlToText(content);
+    }
+  }
+  
+  // Try to extract from any table with substantial content
+  const anyTable = /<table[^>]*>([\s\S]*?)<\/table>/gi;
+  const tableMatches = [...html.matchAll(anyTable)];
   
   if (debug) {
-    console.log("Using multi-stage extraction pipeline for domain:", domain);
-  }
-
-  let jobDescription = null;
-  
-  // Stage 1: Try structured data extraction (JSON-LD)
-  if (!jobDescription) {
-    jobDescription = extractFromStructuredData(html, debug);
-    if (jobDescription && debug) console.log("Extracted from structured data, length:", jobDescription.length);
+    console.log(`Found ${tableMatches.length} tables on the page`);
   }
   
-  // Stage 2: Try common class/id patterns based on domain-specific customizations
-  if (!jobDescription) {
-    jobDescription = extractByDomainRules(html, domain, debug);
-    if (jobDescription && debug) console.log("Extracted using domain rules, length:", jobDescription.length);
-  }
-  
-  // Stage 3: Try generic class/id patterns
-  if (!jobDescription) {
-    jobDescription = extractFromCommonPatterns(html, debug);
-    if (jobDescription && debug) console.log("Extracted from common patterns, length:", jobDescription.length);
-  }
-  
-  // Stage 4: Try main content areas
-  if (!jobDescription) {
-    jobDescription = extractFromMainContent(html, debug);
-    if (jobDescription && debug) console.log("Extracted from main content, length:", jobDescription.length);
-  }
-  
-  // Stage 5: Try to find the largest text block with job keywords
-  if (!jobDescription && advancedExtraction) {
-    jobDescription = extractFromLargestContentBlock(html, debug);
-    if (jobDescription && debug) console.log("Extracted from largest content block, length:", jobDescription.length);
-  }
-  
-  // Final cleanup if we have a job description
-  if (jobDescription) {
-    jobDescription = cleanJobDescription(jobDescription);
-  }
-  
-  return jobDescription;
-}
-
-// NEW: Extract job description from structured data (JSON-LD)
-function extractFromStructuredData(html: string, debug = false): string | null {
-  if (debug) {
-    console.log("Attempting to extract from structured data...");
-  }
-  
-  // Look for JSON-LD data
-  const jsonLdPattern = /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
-  const jsonMatches = [...html.matchAll(jsonLdPattern)];
-  
-  for (const jsonMatch of jsonMatches) {
-    if (jsonMatch[1]) {
-      try {
-        const data = JSON.parse(jsonMatch[1]);
-        
-        // Check for JobPosting schema
-        if (data["@type"] === "JobPosting" && data.description) {
-          return typeof data.description === 'string' ? 
-            convertHtmlToText(data.description) : 
-            JSON.stringify(data.description);
-        }
-        
-        // Check for nested data
-        if (data.jobPosting && data.jobPosting.description) {
-          return typeof data.jobPosting.description === 'string' ? 
-            convertHtmlToText(data.jobPosting.description) : 
-            JSON.stringify(data.jobPosting.description);
-        }
-        
-      } catch (e) {
-        if (debug) {
-          console.error("Error parsing JSON-LD:", e);
-        }
+  let bestTableMatch = { content: "", length: 0 };
+  for (const tableMatch of tableMatches) {
+    const tableContent = tableMatch[1];
+    if (tableContent.length > 500 &&
+        (tableContent.includes('experience') || 
+         tableContent.includes('requirements') || 
+         tableContent.includes('responsibilities') || 
+         tableContent.includes('qualifications'))) {
+      
+      if (tableContent.length > bestTableMatch.length) {
+        bestTableMatch = {
+          content: convertHtmlToText(tableContent),
+          length: tableContent.length
+        };
       }
+    }
+  }
+  
+  if (bestTableMatch.content) {
+    return bestTableMatch.content;
+  }
+  
+  // Last resort: try to find any large block of text
+  const textBlockPattern = /<div[^>]*>([\s\S]{500,}?)<\/div>/gi;
+  const blockMatches = [...html.matchAll(textBlockPattern)];
+  
+  for (const blockMatch of blockMatches) {
+    const content = blockMatch[1];
+    if (content && content.length > 500 && !content.includes('<table')) {
+      return convertHtmlToText(content);
     }
   }
   
   return null;
 }
 
-// NEW: Extract job description based on domain-specific rules
-function extractByDomainRules(html: string, domain: string, debug = false): string | null {
+// Enhanced function to extract job description with better pattern matching
+function extractJobDescription(html: string, url: string, debug = false): string | null {
   if (debug) {
-    console.log("Trying domain-specific extraction rules for:", domain);
-  }
-  
-  // LinkedIn-specific extraction
-  if (domain.includes('linkedin.com')) {
-    const linkedInPatterns = [
-      /<div[^>]*class="[^"]*show-more-less-html[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-      /<div[^>]*class="[^"]*description__text[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-      /<section[^>]*class="[^"]*description[^"]*"[^>]*>([\s\S]*?)<\/section>/i
+    console.log(`URL domain: ${new URL(url).hostname}`);
+    
+    const jobDescPatterns = [
+      'job-description',
+      'jobDescription', 
+      'description__text',
+      'jobDescriptionText',
+      'job-details'
     ];
     
-    for (const pattern of linkedInPatterns) {
-      const match = html.match(pattern);
-      if (match && match[1] && match[1].length > 100) {
-        return convertHtmlToText(match[1]);
-      }
+    for (const pattern of jobDescPatterns) {
+      console.log(`Pattern "${pattern}" exists: ${html.includes(pattern)}`);
     }
   }
-  
-  // Indeed-specific extraction
-  if (domain.includes('indeed.com')) {
-    const indeedPatterns = [
-      /<div[^>]*id="jobDescriptionText"[^>]*>([\s\S]*?)<\/div>/i,
-      /<div[^>]*class="[^"]*jobsearch-JobComponent-description[^"]*"[^>]*>([\s\S]*?)<\/div>/i
-    ];
-    
-    for (const pattern of indeedPatterns) {
-      const match = html.match(pattern);
-      if (match && match[1] && match[1].length > 100) {
-        return convertHtmlToText(match[1]);
-      }
-    }
-  }
-  
-  // MBA Exchange specific extraction
-  if (domain.includes('mba-exchange.com')) {
-    // Look for tables with job content
-    const tablePattern = /<table[^>]*class="[^"]*(?:jd|job-description)[^"]*"[^>]*>([\s\S]*?)<\/table>/i;
-    let match = html.match(tablePattern);
-    
-    if (match && match[1]) {
-      return convertHtmlToText(match[1]);
-    }
-    
-    // Try to find job description in specific MBA Exchange structure
-    const jobDetailPattern = /<div[^>]*class="[^"]*jobs?[^"]*"[^>]*>([\s\S]*?)<\/div>/i;
-    match = html.match(jobDetailPattern);
-    
-    if (match && match[1]) {
-      return convertHtmlToText(match[1]);
-    }
-    
-    // Look for any substantial table content
-    const anyTable = /<table[^>]*>([\s\S]{300,}?)<\/table>/gi;
-    const tableMatches = [...html.matchAll(anyTable)];
-    
-    for (const tableMatch of tableMatches) {
-      const content = tableMatch[1];
-      if (content && content.length > 300) {
-        return convertHtmlToText(content);
-      }
-    }
-  }
-  
-  // MyCareersFuture specific extraction
-  if (domain.includes('mycareersfuture.gov.sg')) {
-    const myCareersPatterns = [
-      /<div[^>]*class="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-      /<section[^>]*id="job-description"[^>]*>([\s\S]*?)<\/section>/i,
-      /<div[^>]*data-testid="job-description"[^>]*>([\s\S]*?)<\/div>/i
-    ];
-    
-    for (const pattern of myCareersPatterns) {
-      const match = html.match(pattern);
-      if (match && match[1] && match[1].length > 100) {
-        return convertHtmlToText(match[1]);
-      }
-    }
-    
-    // Try to find job details within any section
-    const sectionContents = html.match(/<section[^>]*>([\s\S]{300,}?)<\/section>/gi);
-    if (sectionContents) {
-      for (const section of sectionContents) {
-        // Check if section contains job-related content
-        if (section.toLowerCase().includes('job description') || 
-            section.toLowerCase().includes('responsibilities') || 
-            section.toLowerCase().includes('requirements')) {
-          return convertHtmlToText(section);
-        }
-      }
-    }
-  }
-  
-  return null;
-}
 
-// NEW: Extract from common patterns across job sites
-function extractFromCommonPatterns(html: string, debug = false): string | null {
-  if (debug) {
-    console.log("Trying common content patterns extraction...");
-  }
+  const domain = new URL(url).hostname.toLowerCase();
   
-  // Clean HTML to focus on content
   const cleanedHtml = html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
@@ -557,229 +436,105 @@ function extractFromCommonPatterns(html: string, debug = false): string | null {
     .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, '')
     .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, '');
   
+  if (url.includes('linkedin.com')) {
+    const linkedInPatterns = [
+      /<div[^>]*class="[^"]*show-more-less-html[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+      /<div[^>]*class="[^"]*description__text[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+      /<section[^>]*class="[^"]*description[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
+      /<div[^>]*class="[^"]*job-description[^"]*"[^>]*>([\s\S]*?)<\/div>/i
+    ];
+    
+    for (const pattern of linkedInPatterns) {
+      const match = cleanedHtml.match(pattern);
+      if (match && match[1] && match[1].length > 100) {
+        return convertHtmlToText(match[1]);
+      }
+    }
+  }
+  
   const patterns = [
-    // Common job description containers by class
-    /<div[^>]*class="[^"]*(?:job-description|jobDescription|description|job-details|details)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<section[^>]*class="[^"]*(?:job-description|description|job-details|details)[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
+    /<div[^>]*class="[^"]*(?:job-description|jobDescriptionText|description|job-details|details|jobsearch-JobComponent-description)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<section[^>]*class="[^"]*(?:job-description|jobDescriptionText|description|job-details|details)[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
+    /<div[^>]*id="[^"]*(?:job-description|jobDescriptionText|description|job-details|details)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<section[^>]*id="[^"]*(?:job-description|jobDescriptionText|description|job-details|details)[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
     
-    // Common job description containers by ID
-    /<div[^>]*id="[^"]*(?:job-description|jobDescription|description|job-details|details)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<section[^>]*id="[^"]*(?:job-description|description|job-details|details)[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
+    /<div[^>]*id="[^"]*(?:jobDescriptionText)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     
-    // Additional patterns for job descriptions
-    /<div[^>]*class="[^"]*(?:jobDescriptionContent|desc|posting-requirements)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*(?:jobDescriptionContent|desc)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     
-    // Article-based job descriptions
-    /<article[^>]*class="[^"]*(?:job|job-description)[^"]*"[^>]*>([\s\S]*?)<\/article>/i
+    /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i
   ];
   
   for (const pattern of patterns) {
     const match = cleanedHtml.match(pattern);
     if (match && match[1]) {
-      const content = match[1].trim();
-      if (content.length > 200 && isLikelyJobDescription(content)) {
-        return convertHtmlToText(content);
+      if (pattern.toString().includes('ld\\+json')) {
+        try {
+          const jsonData = JSON.parse(match[1]);
+          if (jsonData.description) {
+            return typeof jsonData.description === 'string' 
+              ? convertHtmlToText(jsonData.description)
+              : JSON.stringify(jsonData.description);
+          }
+        } catch (e) {
+          if (debug) console.error('Error parsing JSON-LD data:', e);
+        }
+      } else {
+        const extractedText = convertHtmlToText(match[1]);
+        if (extractedText && extractedText.length > 100) {
+          return extractedText;
+        }
       }
     }
   }
   
-  return null;
-}
-
-// NEW: Check if content looks like a job description
-function isLikelyJobDescription(content: string): boolean {
-  // Keywords commonly found in job descriptions
-  const jobKeywords = [
-    'responsibilities', 
-    'requirements', 
-    'qualifications', 
-    'skills', 
-    'experience', 
-    'role', 
-    'position', 
-    'about the job',
-    'job summary',
-    'we are looking for',
-    'what you will do',
-    'what you\'ll do', // Fixed the syntax error here
-    'who we are looking for',
-    'desired skills'
-  ];
-  
-  const lowerContent = content.toLowerCase();
-  
-  // Check for the presence of job keywords
-  const keywordPresence = jobKeywords.some(keyword => lowerContent.includes(keyword));
-  
-  // Check for bullet points which are common in job descriptions
-  const hasBulletPoints = lowerContent.includes('<li>') || 
-                          lowerContent.includes('•') || 
-                          lowerContent.includes('- ');
-  
-  // Check for requirement-like structures (numbers or bullets followed by text)
-  const hasRequirementStructure = /(\d+\.|\•|\-)\s+[A-Z][a-z]/.test(content);
-  
-  return keywordPresence && (hasBulletPoints || hasRequirementStructure || content.length > 500);
-}
-
-// NEW: Extract from main content areas
-function extractFromMainContent(html: string, debug = false): string | null {
-  if (debug) {
-    console.log("Attempting to extract from main content areas...");
-  }
-  
-  const mainContentPatterns = [
-    /<main[^>]*>([\s\S]*?)<\/main>/i,
+  const contentPatterns = [
     /<article[^>]*>([\s\S]*?)<\/article>/i,
-    /<div[^>]*class="[^"]*(?:main-content|content-main|main|content)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*id="[^"]*(?:main-content|content-main|main|content)[^"]*"[^>]*>([\s\S]*?)<\/div>/i
+    /<main[^>]*>([\s\S]*?)<\/main>/i,
+    /<div[^>]*class="[^"]*(?:content|main|body|job)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
   ];
   
-  for (const pattern of mainContentPatterns) {
-    const match = html.match(pattern);
+  for (const pattern of contentPatterns) {
+    const match = cleanedHtml.match(pattern);
     if (match && match[1]) {
-      const content = match[1].trim();
-      
-      // Process the main content to find job description within it
-      if (content.length > 300) {
-        // Try to find job description section within the main content
-        const jobSectionPattern = /<(?:div|section)[^>]*>(?:[\s\S]*?)(?:job description|responsibilities|requirements|qualifications)(?:[\s\S]*?)<\/(?:div|section)>/i;
-        const jobSection = content.match(jobSectionPattern);
-        
-        if (jobSection && jobSection[0]) {
-          return convertHtmlToText(jobSection[0]);
-        }
-        
-        // If we can't find an explicit section, check if the main content itself looks like a job description
-        if (isLikelyJobDescription(content)) {
-          return convertHtmlToText(content);
-        }
+      const text = convertHtmlToText(match[1]);
+      if (text && text.length > 200) {
+        return text;
       }
     }
   }
   
-  return null;
-}
-
-// NEW: Extract from the largest content block that contains job-related keywords
-function extractFromLargestContentBlock(html: string, debug = false): string | null {
-  if (debug) {
-    console.log("Attempting to extract from largest relevant content block...");
-  }
+  const divMatches = [...cleanedHtml.matchAll(/<div[^>]*>([\s\S]*?)<\/div>/gi)];
+  let bestMatch = { text: "", score: 0, length: 0 };
   
-  // First clean the HTML to focus on content
-  const cleanedHtml = html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-    .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, '')
-    .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, '')
-    .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, '');
-  
-  // Find all substantial content blocks
-  const contentBlocks = [
-    ...findContentBlocks(cleanedHtml, 'div', 300),
-    ...findContentBlocks(cleanedHtml, 'section', 300),
-    ...findContentBlocks(cleanedHtml, 'article', 300)
-  ];
-  
-  if (contentBlocks.length === 0) {
-    return null;
-  }
-  
-  // Score each content block based on length and job-related keywords
-  const scoredBlocks = contentBlocks.map(block => {
-    const text = convertHtmlToText(block);
-    const jobKeywordCount = countJobKeywords(text);
-    const score = jobKeywordCount * 10 + Math.min(text.length / 100, 50);
+  for (const match of divMatches) {
+    if (match[1].length < 200) continue;
     
-    return {
-      content: block,
-      text,
-      score,
-      length: text.length,
-      keywordCount: jobKeywordCount
-    };
-  });
-  
-  // Sort by score (highest first)
-  scoredBlocks.sort((a, b) => b.score - a.score);
-  
-  if (debug) {
-    console.log(`Found ${scoredBlocks.length} content blocks`);
-    console.log(`Top block score: ${scoredBlocks[0]?.score}, length: ${scoredBlocks[0]?.length}, keywords: ${scoredBlocks[0]?.keywordCount}`);
-  }
-  
-  // Return the highest-scoring block that meets minimum criteria
-  const bestBlock = scoredBlocks.find(block => block.score > 20 && block.keywordCount >= 2);
-  
-  if (bestBlock) {
-    return bestBlock.text;
-  }
-  
-  return null;
-}
-
-// Helper function to find content blocks of a specified minimum length
-function findContentBlocks(html: string, tag: string, minLength: number): string[] {
-  const pattern = new RegExp(`<${tag}[^>]*>(.*?)<\/${tag}>`, 'gi');
-  const blocks: string[] = [];
-  
-  let match;
-  while ((match = pattern.exec(html)) !== null) {
-    if (match[1] && match[1].length > minLength) {
-      blocks.push(match[1]);
+    const contentText = convertHtmlToText(match[1]);
+    if (contentText.length > 200) {
+      const jobTermCount = (contentText.match(/experience|skills|requirements|responsibilities|qualifications|job|position|role/gi) || []).length;
+      
+      const score = jobTermCount * 10 + Math.min(contentText.length / 100, 50);
+      
+      if (score > bestMatch.score) {
+        bestMatch = {
+          text: contentText,
+          score: score,
+          length: contentText.length
+        };
+      }
     }
   }
   
-  return blocks;
-}
-
-// Helper function to count job-related keywords in text
-function countJobKeywords(text: string): number {
-  const keywords = [
-    'responsibilities',
-    'requirements',
-    'qualifications',
-    'experience',
-    'skills',
-    'job description',
-    'about the role',
-    'what you\'ll do', // Fixed the syntax error here
-    'what you will do',
-    'required',
-    'preferred',
-    'position',
-    'opportunity',
-    'application',
-    'apply',
-    'candidates',
-    'team',
-    'company',
-    'benefits'
-  ];
+  if (bestMatch.text && bestMatch.score > 30) {
+    return bestMatch.text;
+  }
   
-  const lowerText = text.toLowerCase();
-  return keywords.reduce((count, keyword) => {
-    return count + (lowerText.includes(keyword) ? 1 : 0);
-  }, 0);
-}
-
-// Clean and format the job description
-function cleanJobDescription(html: string): string {
-  // First convert HTML to text
-  let text = convertHtmlToText(html);
+  if (debug) {
+    console.log("Failed to extract job description using standard patterns");
+  }
   
-  // Trim unnecessary whitespace
-  text = text.trim();
-  
-  // Fix bullet points
-  text = text.replace(/•\s*/g, '• ');
-  
-  // Fix multiple consecutive line breaks
-  text = text.replace(/\n{3,}/g, '\n\n');
-  
-  return text;
+  return null;
 }
 
 // Convert HTML to plain text with better formatting
