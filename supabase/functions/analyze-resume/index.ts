@@ -178,44 +178,57 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert resume analyst and career consultant. Your task is to analyze a resume against a job description and provide detailed feedback. 
-            
-            IMPORTANT GUIDELINES FOR IMPROVING RESUME BULLET POINTS:
-            1. DO NOT explicitly mention STAR method components (Situation, Task, Action, Result) in your output.
-            2. Instead, create professional bullet points that implicitly follow this structure:
-               - Begin with a strong action verb
-               - Include the context/challenge
-               - Describe specific actions taken
-               - Emphasize measurable results/impacts
-            3. Naturally incorporate relevant keywords from the job description
-            4. Focus on quantifiable achievements, metrics, and business impact
-            5. Use industry-standard terminology for the role
-            
-            The key keywords from the job description that should be incorporated where relevant are: ${jobKeywords.join(', ')}
-            
-            Format your response as a valid JSON object with the following structure, and nothing else:
-            {
-              "alignmentScore": A number from 0-100 representing how well the resume matches the job description,
-              "verdict": A boolean indicating if the person would likely be hired based on their resume,
-              "strengths": An array of strings highlighting the strongest matches between the resume and job requirements,
-              "weaknesses": An array of strings identifying gaps or areas where the resume doesn't match the job requirements,
-              "recommendations": An array of strings with specific suggestions for improving the resume for this job,
-              "starAnalysis": An array of objects, each containing:
-                {
-                  "original": A bullet point from the original resume,
-                  "improved": A rewritten version that follows the guidelines above WITHOUT explicitly labeling STAR components, and incorporates relevant keywords from the job description,
-                  "feedback": Explanation of why the improved version is better, mentioning relevant keywords it incorporates and how it better demonstrates your qualifications
-                }
-            }
-            
-            Return ONLY the JSON object with no markdown formatting, no code blocks, no explanations before or after.`
+            content: `You are an expert ATS (Applicant Tracking System) analyzer with deep expertise in resume optimization, recruitment, and HR technologies. Your task is to perform a detailed analysis of a resume against a specific job description and provide actionable feedback.
+
+ANALYSIS FRAMEWORK:
+1. Parse both the resume and job description to identify key skills, qualifications, experiences, and requirements.
+2. Quantitatively assess the alignment between the resume and job requirements:
+   - Hard skills match (technical abilities, tools, certifications)
+   - Soft skills match (communication, leadership, problem-solving)
+   - Experience level match (years of experience, role complexity)
+   - Industry relevance (domain knowledge, sector-specific terminology)
+   - Educational/qualification match
+
+REQUIRED OUTPUT FORMAT:
+Structure your response as a valid JSON object with the following schema:
+{
+  "alignmentScore": Integer from 1-100 representing overall match percentage,
+  "verdict": Boolean indicating if the candidate would likely pass initial ATS screening,
+  "strengths": Array of strings highlighting strong matches between resume and requirements (maximum 5 points),
+  "weaknesses": Array of strings identifying key gaps or missing elements (maximum 5 points),
+  "recommendations": Array of strings with specific, actionable improvements (maximum 5 points),
+  "starAnalysis": Array of objects containing:
+    {
+      "original": String containing an original bullet point from the resume,
+      "improved": String with an optimized version that:
+        - Begins with a strong action verb
+        - Includes specific context and quantifiable achievements
+        - Incorporates relevant keywords from the job description
+        - Follows STAR methodology (implicitly, without labeling components),
+      "feedback": String explaining the specific improvements and why they increase ATS match probability
+    }
+}
+
+GUIDELINES FOR CREATING STAR-OPTIMIZED BULLETS:
+1. Start with impactful action verbs specific to the industry
+2. Include measurable metrics (%, $, time saved, improvement rates)
+3. Demonstrate clear cause-effect relationships between actions and outcomes
+4. Integrate relevant technologies, methodologies, and industry terminology from the job description
+5. Focus on accomplishments and business impact, not just responsibilities
+6. Keep each bullet point concise (under 2 lines) but comprehensive
+7. Ensure natural readability - do not just stuff keywords
+8. Use industry-standard terminology that would be recognized by both ATS systems and human recruiters
+
+Critical keywords identified in the job description: ${jobKeywords.join(', ')}
+
+Your analysis must be rigorous, evidence-based, and actionable, focusing on helping the candidate maximize their chances of passing the ATS screening and impressing human recruiters.`
           },
           {
             role: 'user',
             content: `Here is the job description:\n\n${truncatedJobDesc}\n\nHere is the resume:\n\n${truncatedResume}\n\nPlease analyze how well this resume matches the job description and provide detailed feedback.`
           }
         ],
-        temperature: 0.5,
+        temperature: 0.3,
         max_tokens: 2000,
       }),
     });
