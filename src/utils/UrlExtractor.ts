@@ -13,8 +13,8 @@ export class UrlExtractor {
     try {
       console.log('Extracting content from URL:', url);
       
-      // First, attempt to extract company name from URL for fallback
-      const urlCompanyName = this.extractCompanyFromUrl(url);
+      // First check if this is a LinkedIn URL to apply special extraction
+      const isLinkedIn = url.includes('linkedin.com');
       
       // Use supabase client to call our edge function with additional headers
       const { data, error } = await supabase.functions.invoke('extract-job-content', {
@@ -23,7 +23,7 @@ export class UrlExtractor {
           options: {
             // Pass additional options for extraction
             followRedirects: true,
-            extractLinkedInCompanyName: true,
+            extractLinkedInCompanyName: isLinkedIn,
             // Add browser-like headers to avoid being blocked
             browserHeaders: true
           }
@@ -38,12 +38,22 @@ export class UrlExtractor {
       // Log the extraction results for debugging
       console.log('Extraction results:', data);
       
-      // Use fallback company name from URL if none was extracted
-      const companyName = data.companyName || urlCompanyName || null;
+      let companyName = data.companyName;
+      
+      // If the extracted company name is "View" (which is likely incorrect from LinkedIn),
+      // or if no company name was found, try our URL-based extraction as fallback
+      if (!companyName || companyName === "View") {
+        companyName = this.extractCompanyFromUrl(url);
+      }
+      
+      // For LinkedIn, do additional parsing of the job description to find company name
+      if (isLinkedIn && data.jobDescription && (!companyName || companyName === "View")) {
+        companyName = this.extractCompanyFromJobDescription(data.jobDescription);
+      }
       
       // Return the extracted data, even if partial
       return {
-        companyName: companyName,
+        companyName: companyName || null,
         jobDescription: data.jobDescription || null,
         error: (!companyName && !data.jobDescription) ? 
                'Could not extract complete information from the provided URL' : 
@@ -57,6 +67,35 @@ export class UrlExtractor {
         error: error instanceof Error ? error.message : 'Failed to extract content from the provided URL'
       };
     }
+  }
+  
+  // Extract company name from job description for cases when it's mentioned there
+  private static extractCompanyFromJobDescription(jobDescription: string): string | null {
+    if (!jobDescription) return null;
+    
+    // Common patterns for company introductions in job descriptions
+    const patterns = [
+      /About ([\w\s&\-,.]+?)(?:\.|is|\n|seeking)/i,    // "About Company Name." or "About Company Name is"
+      /([\w\s&\-,.]+?) is (?:a|the|an|looking|seeking)/i,   // "Company Name is a..."
+      /At ([\w\s&\-,.]+?),/i,                         // "At Company Name,"
+      /Join (?:the )?([\w\s&\-,.]+?) team/i,          // "Join the Company Name team"
+      /working (?:at|with) ([\w\s&\-,.]+?)[,\.\n]/i,  // "working at Company Name."
+      /([\w\s&\-,.]+?) (?:was founded|is hiring)/i    // "Company Name was founded" or "is hiring"
+    ];
+    
+    for (const pattern of patterns) {
+      const matches = jobDescription.match(pattern);
+      if (matches && matches[1]) {
+        const candidate = matches[1].trim();
+        // Validate the extracted company name (min 2 chars, max 50 chars, not generic terms)
+        if (candidate.length > 1 && candidate.length < 50 && 
+            !['the company', 'our company', 'this role', 'this position'].includes(candidate.toLowerCase())) {
+          return candidate;
+        }
+      }
+    }
+    
+    return null;
   }
   
   // Helper method to extract company name from URL as a fallback
@@ -73,14 +112,20 @@ export class UrlExtractor {
           return this.formatCompanyName(companyPath);
         }
         
-        // For job postings, try to extract from the path
+        // For job postings, find "at Company" in the URL
         if (url.includes('/jobs/view/')) {
-          // Sometimes company name is in the URL or query parameters
-          const pathParts = urlObj.pathname.split('/');
-          for (let i = 0; i < pathParts.length; i++) {
-            if (pathParts[i] === 'at' && i + 1 < pathParts.length) {
-              return this.formatCompanyName(pathParts[i + 1]);
-            }
+          // Check if there's a company name in the URL path
+          const atCompanyMatch = urlObj.pathname.match(/at-([\w-]+)/i);
+          if (atCompanyMatch && atCompanyMatch[1]) {
+            return this.formatCompanyName(atCompanyMatch[1]);
+          }
+          
+          // Check for company in query parameters
+          const params = new URLSearchParams(urlObj.search);
+          const referer = params.get('referer');
+          if (referer && referer.includes('at=')) {
+            const company = referer.split('at=')[1].split('&')[0];
+            return this.formatCompanyName(company);
           }
         }
       } 

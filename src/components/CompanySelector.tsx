@@ -34,6 +34,12 @@ const CompanySelector = () => {
     try {
       const extractionResult = await UrlExtractor.extractFromUrl(jobUrl);
       
+      // Show detailed extraction status for debugging purposes
+      console.log('Extraction completed:', {
+        companyName: extractionResult.companyName,
+        jobDescriptionLength: extractionResult.jobDescription?.length || 0
+      });
+      
       // Show extraction status
       if (extractionResult.error) {
         toast.error(extractionResult.error);
@@ -60,8 +66,11 @@ const CompanySelector = () => {
         toast.info('Only company name was extracted. Please review and add job description manually if needed.');
       } else if (!extractionResult.companyName && extractionResult.jobDescription) {
         toast.info('Only job description was extracted. Please enter company name manually.');
+        // Switch to manual tab if only job description was extracted
+        setActiveTab('manual');
       } else if (!extractionResult.companyName && !extractionResult.jobDescription) {
         toast.warning('Could not extract information from the URL. Please enter details manually.');
+        setActiveTab('manual');
       }
     } catch (error) {
       console.error('Error extracting content:', error);
