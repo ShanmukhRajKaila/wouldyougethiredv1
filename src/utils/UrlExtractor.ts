@@ -149,4 +149,52 @@ export class UrlExtractor {
       
     return formatted;
   }
+  
+  // New utility function to extract bullet points from resume text
+  static extractBulletPoints(resumeText: string): string[] {
+    if (!resumeText) return [];
+    
+    const bullets: string[] = [];
+    
+    // Pattern 1: Look for bullet points after line breaks
+    const pattern1 = /[\n\r][\s]*[•\-\*\[\]\>\+◦◆◇‣⁃⁌⁍][\s]+(.*?)(?=[\n\r]|$)/g;
+    let match;
+    while ((match = pattern1.exec(resumeText)) !== null) {
+      if (match[1] && match[1].trim().length > 10) {
+        bullets.push(match[1].trim());
+      }
+    }
+    
+    // Pattern 2: Look for sequences of text that appear to be bullet points based on structure
+    if (bullets.length < 3) {
+      const lines = resumeText.split(/[\n\r]+/);
+      let experienceSection = false;
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        // Detect experience section headers
+        if (/^(?:experience|work experience|employment|professional experience)/i.test(line)) {
+          experienceSection = true;
+          continue;
+        }
+        
+        // In experience sections, look for bullet-like items (short phrases with action verbs)
+        if (experienceSection && 
+            line.length > 20 && 
+            line.length < 500 && 
+            /^(?:Led|Developed|Created|Managed|Built|Designed|Implemented|Increased|Reduced|Achieved|Improved|Analyzed)/i.test(line)) {
+          bullets.push(line);
+        }
+        
+        // If we found a new section header, exit experience section
+        if (experienceSection && /^(?:education|skills|projects|publications|certifications|languages)/i.test(line)) {
+          experienceSection = false;
+        }
+      }
+    }
+    
+    // Deduplicate bullets
+    return [...new Set(bullets)];
+  }
 }

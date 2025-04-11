@@ -82,7 +82,19 @@ serve(async (req) => {
     // More advanced extraction techniques
     const companyName = extractCompanyName(html, url);
     const jobTitle = extractJobTitle(html, url);
-    const jobDescription = extractJobDescription(html, url, debug);
+    
+    // IMPROVED: Extract job description with specialized handling for MBA Exchange
+    let jobDescription = null;
+    
+    // Special handling for MBA Exchange website
+    if (url.includes('mba-exchange.com')) {
+      jobDescription = extractMBAExchangeJobDescription(html, debug);
+    } 
+    
+    // If not MBA Exchange or extraction failed, try generic methods
+    if (!jobDescription) {
+      jobDescription = extractJobDescription(html, url, debug);
+    }
 
     // For debugging: return more info about the extraction process
     let debugInfo = {};
@@ -315,6 +327,88 @@ function cleanCompanyName(name: string): string {
     .trim();
 }
 
+// ADDED: Specialized extraction function for MBA Exchange website
+function extractMBAExchangeJobDescription(html: string, debug = false): string | null {
+  if (debug) {
+    console.log("Using specialized MBA Exchange extraction method");
+  }
+  
+  // Look for tables with job content
+  const tablePattern = /<table[^>]*class="[^"]*(?:jd|job-description)[^"]*"[^>]*>([\s\S]*?)<\/table>/i;
+  let match = html.match(tablePattern);
+  
+  if (match && match[1]) {
+    return convertHtmlToText(match[1]);
+  }
+  
+  // Try to find job description in specific MBA Exchange structure
+  const jobDetailPattern = /<div[^>]*class="[^"]*jobs?[^"]*"[^>]*>([\s\S]*?)<\/div>/i;
+  match = html.match(jobDetailPattern);
+  
+  if (match && match[1]) {
+    return convertHtmlToText(match[1]);
+  }
+  
+  // Look for TD with content that likely contains job description
+  const tdContentPattern = /<td[^>]*>([\s\S]{200,}?)<\/td>/gi;
+  const tdMatches = [...html.matchAll(tdContentPattern)];
+  
+  for (const tdMatch of tdMatches) {
+    const content = tdMatch[1];
+    if (content && 
+        content.length > 300 && 
+        (content.includes('responsibilities') || 
+         content.includes('requirements') || 
+         content.includes('qualifications') || 
+         content.includes('experience'))) {
+      return convertHtmlToText(content);
+    }
+  }
+  
+  // Try to extract from any table with substantial content
+  const anyTable = /<table[^>]*>([\s\S]*?)<\/table>/gi;
+  const tableMatches = [...html.matchAll(anyTable)];
+  
+  if (debug) {
+    console.log(`Found ${tableMatches.length} tables on the page`);
+  }
+  
+  let bestTableMatch = { content: "", length: 0 };
+  for (const tableMatch of tableMatches) {
+    const tableContent = tableMatch[1];
+    if (tableContent.length > 500 &&
+        (tableContent.includes('experience') || 
+         tableContent.includes('requirements') || 
+         tableContent.includes('responsibilities') || 
+         tableContent.includes('qualifications'))) {
+      
+      if (tableContent.length > bestTableMatch.length) {
+        bestTableMatch = {
+          content: convertHtmlToText(tableContent),
+          length: tableContent.length
+        };
+      }
+    }
+  }
+  
+  if (bestTableMatch.content) {
+    return bestTableMatch.content;
+  }
+  
+  // Last resort: try to find any large block of text
+  const textBlockPattern = /<div[^>]*>([\s\S]{500,}?)<\/div>/gi;
+  const blockMatches = [...html.matchAll(textBlockPattern)];
+  
+  for (const blockMatch of blockMatches) {
+    const content = blockMatch[1];
+    if (content && content.length > 500 && !content.includes('<table')) {
+      return convertHtmlToText(content);
+    }
+  }
+  
+  return null;
+}
+
 // Enhanced function to extract job description with better pattern matching
 function extractJobDescription(html: string, url: string, debug = false): string | null {
   if (debug) {
@@ -334,32 +428,6 @@ function extractJobDescription(html: string, url: string, debug = false): string
   }
 
   const domain = new URL(url).hostname.toLowerCase();
-  
-  if (domain.includes('mba-exchange.com')) {
-    const tablePattern = /<table[^>]*class="[^"]*jd[^"]*"[^>]*>([\s\S]*?)<\/table>/i;
-    const match = html.match(tablePattern);
-    if (match && match[1]) {
-      return convertHtmlToText(match[1]);
-    }
-    
-    const anyTable = /<table[^>]*>([\s\S]*?)<\/table>/gi;
-    const tableMatches = [...html.matchAll(anyTable)];
-    
-    if (debug) {
-      console.log(`Found ${tableMatches.length} tables on the page`);
-    }
-    
-    for (const tableMatch of tableMatches) {
-      const tableContent = tableMatch[1];
-      if (tableContent.length > 300 &&
-          (tableContent.includes('experience') || 
-           tableContent.includes('requirements') || 
-           tableContent.includes('responsibilities') || 
-           tableContent.includes('qualifications'))) {
-        return convertHtmlToText(tableContent);
-      }
-    }
-  }
   
   const cleanedHtml = html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')

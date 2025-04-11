@@ -6,6 +6,7 @@ import { useAppContext } from '@/context/AppContext';
 import PDFExtractor from '@/utils/PDFExtractor';
 import { AlertCircle } from 'lucide-react';
 import StarAnalysis from '@/components/StarAnalysis';
+import { extractBulletPoints } from '@/utils/UrlExtractor';
 
 interface StarAnalysisItem {
   original: string;
@@ -24,6 +25,8 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [missingSkills, setMissingSkills] = useState<string[]>([]);
+  const [resumeBullets, setResumeBullets] = useState<string[]>([]);
+  const [improvedBullets, setImprovedBullets] = useState<Record<string, StarAnalysisItem>>({});
   
   const validStarAnalysis = Array.isArray(starAnalysis) ? starAnalysis : [];
   
@@ -45,6 +48,17 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
               setResumeText(text);
               setExtractionError(null);
               
+              // Extract bullet points from resume
+              const bullets = extractBulletPoints(text);
+              setResumeBullets(bullets);
+              
+              // Create mapping of original bullets to improved versions from starAnalysis
+              const improvedMap: Record<string, StarAnalysisItem> = {};
+              validStarAnalysis.forEach(item => {
+                improvedMap[item.original.trim()] = item;
+              });
+              setImprovedBullets(improvedMap);
+              
               if (jobDescription) {
                 identifyMissingSkills(text, jobDescription);
               }
@@ -61,7 +75,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
           setIsLoading(false);
         });
     }
-  }, [resumeFile, jobDescription]);
+  }, [resumeFile, jobDescription, starAnalysis]);
   
   const identifyMissingSkills = (resumeText: string, jobDesc: string) => {
     // Common skills for analytics and AI roles that might be missing
@@ -100,10 +114,10 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
   };
   
   const renderImprovedResume = () => {
-    if (validStarAnalysis.length === 0) {
+    if (resumeBullets.length === 0) {
       return (
         <div className="p-6">
-          <p className="text-consulting-gray">No improvement suggestions available.</p>
+          <p className="text-consulting-gray">No bullet points detected in your resume.</p>
         </div>
       );
     }
@@ -131,22 +145,36 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
             Enhanced Experience Bullets
           </h2>
           <div className="space-y-6">
-            {validStarAnalysis.map((item, idx) => (
-              <div key={idx} className="p-4 bg-gray-50 rounded-lg">
-                <div className="text-consulting-charcoal font-medium mb-2">
-                  <h3 className="text-sm text-gray-500">Original:</h3>
-                  <p className="text-sm italic text-gray-600 mb-3">"{item.original}"</p>
-                  
-                  <h3 className="text-sm text-consulting-blue">Enhanced:</h3>
-                  <p className="font-medium text-consulting-navy">{item.improved}</p>
-                  
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <h4 className="text-xs font-semibold text-gray-500">Why this improves alignment:</h4>
-                    <p className="text-xs text-gray-600 mt-1">{item.feedback}</p>
+            {resumeBullets.map((bullet, idx) => {
+              const cleanBullet = bullet.trim();
+              const improved = improvedBullets[cleanBullet];
+              
+              return (
+                <div key={idx} className="p-4 bg-gray-50 rounded-lg">
+                  <div className="text-consulting-charcoal mb-2">
+                    <h3 className="text-sm text-gray-500">Original:</h3>
+                    <p className="text-sm italic text-gray-600 mb-3">"{cleanBullet}"</p>
+                    
+                    <h3 className="text-sm text-consulting-blue">Enhanced:</h3>
+                    {improved ? (
+                      <>
+                        <p className="font-medium text-consulting-navy">{improved.improved}</p>
+                        
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <h4 className="text-xs font-semibold text-gray-500">Why this improves alignment:</h4>
+                          <p className="text-xs text-gray-600 mt-1">{improved.feedback}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="p-3 bg-gray-100 border border-gray-200 rounded text-gray-600">
+                        <p>This bullet point is already well-written and aligns with job requirements.</p>
+                        <p className="mt-1 text-xs">Keep this bullet as is, or consider adding specific metrics or results if available.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
         

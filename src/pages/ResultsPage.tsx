@@ -1,16 +1,20 @@
 
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/context/AppContext';
 import PageContainer from '@/components/PageContainer';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ResumeComparison from '@/components/ResumeComparison';
 import StarAnalysis from '@/components/StarAnalysis';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 const ResultsPage: React.FC = () => {
   const { resetApplication, jobDescription, analysisResults, selectedCompany } = useAppContext();
   const [selectedRole, setSelectedRole] = useState('');
+  const [showRoleDialog, setShowRoleDialog] = useState(false);
+  const [inputRole, setInputRole] = useState('');
   
   useEffect(() => {
     if (!analysisResults) {
@@ -23,7 +27,9 @@ const ResultsPage: React.FC = () => {
       if (jobTitle) {
         setSelectedRole(jobTitle);
       } else {
-        setSelectedRole('Unspecified Role');
+        // If no job title detected, prompt user
+        setShowRoleDialog(true);
+        setInputRole('');
       }
     }
   }, [jobDescription, analysisResults]);
@@ -52,7 +58,12 @@ const ResultsPage: React.FC = () => {
       return firstLine;
     }
     
-    return 'Unspecified Role';
+    return '';
+  };
+  
+  const handleRoleSubmit = () => {
+    setSelectedRole(inputRole);
+    setShowRoleDialog(false);
   };
   
   // If no results are available, show an error message
@@ -99,9 +110,14 @@ const ResultsPage: React.FC = () => {
             </h1>
             <p className="text-consulting-gray">
               {selectedCompany?.name ? (
-                <><span className="font-medium">Company:</span> {selectedCompany.name} | <span className="font-medium">Role:</span> {selectedRole}</>
+                <><span className="font-medium">Company:</span> {selectedCompany.name} | <span className="font-medium">Role:</span> {selectedRole || "Click to add role"}</>
               ) : (
-                <><span className="font-medium">Role:</span> {selectedRole}</>
+                <><span className="font-medium">Role:</span> <span 
+                  onClick={() => setShowRoleDialog(true)} 
+                  className={`${!selectedRole ? "text-blue-500 underline cursor-pointer" : ""}`}
+                >
+                  {selectedRole || "Click to add role"}
+                </span></>
               )}
             </p>
           </div>
@@ -209,6 +225,32 @@ const ResultsPage: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* Job Role Dialog */}
+      <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Enter Job Role</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-500 mb-4">
+              We couldn't automatically detect the job role from the job description. 
+              Please enter it manually to continue.
+            </p>
+            <Input 
+              placeholder="e.g. Data Analyst, Software Engineer" 
+              value={inputRole} 
+              onChange={(e) => setInputRole(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="submit" onClick={handleRoleSubmit} disabled={!inputRole.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 };
