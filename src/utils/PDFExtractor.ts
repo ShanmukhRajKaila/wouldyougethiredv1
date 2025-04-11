@@ -27,15 +27,14 @@ class PDFExtractor {
       }
     }
     
-    // For Word documents (.docx, .doc), use a specialized extraction method
-    if (file.name.toLowerCase().endsWith('.docx') || file.name.toLowerCase().endsWith('.doc') || 
-        file.type.includes('word') || file.type.includes('officedocument')) {
-      console.log('Word document detected');
+    // For plain text files, use simple text extraction
+    if (file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt')) {
+      console.log('Text file detected');
       return this.extractAsText(file);
     }
     
-    // Fallback to text extraction for all other cases
-    return this.extractAsText(file);
+    // Reject other file types
+    return `Unsupported file type: ${file.type || file.name.split('.').pop()}. Please upload a PDF or plain text file.`;
   }
 
   private static async extractWithPDFJS(file: File): Promise<string | null> {
@@ -48,28 +47,57 @@ class PDFExtractor {
       
       // Create a new PDF document with the loaded data
       console.log('Loading PDF document with PDF.js');
-      const pdf = await PDFJS.getDocument({ data: arrayBuffer }).promise;
+      const pdf = await PDFJS.getDocument({ 
+        data: arrayBuffer,
+        // Enable additional options to better handle different PDF types
+        nativeImageDecoderSupport: 'none',
+        ignoreErrors: true,
+        disableFontFace: true
+      }).promise;
+      
       console.log('PDF loaded with', pdf.numPages, 'pages');
       
       // Extract text from each page
       let completeText = '';
-      for (let i = 1; i <= pdf.numPages; i++) {
+      
+      // Track if we've extracted any meaningful content
+      let hasExtractedContent = false;
+      
+      for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) { // Limit to 50 pages for performance
         console.log(`Extracting text from page ${i}/${pdf.numPages}`);
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        
-        // Join text items with spaces
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ');
-        
-        completeText += pageText + '\n\n';
+        try {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent({
+            normalizeWhitespace: true,
+            disableCombineTextItems: false
+          });
+          
+          if (textContent.items.length > 0) {
+            hasExtractedContent = true;
+          }
+          
+          // Join text items with proper spacing
+          const pageText = textContent.items
+            .map((item: any) => item.str)
+            .join(' ');
+          
+          if (pageText.trim().length > 0) {
+            completeText += pageText + '\n\n';
+          }
+        } catch (pageError) {
+          console.warn(`Error extracting text from page ${i}:`, pageError);
+          completeText += `[Error extracting page ${i}]\n\n`;
+        }
       }
       
       console.log('PDF text extraction complete, extracted', completeText.length, 'characters');
-      if (completeText.trim().length === 0) {
-        console.warn('Extracted text is empty');
-        return 'No readable text found in the PDF. It might be a scanned document or an image-based PDF.';
+      
+      // Clean up the extracted text to remove PDF syntax or binary artifacts
+      completeText = this.cleanupExtractedText(completeText);
+      
+      if (completeText.trim().length < 100 || !hasExtractedContent) {
+        console.warn('Insufficient text extracted or content appears to be binary');
+        return 'This PDF appears to be a scanned document or image-based PDF. Please upload a text-based PDF or extract and save the text in a .txt file.';
       }
       
       return completeText;
@@ -77,6 +105,31 @@ class PDFExtractor {
       console.error('Error in PDF extraction:', error);
       throw error;
     }
+  }
+
+  private static cleanupExtractedText(text: string): string {
+    // Remove any PDF-specific markers or syntax
+    let cleanText = text.replace(/%PDF[\s\S]*?(?=\w{3,})/g, '');
+    
+    // Remove common PDF syntax elements
+    cleanText = cleanText.replace(/<<\/?[\w\/]+>>/g, '');
+    cleanText = cleanText.replace(/endobj|obj|\d+ \d+ R/g, '');
+    
+    // Remove binary data markers
+    cleanText = cleanText.replace(/stream[\s\S]*?endstream/g, '');
+    
+    // Remove non-readable characters
+    cleanText = cleanText.replace(/[^\x20-\x7E\n\r\t]/g, ' ');
+    
+    // Normalize whitespace
+    cleanText = cleanText.replace(/\s+/g, ' ').trim();
+    
+    // Check for common indicators of binary content
+    if (cleanText.includes('FlateDecode') || cleanText.includes('Filter')) {
+      console.warn('Text appears to contain binary PDF data');
+    }
+    
+    return cleanText;
   }
 
   private static async extractAsText(file: File): Promise<string | null> {
@@ -88,10 +141,11 @@ class PDFExtractor {
           const text = event.target.result as string;
           console.log(`Text extracted, length: ${text.length}`);
           
-          if (text.includes('%PDF') || text.includes('obj') || 
-              /[\x00-\x08\x0E-\x1F\x80-\xFF]/.test(text.substring(0, 100))) {
+          // Check if text appears to be binary data
+          if (text.includes('%PDF') || text.includes('obj') || text.includes('endobj') || 
+              /[\x00-\x08\x0E-\x1F\x80-\xFF]/.test(text.substring(0, 200))) {
             // Detected binary content
-            resolve('This appears to be a binary file that cannot be read as text. Please upload a PDF instead.');
+            resolve('This appears to be a binary file that cannot be read as text. Please upload a text-based PDF or a plain text file instead.');
           } else {
             resolve(text);
           }

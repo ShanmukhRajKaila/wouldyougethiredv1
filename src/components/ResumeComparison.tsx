@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppContext } from '@/context/AppContext';
 import PDFExtractor from '@/utils/PDFExtractor';
+import { AlertCircle } from 'lucide-react';
 
 interface StarAnalysisItem {
   original: string;
@@ -35,8 +36,17 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
       PDFExtractor.extractText(resumeFile)
         .then(text => {
           if (text) {
-            setResumeText(text);
-            setExtractionError(null);
+            // Check if the text is an error message from the extractor
+            if (text.includes('scanned document') || 
+                text.includes('image-based PDF') || 
+                text.includes('Error extracting PDF') ||
+                text.includes('binary file')) {
+              setExtractionError(text);
+              setResumeText('');
+            } else {
+              setResumeText(text);
+              setExtractionError(null);
+            }
           } else {
             setExtractionError("Could not extract text from the uploaded file.");
           }
@@ -89,9 +99,21 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
     
     if (extractionError) {
       return (
-        <div className="p-4 text-red-500">
-          <p>{extractionError}</p>
-          <p className="mt-2 text-sm">Try uploading your resume in a different format (.pdf or .txt recommended).</p>
+        <div className="p-4 text-red-50 bg-red-100 rounded-md">
+          <div className="flex items-start">
+            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 mr-2" />
+            <div>
+              <p className="text-red-800 font-medium">{extractionError}</p>
+              <p className="mt-2 text-sm text-gray-700">
+                For best results:
+                <ul className="list-disc pl-5 mt-1">
+                  <li>Use text-based PDFs (not scanned documents)</li>
+                  <li>If using Word, save as PDF with text encoding</li>
+                  <li>Try saving your resume as plain text (.txt)</li>
+                </ul>
+              </p>
+            </div>
+          </div>
         </div>
       );
     }
@@ -99,7 +121,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
     if (!resumeText) {
       return (
         <div className="p-4 text-consulting-gray">
-          No resume content available. Please upload a resume file (.pdf, .docx, or .txt).
+          No resume content available. Please upload a resume file (.pdf or .txt).
         </div>
       );
     }

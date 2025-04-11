@@ -67,6 +67,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
       return;
     }
 
+    // For PDFs, add a warning about text-based PDFs
+    if (fileExtension === 'pdf') {
+      toast.info("For best results, use text-based PDFs rather than scanned documents.");
+    }
+
     onChange(file);
   };
 
