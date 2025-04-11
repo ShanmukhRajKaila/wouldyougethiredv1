@@ -53,68 +53,180 @@ function cleanupText(text: string): string {
   return cleanText.trim();
 }
 
-// Extract keywords from job description with improved relevance
-function extractKeywords(text: string): string[] {
-  // Expanded stopwords list
-  const commonWords = new Set([
+// Enhanced function to extract skills and requirements from job description
+function extractJobRequirements(jobDescription: string): {
+  skills: string[];
+  technicalSkills: string[];
+  softSkills: string[];
+  education: string[];
+  experience: string[];
+} {
+  // Common stopwords to filter out
+  const stopwords = new Set([
     "the", "and", "that", "this", "with", "for", "have", "not", "from", "but", "what", "about", 
     "who", "which", "when", "will", "more", "would", "there", "their", "them", "these", "some", 
     "your", "into", "has", "may", "such", "than", "its", "been", "were", "are", "our", "then",
     "how", "well", "where", "why", "should", "could", "year", "years", "can", "able", "any"
   ]);
   
-  // Extract potential keywords (focus on nouns/skills)
-  const words = text.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
-  const wordCounts: Record<string, number> = {};
+  // Categorize soft skills that are often mentioned in job descriptions
+  const softSkillsDict = new Set([
+    "leadership", "communication", "teamwork", "collaboration", "problem solving", "problem-solving",
+    "critical thinking", "decision making", "time management", "adaptability", "flexibility",
+    "creativity", "interpersonal", "stakeholder management", "stakeholder engagement",
+    "negotiation", "conflict resolution", "emotional intelligence", "presentation", "initiative",
+    "strategic thinking", "analytical thinking", "detail oriented", "self motivation",
+    "work ethic", "accountability", "resilience", "cultural awareness", "innovation", "mentoring",
+    "coaching", "relationship building", "verbal communication", "written communication", "advocacy",
+    "customer service", "project management", "change management", "facilitation", "influencing",
+    "delegation", "strategic planning", "commercial acumen", "business acumen", "organizational"
+  ]);
   
-  words.forEach(word => {
-    if (!commonWords.has(word)) {
-      wordCounts[word] = (wordCounts[word] || 0) + 1;
-    }
-  });
+  // Technical skills patterns
+  const technicalPatterns = [
+    /\b(?:python|java|javascript|typescript|c\+\+|ruby|php|swift|html|css|sql|nosql|react|angular|vue|node\.js|express|django|flask|aws|azure|gcp|docker|kubernetes|jenkins|terraform|ansible|git|agile|scrum|kanban|jira|confluence|excel|tableau|power\sbi|r|matlab|spss|hadoop|spark|tensorflow|pytorch|keras|scikit-learn)\b/i,
+    /\b(?:architecture|database|cloud|devops|frontend|backend|full-stack|mobile|web|security|network|system|data\s*science|machine\s*learning|artificial\s*intelligence|deep\s*learning|nlp|computer\s*vision|blockchain|iot|big\s*data|analytics|bi|business\s*intelligence|etl|data\s*engineering|data\s*warehouse|data\s*lake|data\s*mining|data\s*modeling|api|rest|graphql|microservices|serverless|ci\/cd)\b/i
+  ];
   
-  // Extract phrases that might be technical skills (2-3 word phrases)
-  const phrases: Record<string, number> = {};
-  const phraseRegex = /\b([a-z0-9]+(?:[-\s][a-z0-9]+){1,2})\b/g;
+  // Education patterns
+  const educationPatterns = [
+    /\b(?:bachelor|master|phd|doctorate|mba|bs|ba|ms|ma|degree|certification)\b/i,
+    /\b(?:computer\s*science|information\s*technology|engineering|data\s*science|business\s*administration|finance|accounting|marketing|economics|mathematics|statistics|physics)\b/i
+  ];
+  
+  // Experience patterns
+  const experiencePatterns = [
+    /\b(\d+)(?:\+)?\s*(?:years?|yrs?)\s*(?:of)?\s*(?:experience|work)\b/i,
+    /\bexperienc(?:e|ed)\s*(?:in|with)\s*([^.,:;]+)/i,
+    /\bbackground\s*(?:in|with)\s*([^.,:;]+)/i
+  ];
+  
+  // Extract all potential skills
+  const allWords = jobDescription.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
+  const allPhrases: string[] = [];
+  
+  // Extract 2-3 word phrases
+  const phraseRegex = /\b([a-z0-9]+(?:[-\s][a-z0-9]+){1,2})\b/gi;
   let match;
-  while ((match = phraseRegex.exec(text.toLowerCase())) !== null) {
+  while ((match = phraseRegex.exec(jobDescription.toLowerCase())) !== null) {
     const phrase = match[1];
-    // Skip phrases that are just stopwords
-    if (!phrase.split(/[-\s]/).every(word => commonWords.has(word))) {
-      phrases[phrase] = (phrases[phrase] || 0) + 1;
+    if (!phrase.split(/[-\s]/).every(word => stopwords.has(word))) {
+      allPhrases.push(phrase);
     }
   }
   
-  // Combine single words and phrases, prioritizing phrases and technical terms
-  const technicalTermPatterns = [
-    /\b(?:software|hardware|technology|engineering|development|programming|analysis|design|management|leadership|strategy|operations|financial|marketing|sales|product|project|agile|scrum|data|cloud|api|web|mobile|app|database|security|network|system|platform|infrastructure|solution|service|quality|testing|deployment)\b/i
-  ];
-  
-  // Filter and prioritize keywords
-  const keywordCandidates = [
-    ...Object.entries(phrases)
-      .filter(([_, count]) => count >= 1)
-      .map(([phrase]) => phrase),
-    ...Object.entries(wordCounts)
-      .filter(([_, count]) => count >= 2)
-      .filter(([word]) => {
-        // Prioritize technical terms
-        return technicalTermPatterns.some(pattern => pattern.test(word));
-      })
-      .map(([word]) => word)
-  ];
-  
-  // Remove duplicates (phrases that contain single words we've already included)
-  const uniqueKeywords = keywordCandidates.filter((keyword, index) => {
-    for (let i = 0; i < index; i++) {
-      if (keywordCandidates[i].includes(keyword) || keyword.includes(keywordCandidates[i])) {
-        return false;
-      }
+  // Extract education requirements
+  const education: string[] = [];
+  for (const pattern of educationPatterns) {
+    let match;
+    while ((match = pattern.exec(jobDescription)) !== null) {
+      const fullContext = jobDescription.substring(
+        Math.max(0, match.index - 30),
+        Math.min(jobDescription.length, match.index + match[0].length + 30)
+      );
+      education.push(fullContext.trim());
+      // Reset lastIndex to avoid infinite loops
+      pattern.lastIndex = match.index + 1;
     }
-    return true;
-  });
+  }
   
-  return uniqueKeywords.slice(0, 25); // Top keywords
+  // Extract experience requirements
+  const experience: string[] = [];
+  for (const pattern of experiencePatterns) {
+    let match;
+    while ((match = pattern.exec(jobDescription)) !== null) {
+      const fullContext = jobDescription.substring(
+        Math.max(0, match.index - 20),
+        Math.min(jobDescription.length, match.index + match[0].length + 30)
+      );
+      experience.push(fullContext.trim());
+      // Reset lastIndex to avoid infinite loops
+      pattern.lastIndex = match.index + 1;
+    }
+  }
+  
+  // Categorize skills
+  const skills: string[] = [];
+  const technicalSkills: string[] = [];
+  const softSkills: string[] = [];
+  
+  // Process phrases first (they're more valuable)
+  for (const phrase of allPhrases) {
+    // Check if it's a soft skill
+    if (softSkillsDict.has(phrase)) {
+      softSkills.push(phrase);
+      skills.push(phrase);
+      continue;
+    }
+    
+    // Check if it's a technical skill
+    if (technicalPatterns.some(pattern => pattern.test(phrase))) {
+      technicalSkills.push(phrase);
+      skills.push(phrase);
+      continue;
+    }
+    
+    // If phrase appears multiple times or in specific contexts, it's likely important
+    const phraseCount = (jobDescription.toLowerCase().match(new RegExp('\\b' + phrase + '\\b', 'gi')) || []).length;
+    const importantContexts = [
+      /experience/i, /knowledge/i, /proficien/i, /familiar/i,
+      /skill/i, /ability/i, /understand/i, /expert/i
+    ];
+    
+    const isInImportantContext = importantContexts.some(context => {
+      const contextWindow = 20; // characters
+      const occurrences = jobDescription.toLowerCase().indexOf(phrase);
+      if (occurrences !== -1) {
+        const contextStart = Math.max(0, occurrences - contextWindow);
+        const contextEnd = Math.min(jobDescription.length, occurrences + phrase.length + contextWindow);
+        const textContext = jobDescription.substring(contextStart, contextEnd).toLowerCase();
+        return context.test(textContext);
+      }
+      return false;
+    });
+    
+    if (phraseCount >= 2 || isInImportantContext) {
+      skills.push(phrase);
+    }
+  }
+  
+  // Process single words (less valuable, but still important)
+  for (const word of allWords) {
+    if (stopwords.has(word)) continue;
+    
+    // Check for technical terms
+    if (technicalPatterns.some(pattern => pattern.test(word))) {
+      if (!technicalSkills.includes(word)) {
+        technicalSkills.push(word);
+        skills.push(word);
+      }
+      continue;
+    }
+    
+    // Check for soft skills
+    if (softSkillsDict.has(word)) {
+      if (!softSkills.includes(word)) {
+        softSkills.push(word);
+        skills.push(word);
+      }
+      continue;
+    }
+  }
+  
+  // Cleanup and remove duplicates
+  const uniqueSkills = Array.from(new Set(skills)).slice(0, 30);
+  const uniqueTechnicalSkills = Array.from(new Set(technicalSkills)).slice(0, 15);
+  const uniqueSoftSkills = Array.from(new Set(softSkills)).slice(0, 15);
+  const uniqueEducation = Array.from(new Set(education)).slice(0, 5);
+  const uniqueExperience = Array.from(new Set(experience)).slice(0, 5);
+  
+  return {
+    skills: uniqueSkills,
+    technicalSkills: uniqueTechnicalSkills,
+    softSkills: uniqueSoftSkills,
+    education: uniqueEducation,
+    experience: uniqueExperience
+  };
 }
 
 serve(async (req) => {
@@ -156,9 +268,9 @@ serve(async (req) => {
       console.log('Cleaned resume text for processing');
     }
     
-    // Extract key terms from job description
-    const jobKeywords = extractKeywords(jobDescription);
-    console.log(`Extracted ${jobKeywords.length} keywords from job description`);
+    // Extract key requirements from job description
+    const jobRequirements = extractJobRequirements(jobDescription);
+    console.log(`Extracted ${jobRequirements.skills.length} skills, ${jobRequirements.softSkills.length} soft skills, and ${jobRequirements.technicalSkills.length} technical skills from job description`);
     
     // Truncate inputs to prevent token limit issues
     truncatedResume = truncateText(cleanedResume, 8000);
@@ -174,7 +286,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', // Using a smaller model that's faster and has lower token limits
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -182,9 +294,9 @@ serve(async (req) => {
 
 ANALYSIS FRAMEWORK:
 1. Parse both the resume and job description to identify key skills, qualifications, experiences, and requirements.
-2. Quantitatively assess the alignment between the resume and job requirements:
+2. Perform a comprehensive skills gap analysis focusing on:
    - Hard skills match (technical abilities, tools, certifications)
-   - Soft skills match (communication, leadership, problem-solving)
+   - Soft skills match (communication, leadership, stakeholder management, problem-solving)
    - Experience level match (years of experience, role complexity)
    - Industry relevance (domain knowledge, sector-specific terminology)
    - Educational/qualification match
@@ -219,9 +331,15 @@ GUIDELINES FOR CREATING STAR-OPTIMIZED BULLETS:
 7. Ensure natural readability - do not just stuff keywords
 8. Use industry-standard terminology that would be recognized by both ATS systems and human recruiters
 
-Critical keywords identified in the job description: ${jobKeywords.join(', ')}
+SPECIFICALLY CHECK FOR THESE KEY REQUIREMENTS FROM THE JOB DESCRIPTION:
+Technical Skills: ${jobRequirements.technicalSkills.join(', ')}
+Soft Skills: ${jobRequirements.softSkills.join(', ')}
+Education: ${jobRequirements.education.join('; ')}
+Experience: ${jobRequirements.experience.join('; ')}
 
-Your analysis must be rigorous, evidence-based, and actionable, focusing on helping the candidate maximize their chances of passing the ATS screening and impressing human recruiters.`
+Your analysis must be rigorous, evidence-based, and actionable, focusing on helping the candidate maximize their chances of passing the ATS screening and impressing human recruiters. 
+
+Pay special attention to soft skills like stakeholder management, leadership, and communication if they appear in the job requirements, ensuring you provide specific recommendations for demonstrating these qualities effectively.`
           },
           {
             role: 'user',
