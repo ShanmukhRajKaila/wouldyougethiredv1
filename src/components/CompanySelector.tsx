@@ -10,7 +10,7 @@ import { Loader2, Link as LinkIcon } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const CompanySelector = () => {
-  const { selectedCompany, setSelectedCompany, setJobDescription } = useAppContext();
+  const { selectedCompany, setSelectedCompany, setJobDescription, jobDescription } = useAppContext();
   const [jobUrl, setJobUrl] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('url');
@@ -60,6 +60,8 @@ const CompanySelector = () => {
         toast.info('Only company name was extracted. Please review and add job description manually if needed.');
       } else if (!extractionResult.companyName && extractionResult.jobDescription) {
         toast.info('Only job description was extracted. Please enter company name manually.');
+      } else if (!extractionResult.companyName && !extractionResult.jobDescription) {
+        toast.warning('Could not extract information from the URL. Please enter details manually.');
       }
     } catch (error) {
       console.error('Error extracting content:', error);
