@@ -33,6 +33,25 @@ function truncateText(text: string, maxTokens: number): string {
   return text.substring(0, maxChars) + "\n[content truncated for length]";
 }
 
+// Clean up text that might contain binary data or PDF syntax
+function cleanupText(text: string): string {
+  // Remove any PDF-specific markers or syntax
+  let cleanText = text.replace(/%PDF[\s\S]*?(?=\w{3,})/g, '');
+  
+  // Remove common PDF syntax elements
+  cleanText = cleanText.replace(/<<\/[\w\/]+>>/g, '');
+  cleanText = cleanText.replace(/endobj/g, '');
+  cleanText = cleanText.replace(/obj/g, '');
+  
+  // Remove non-readable characters
+  cleanText = cleanText.replace(/[^\x20-\x7E\n\r\t]/g, ' ');
+  
+  // Remove excessive whitespace
+  cleanText = cleanText.replace(/\s+/g, ' ');
+  
+  return cleanText.trim();
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -51,13 +70,43 @@ serve(async (req) => {
 
     console.log('Analyzing resume against job description');
     
-    // Truncate inputs to prevent token limit issues
-    // Give more space to resume than job description
-    const truncatedResume = truncateText(resumeText, 8000);
-    const truncatedJobDesc = truncateText(jobDescription, 2000);
+    // Check if resume text appears to be PDF binary data
+    if (resumeText.includes('%PDF') || resumeText.includes('obj') || resumeText.includes('endobj')) {
+      console.warn('Resume text appears to contain PDF binary data or syntax');
+      
+      // Try to clean up the text before proceeding
+      const cleanedResume = cleanupText(resumeText);
+      
+      if (cleanedResume.length < 200) {
+        return new Response(
+          JSON.stringify({ error: 'Unable to process the resume. The PDF appears to be image-based or contains unreadable text.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log('Cleaned resume text for processing');
+      
+      // Truncate inputs to prevent token limit issues
+      // Give more space to resume than job description
+      const truncatedResume = truncateText(cleanedResume, 6000);
+      const truncatedJobDesc = truncateText(jobDescription, 2000);
+      
+      console.log(`Original resume length: ${resumeText.length}, cleaned to: ${cleanedResume.length}, truncated to: ${truncatedResume.length}`);
+      console.log(`Original job description length: ${jobDescription.length}, truncated to: ${truncatedJobDesc.length}`);
+    } else {
+      // Truncate inputs to prevent token limit issues
+      // Give more space to resume than job description
+      const truncatedResume = truncateText(resumeText, 8000);
+      const truncatedJobDesc = truncateText(jobDescription, 2000);
+      
+      console.log(`Original resume length: ${resumeText.length}, truncated to: ${truncatedResume.length}`);
+      console.log(`Original job description length: ${jobDescription.length}, truncated to: ${truncatedJobDesc.length}`);
+    }
     
-    console.log(`Original resume length: ${resumeText.length}, truncated to: ${truncatedResume.length}`);
-    console.log(`Original job description length: ${jobDescription.length}, truncated to: ${truncatedJobDesc.length}`);
+    // Process the text with OpenAI
+    const cleanedResume = cleanupText(resumeText);
+    const truncatedResume = truncateText(cleanedResume, 8000); 
+    const truncatedJobDesc = truncateText(jobDescription, 2000);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',

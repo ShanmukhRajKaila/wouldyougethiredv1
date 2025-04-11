@@ -26,6 +26,7 @@ const ResumeUploadPage: React.FC = () => {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [processingError, setProcessingError] = useState<string | null>(null);
+  const [extractionWarning, setExtractionWarning] = useState<string | null>(null);
   
   useEffect(() => {
     // Initialize PDF extractor
@@ -34,10 +35,36 @@ const ResumeUploadPage: React.FC = () => {
       // Reset any previous analysis results when coming to this page
       setAnalysisResults(null);
       setProcessingError(null);
+      setExtractionWarning(null);
     } catch (error) {
       console.error('Failed to initialize PDF extractor:', error);
     }
   }, []);
+  
+  // Preview the file to check if it's valid
+  useEffect(() => {
+    if (resumeFile) {
+      setExtractionWarning(null);
+      // Test extract text to verify it can be read properly
+      PDFExtractor.extractText(resumeFile)
+        .then(text => {
+          // Check if we got a valid extraction or an error message
+          if (text && text.includes('Error extracting PDF') || text?.includes('binary file')) {
+            setExtractionWarning(
+              "Warning: Your file may not be properly readable. For best results, use a text-based PDF or a .txt file."
+            );
+          } else if (!text || text.trim().length < 50) {
+            setExtractionWarning(
+              "Warning: Very little text could be extracted from your file. Use a text-based PDF for best results."
+            );
+          }
+        })
+        .catch(err => {
+          setExtractionWarning("Warning: There might be issues reading this file format.");
+          console.error("Preview extraction error:", err);
+        });
+    }
+  }, [resumeFile]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,9 +112,11 @@ const ResumeUploadPage: React.FC = () => {
           
           console.log('Extracted text from file. Length:', resumeText.length);
           
-          // Handle raw/insufficient content cases
-          if (resumeText.includes('Raw content from') || resumeText.includes('Content extraction failed')) {
-            toast.error('Document content extraction was incomplete. Please try with PDF or TXT format for better results.');
+          // Handle error messages returned from extraction
+          if (resumeText.includes('Error extracting') || 
+              resumeText.includes('binary file') ||
+              resumeText.length < 100) {
+            toast.error('Could not properly read your document. Please try uploading a text-based PDF or a .txt file.');
             setCurrentStage('resumeUpload');
             setIsSubmitting(false);
             return;
@@ -146,7 +175,7 @@ const ResumeUploadPage: React.FC = () => {
         </h1>
         <p className="text-consulting-gray mb-8">
           Upload your resume and, optionally, your cover letter for analysis. 
-          We support PDF, Word documents (.doc, .docx), and plain text (.txt) files.
+          We recommend using text-based PDF files or plain text (.txt) files for best results.
         </p>
         
         {processingError && (
@@ -162,16 +191,26 @@ const ResumeUploadPage: React.FC = () => {
         <form onSubmit={handleSubmit}>
           <FileUpload
             label="Resume"
-            accept=".pdf,.doc,.docx,.txt,.rtf"
+            accept=".pdf,.txt"
             onChange={setResumeFile}
             value={resumeFile}
             required
             maxSizeMB={5}
           />
           
+          {extractionWarning && (
+            <div className="mb-6 p-3 border border-yellow-300 bg-yellow-50 rounded-md">
+              <p className="text-sm text-yellow-800">{extractionWarning}</p>
+              <p className="text-xs text-gray-600 mt-1">
+                If you're uploading a PDF, make sure it's a text-based PDF (not scanned or image-based).
+                For best results, you can export your resume as plain text (.txt).
+              </p>
+            </div>
+          )}
+          
           <FileUpload
             label="Cover Letter (Optional)"
-            accept=".pdf,.doc,.docx,.txt,.rtf"
+            accept=".pdf,.txt"
             onChange={setCoverLetterFile}
             value={coverLetterFile}
             maxSizeMB={5}
