@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -69,16 +70,18 @@ function extractJobRequirements(jobDescription: string): {
   ]);
   
   // Categorize soft skills that are often mentioned in job descriptions
+  // IMPORTANT: Make sure stakeholder management is included as a priority skill
   const softSkillsDict = new Set([
+    "stakeholder management", "stakeholder engagement", "stakeholder relationship", "stakeholders",
     "leadership", "communication", "teamwork", "collaboration", "problem solving", "problem-solving",
     "critical thinking", "decision making", "time management", "adaptability", "flexibility",
-    "creativity", "interpersonal", "stakeholder management", "stakeholder engagement",
-    "negotiation", "conflict resolution", "emotional intelligence", "presentation", "initiative",
-    "strategic thinking", "analytical thinking", "detail oriented", "self motivation",
-    "work ethic", "accountability", "resilience", "cultural awareness", "innovation", "mentoring",
-    "coaching", "relationship building", "verbal communication", "written communication", "advocacy",
-    "customer service", "project management", "change management", "facilitation", "influencing",
-    "delegation", "strategic planning", "commercial acumen", "business acumen", "organizational"
+    "creativity", "interpersonal", "negotiation", "conflict resolution", "emotional intelligence", 
+    "presentation", "initiative", "strategic thinking", "analytical thinking", "detail oriented", 
+    "self motivation", "work ethic", "accountability", "resilience", "cultural awareness", 
+    "innovation", "mentoring", "coaching", "relationship building", "verbal communication", 
+    "written communication", "advocacy", "customer service", "project management", "change management", 
+    "facilitation", "influencing", "delegation", "strategic planning", "commercial acumen", 
+    "business acumen", "organizational"
   ]);
   
   // Technical skills patterns
@@ -99,6 +102,12 @@ function extractJobRequirements(jobDescription: string): {
     /\bexperienc(?:e|ed)\s*(?:in|with)\s*([^.,:;]+)/i,
     /\bbackground\s*(?:in|with)\s*([^.,:;]+)/i
   ];
+  
+  // Special pattern for stakeholder management (high priority skill)
+  const stakeholderPattern = /\b(?:stakeholder|stakeholders|client)\s*(?:management|engagement|relationship|communication|interaction|liaison)\b/i;
+  
+  // Check if stakeholder management is explicitly mentioned in the job description
+  let hasStakeholderManagement = stakeholderPattern.test(jobDescription.toLowerCase());
   
   // Extract all potential skills
   const allWords = jobDescription.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
@@ -148,6 +157,26 @@ function extractJobRequirements(jobDescription: string): {
   const skills: string[] = [];
   const technicalSkills: string[] = [];
   const softSkills: string[] = [];
+  
+  // If stakeholder management is mentioned, make sure it's added to soft skills
+  if (hasStakeholderManagement) {
+    softSkills.push("stakeholder management");
+    skills.push("stakeholder management");
+  }
+  
+  // Check if management/leadership is mentioned, which often implies stakeholder management
+  if (jobDescription.toLowerCase().includes("management") || 
+      jobDescription.toLowerCase().includes("leader") ||
+      jobDescription.toLowerCase().includes("coordinate") ||
+      jobDescription.toLowerCase().includes("communication") ||
+      jobDescription.toLowerCase().includes("client") ||
+      jobDescription.toLowerCase().includes("relationship")) {
+    // Add stakeholder management if not already added
+    if (!softSkills.includes("stakeholder management")) {
+      softSkills.push("stakeholder management");
+      skills.push("stakeholder management");
+    }
+  }
   
   // Process phrases first (they're more valuable)
   for (const phrase of allPhrases) {
@@ -234,6 +263,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log("Starting resume analysis...");
+
   try {
     const { resumeText, jobDescription } = await req.json() as AnalysisRequest;
 
@@ -271,143 +302,173 @@ serve(async (req) => {
     const jobRequirements = extractJobRequirements(jobDescription);
     console.log(`Extracted ${jobRequirements.skills.length} skills, ${jobRequirements.softSkills.length} soft skills, and ${jobRequirements.technicalSkills.length} technical skills from job description`);
     
-    // Truncate inputs to prevent token limit issues
-    truncatedResume = truncateText(cleanedResume, 8000);
-    truncatedJobDesc = truncateText(jobDescription, 2000);
+    // Further reduce token usage - use smaller limits for faster processing
+    truncatedResume = truncateText(cleanedResume, 4000); // Reduced from 8000
+    truncatedJobDesc = truncateText(jobDescription, 1000); // Reduced from 2000
     
     console.log(`Original resume length: ${resumeText.length}, cleaned to: ${cleanedResume.length}, truncated to: ${truncatedResume.length}`);
     console.log(`Original job description length: ${jobDescription.length}, truncated to: ${truncatedJobDesc.length}`);
     
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an expert ATS (Applicant Tracking System) analyzer with deep expertise in resume optimization, recruitment, and HR technologies. Your task is to perform a detailed analysis of a resume against a specific job description and provide actionable feedback.
+    // Use a more efficient model and set a short timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 sec max for API call
+    
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini', // Using smaller model for speed
+          messages: [
+            {
+              role: 'system',
+              content: `You are an expert ATS (Applicant Tracking System) analyzer specializing in resume optimization. Your task is to analyze a resume against a job description and provide actionable feedback, focusing especially on STAKEHOLDER MANAGEMENT skills when they appear relevant to the role.
 
-ANALYSIS FRAMEWORK:
-1. Parse both the resume and job description to identify key skills, qualifications, experiences, and requirements.
-2. Perform a comprehensive skills gap analysis focusing on:
-   - Hard skills match (technical abilities, tools, certifications)
-   - Soft skills match (communication, leadership, stakeholder management, problem-solving)
-   - Experience level match (years of experience, role complexity)
-   - Industry relevance (domain knowledge, sector-specific terminology)
-   - Educational/qualification match
-
-REQUIRED OUTPUT FORMAT:
-Structure your response as a valid JSON object with the following schema:
+OUTPUT FORMAT:
+Return a valid JSON object with this structure:
 {
-  "alignmentScore": Integer from 1-100 representing overall match percentage,
-  "verdict": Boolean indicating if the candidate would likely pass initial ATS screening,
-  "strengths": Array of strings highlighting strong matches between resume and requirements (maximum 5 points),
-  "weaknesses": Array of strings identifying key gaps or missing elements (maximum 5 points),
-  "recommendations": Array of strings with specific, actionable improvements (maximum 5 points),
+  "alignmentScore": Integer from 1-100 representing match percentage,
+  "verdict": Boolean indicating if the candidate would pass ATS screening,
+  "strengths": Array of strings highlighting matches (max 5),
+  "weaknesses": Array of strings identifying gaps (max 5),
+  "recommendations": Array of strings with specific improvements (max 5),
   "starAnalysis": Array of objects containing:
     {
-      "original": String containing an original bullet point from the resume,
-      "improved": String with an optimized version that:
-        - Begins with a strong action verb
-        - Includes specific context and quantifiable achievements
-        - Incorporates relevant keywords from the job description
-        - Follows STAR methodology (implicitly, without labeling components),
-      "feedback": String explaining the specific improvements and why they increase ATS match probability
+      "original": String with original bullet point from resume,
+      "improved": String with optimized version,
+      "feedback": String explaining improvements
     }
 }
 
-GUIDELINES FOR CREATING STAR-OPTIMIZED BULLETS:
-1. Start with impactful action verbs specific to the industry
-2. Include measurable metrics (%, $, time saved, improvement rates)
-3. Demonstrate clear cause-effect relationships between actions and outcomes
-4. Integrate relevant technologies, methodologies, and industry terminology from the job description
-5. Focus on accomplishments and business impact, not just responsibilities
-6. Keep each bullet point concise (under 2 lines) but comprehensive
-7. Ensure natural readability - do not just stuff keywords
-8. Use industry-standard terminology that would be recognized by both ATS systems and human recruiters
+IMPORTANT: If the job involves management, leadership, or client relationships, ALWAYS analyze stakeholder management capabilities, even if not explicitly mentioned in the job description.
 
-SPECIFICALLY CHECK FOR THESE KEY REQUIREMENTS FROM THE JOB DESCRIPTION:
+FOCUS ON THESE KEY REQUIREMENTS:
 Technical Skills: ${jobRequirements.technicalSkills.join(', ')}
 Soft Skills: ${jobRequirements.softSkills.join(', ')}
 Education: ${jobRequirements.education.join('; ')}
-Experience: ${jobRequirements.experience.join('; ')}
+Experience: ${jobRequirements.experience.join('; ')}`
+            },
+            {
+              role: 'user',
+              content: `Job description:\n\n${truncatedJobDesc}\n\nResume:\n\n${truncatedResume}\n\nAnalyze how well this resume matches the job description.`
+            }
+          ],
+          temperature: 0.2,
+          max_tokens: 1000, // Reduced from 2000
+        }),
+        signal: controller.signal
+      });
 
-Your analysis must be rigorous, evidence-based, and actionable, focusing on helping the candidate maximize their chances of passing the ATS screening and impressing human recruiters. 
-
-Pay special attention to soft skills like stakeholder management, leadership, and communication if they appear in the job requirements, ensuring you provide specific recommendations for demonstrating these qualities effectively.`
-          },
-          {
-            role: 'user',
-            content: `Here is the job description:\n\n${truncatedJobDesc}\n\nHere is the resume:\n\n${truncatedResume}\n\nPlease analyze how well this resume matches the job description and provide detailed feedback.`
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 2000,
-      }),
-    });
-
-    const data = await response.json();
-    
-    if (data.error) {
-      console.error('OpenAI API error:', data.error);
-      return new Response(
-        JSON.stringify({ error: `OpenAI API error: ${data.error.message || 'Unknown error'}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Parse the content from the OpenAI response
-    let analysisResult;
-    try {
-      const content = data.choices[0].message.content;
-      console.log('Raw OpenAI response:', content.substring(0, 200) + '...');
+      clearTimeout(timeoutId);
+      const data = await response.json();
       
-      // First try direct parsing
-      try {
-        analysisResult = JSON.parse(content);
-      } catch (parseError) {
-        // If direct parsing fails, try to extract JSON from markdown code blocks
-        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-        if (jsonMatch && jsonMatch[1]) {
-          analysisResult = JSON.parse(jsonMatch[1]);
-        } else {
-          // If no code blocks, remove any markdown artifacts and try again
-          const cleanedContent = content
-            .replace(/^```json\s*/, '')
-            .replace(/\s*```$/, '');
-          analysisResult = JSON.parse(cleanedContent);
-        }
+      if (data.error) {
+        console.error('OpenAI API error:', data.error);
+        return new Response(
+          JSON.stringify({ error: `AI analysis error: ${data.error.message || 'Unknown error'}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
       
-      console.log('Analysis complete');
-      console.log('Analysis result keys:', Object.keys(analysisResult));
-      console.log('Has starAnalysis:', analysisResult.hasOwnProperty('starAnalysis'));
-      console.log('StarAnalysis length:', analysisResult.starAnalysis?.length || 0);
-    } catch (error) {
-      console.error('Error parsing OpenAI response:', error);
-      console.error('Response content:', data.choices[0].message.content);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to parse analysis results',
-          details: error.message,
-          responseContent: data.choices[0].message.content 
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+      // Parse the content from the OpenAI response
+      let analysisResult;
+      try {
+        const content = data.choices[0].message.content;
+        console.log('Raw OpenAI response received');
+        
+        // Try direct parsing
+        try {
+          analysisResult = JSON.parse(content);
+        } catch (parseError) {
+          // Try to extract JSON from markdown code blocks
+          const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+          if (jsonMatch && jsonMatch[1]) {
+            analysisResult = JSON.parse(jsonMatch[1]);
+          } else {
+            // If no code blocks, remove any markdown artifacts and try again
+            const cleanedContent = content
+              .replace(/^```json\s*/, '')
+              .replace(/\s*```$/, '');
+            analysisResult = JSON.parse(cleanedContent);
+          }
+        }
+        
+        console.log('Analysis complete');
+        
+        // Ensure stakeholder management is addressed in the results if relevant
+        if (jobRequirements.softSkills.includes('stakeholder management') || 
+            jobDescription.toLowerCase().includes('stakeholder') || 
+            jobDescription.toLowerCase().includes('leadership') ||
+            jobDescription.toLowerCase().includes('management') ||
+            jobDescription.toLowerCase().includes('client')) {
+            
+          // If stakeholder management isn't mentioned in strengths/weaknesses, add a relevant note
+          let hasStakeholderFeedback = false;
+          
+          if (analysisResult.strengths) {
+            hasStakeholderFeedback = analysisResult.strengths.some(s => 
+              s.toLowerCase().includes('stakeholder')
+            );
+          }
+          
+          if (analysisResult.weaknesses) {
+            hasStakeholderFeedback = hasStakeholderFeedback || analysisResult.weaknesses.some(w => 
+              w.toLowerCase().includes('stakeholder')
+            );
+          }
+          
+          if (!hasStakeholderFeedback) {
+            // Add stakeholder management feedback based on if it's mentioned in the resume
+            const hasStakeholderInResume = truncatedResume.toLowerCase().includes('stakeholder');
+            
+            if (hasStakeholderInResume) {
+              if (analysisResult.strengths && analysisResult.strengths.length < 5) {
+                analysisResult.strengths.push("Demonstrates experience with stakeholder management which is crucial for this role");
+              }
+            } else {
+              if (analysisResult.weaknesses && analysisResult.weaknesses.length < 5) {
+                analysisResult.weaknesses.push("Resume lacks explicit mention of stakeholder management skills which appear relevant to this role");
+              }
+              
+              if (analysisResult.recommendations && analysisResult.recommendations.length < 5) {
+                analysisResult.recommendations.push("Highlight any experience with stakeholder management or client relationships, as these skills appear valuable for this position");
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing OpenAI response:', error);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to parse analysis results',
+            details: error.message
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
-    return new Response(
-      JSON.stringify(analysisResult),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+      return new Response(
+        JSON.stringify(analysisResult),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.error('OpenAI request timed out');
+        return new Response(
+          JSON.stringify({ error: 'Analysis took too long to complete. Try with a shorter resume or job description.' }),
+          { status: 408, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      throw fetchError;
+    }
   } catch (error) {
     console.error('Error in analyze-resume function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'An unknown error occurred' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
