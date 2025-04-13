@@ -750,8 +750,8 @@ function convertHtmlToText(html: string): string {
     .replace(/&#39;/g, "'")
     .replace(/&ldquo;/g, '"')
     .replace(/&rdquo;/g, '"')
-    .replace(/&lsquo;/g, ''')
-    .replace(/&rsquo;/g, ''');
+    .replace(/&lsquo;/g, "'")
+    .replace(/&rsquo;/g, "'");
   
   // Handle bullet points and special characters
   text = text
