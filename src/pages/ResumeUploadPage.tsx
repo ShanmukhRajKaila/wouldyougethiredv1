@@ -27,6 +27,7 @@ const ResumeUploadPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [extractionWarning, setExtractionWarning] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
   useEffect(() => {
     // Initialize PDF extractor
@@ -127,7 +128,42 @@ const ResumeUploadPage: React.FC = () => {
           // Analyze the resume against the job description
           console.log('Starting resume analysis...');
           try {
-            const analysisResults = await analyzeResume(resumeText, jobDescription);
+            // Add a loading toast for better UX during potentially slow analysis
+            const loadingToast = toast.loading('Analyzing your resume...');
+            
+            // Try up to 2 times in case of temporary errors
+            let analysisResults = null;
+            let attemptError = null;
+            
+            try {
+              analysisResults = await analyzeResume(resumeText, jobDescription);
+            } catch (error) {
+              console.error('First analysis attempt failed:', error);
+              attemptError = error;
+              
+              // Only retry once if it's not a token limit error
+              if (!error.message?.includes('token') && retryCount < 1) {
+                setRetryCount(prev => prev + 1);
+                
+                // Wait a moment before retrying
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                toast.loading('Retrying analysis...');
+                
+                try {
+                  // Try with a shortened resume if the first attempt failed
+                  const shortenedResume = resumeText.length > 3000 
+                    ? resumeText.substring(0, 3000) + "..." 
+                    : resumeText;
+                    
+                  analysisResults = await analyzeResume(shortenedResume, jobDescription);
+                } catch (retryError) {
+                  console.error('Retry analysis attempt failed:', retryError);
+                  // Use the original error
+                }
+              }
+            }
+            
+            toast.dismiss(loadingToast);
             
             if (analysisResults) {
               console.log('Analysis complete. Results received.');
@@ -146,6 +182,10 @@ const ResumeUploadPage: React.FC = () => {
               setCurrentStage('resumeUpload');
               setProcessingError('Failed to analyze your resume. The analysis service may be temporarily unavailable.');
               toast.error('Failed to analyze your resume. Please try again later.');
+              
+              if (attemptError) {
+                console.error('Resume analysis error details:', attemptError);
+              }
             }
           } catch (error: any) {
             console.error('Resume analysis error:', error);

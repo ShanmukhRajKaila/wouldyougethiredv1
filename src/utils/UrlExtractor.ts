@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 interface ExtractionResult {
@@ -5,7 +6,6 @@ interface ExtractionResult {
   jobDescription: string | null;
   jobTitle?: string | null;
   error?: string;
-  requiresLogin?: boolean;
 }
 
 export class UrlExtractor {
@@ -16,10 +16,6 @@ export class UrlExtractor {
       
       // First check if this is a LinkedIn URL to apply special extraction
       const isLinkedIn = url.includes('linkedin.com');
-      
-      // Determine website domain for specialized handling
-      const urlObj = new URL(url);
-      const domain = urlObj.hostname.replace('www.', '');
       
       // Use supabase client to call our edge function with additional headers
       const { data, error } = await supabase.functions.invoke('extract-job-content', {
@@ -32,9 +28,7 @@ export class UrlExtractor {
             // Add browser-like headers to avoid being blocked
             browserHeaders: true,
             // Add debug flag to get more information
-            debug: true,
-            // Pass the domain for specialized handling
-            domain: domain
+            debug: true
           }
         }
       });
@@ -46,26 +40,13 @@ export class UrlExtractor {
 
       // Log the extraction results for debugging
       console.log('Extraction results (detailed):', data);
-
-      // Check if the site requires login
-      const requiresLogin = data.requiresLogin || 
-                          ((!data.jobDescription || data.jobDescription.length < 100) && 
-                          (data.error && (
-                            data.error.includes('login') || 
-                            data.error.includes('sign in') || 
-                            data.error.includes('authenticate') ||
-                            data.error.includes('credentials')
-                          )));
       
       // Return the extracted data, prioritizing job description
       return {
         companyName: data.companyName || null,
         jobDescription: data.jobDescription || null,
         jobTitle: data.jobTitle || null,
-        requiresLogin: requiresLogin,
         error: (!data.jobDescription) ? 
-               requiresLogin ? 
-               'This website requires login credentials to access the job description.' : 
                'Could not extract job description from the provided URL' : 
                undefined
       };

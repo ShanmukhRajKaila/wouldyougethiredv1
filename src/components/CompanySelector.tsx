@@ -9,21 +9,20 @@ import { UrlExtractor } from '@/utils/UrlExtractor';
 import { Loader2, Link as LinkIcon } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-interface CompanySelectorProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-}
-
-const CompanySelector = ({ value, onChange, placeholder }: CompanySelectorProps) => {
-  const { setJobDescription, jobDescription } = useAppContext();
+const CompanySelector = () => {
+  const { selectedCompany, setSelectedCompany, setJobDescription, jobDescription } = useAppContext();
   const [jobUrl, setJobUrl] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('url');
   const [extractionAttempted, setExtractionAttempted] = useState(false);
   
   const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.value);
+    const companyName = e.target.value;
+    setSelectedCompany(companyName ? { 
+      id: 'custom', 
+      name: companyName,
+      logo: '' 
+    } : null);
   };
 
   const handleUrlExtraction = async () => {
@@ -57,7 +56,11 @@ const CompanySelector = ({ value, onChange, placeholder }: CompanySelectorProps)
 
       // Update company name if available (but it's now optional)
       if (extractionResult.companyName) {
-        onChange(extractionResult.companyName);
+        setSelectedCompany({
+          id: 'extracted',
+          name: extractionResult.companyName,
+          logo: ''
+        });
         console.log('Company name extracted:', extractionResult.companyName);
       }
     } catch (error) {
@@ -133,9 +136,9 @@ const CompanySelector = ({ value, onChange, placeholder }: CompanySelectorProps)
             <Input
               id="company-url"
               type="text"
-              value={value}
+              value={selectedCompany?.name || ''}
               onChange={handleCompanyChange}
-              placeholder={placeholder}
+              placeholder="Company name will appear here if extracted"
               className="w-full"
             />
           </div>
@@ -149,9 +152,9 @@ const CompanySelector = ({ value, onChange, placeholder }: CompanySelectorProps)
             <Input
               id="company-manual"
               type="text"
-              value={value}
+              value={selectedCompany?.name || ''}
               onChange={handleCompanyChange}
-              placeholder={placeholder}
+              placeholder="Enter the company name (optional)"
               className="w-full"
             />
           </div>

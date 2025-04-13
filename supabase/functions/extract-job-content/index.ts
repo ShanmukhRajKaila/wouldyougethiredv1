@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -14,7 +13,6 @@ interface RequestData {
     extractLinkedInCompanyName?: boolean;
     browserHeaders?: boolean;
     debug?: boolean;
-    domain?: string;
   };
 }
 
@@ -28,7 +26,6 @@ serve(async (req) => {
     const request = await req.json() as RequestData;
     const { url, options = {} } = request;
     const debug = options.debug || false;
-    const domain = options.domain || '';
 
     if (!url) {
       return new Response(
@@ -59,8 +56,7 @@ serve(async (req) => {
       'sec-ch-ua': '"Google Chrome";v="120", "Chromium";v="120", "Not=A?Brand";v="99"',
       'sec-ch-ua-mobile': '?0',
       'sec-ch-ua-platform': '"Windows"',
-      'Referer': 'https://www.google.com/',
-      'Cookie': '' // Will use empty cookies by default
+      'Referer': 'https://www.google.com/'
     };
     
     // Fetch the content from the URL with improved headers
@@ -71,11 +67,7 @@ serve(async (req) => {
     
     if (!response.ok) {
       return new Response(
-        JSON.stringify({ 
-          error: `Failed to fetch content from URL: ${response.statusText}`,
-          requiresLogin: response.status === 403 || response.status === 401 || 
-                        (response.redirected && response.url.includes('login'))
-        }),
+        JSON.stringify({ error: `Failed to fetch content from URL: ${response.statusText}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -86,31 +78,21 @@ serve(async (req) => {
       console.log(`Received HTML content (length: ${html.length} characters)`);
       console.log(`First 500 characters of HTML: ${html.substring(0, 500)}...`);
     }
-    
-    // Check for login walls/forms
-    const requiresLogin = detectLoginRequirement(html, response.url);
-    
-    if (requiresLogin && debug) {
-      console.log('Login requirement detected for this website');
-    }
 
     // More advanced extraction techniques
     const companyName = extractCompanyName(html, url);
     const jobTitle = extractJobTitle(html, url);
     
-    // Dynamic job description extraction based on domain
+    // IMPROVED: Extract job description with specialized handling for MBA Exchange
     let jobDescription = null;
     
-    // Special handling for various sites
+    // Special handling for MBA Exchange website
     if (url.includes('mba-exchange.com')) {
       jobDescription = extractMBAExchangeJobDescription(html, debug);
-    } else if (url.includes('sgcareers') || url.includes('.sg/')) {
-      jobDescription = extractSGCareersJobDescription(html, debug);
-    } else if (requiresLogin) {
-      // If login is required, attempt simpler extraction methods
-      jobDescription = extractLoginProtectedContent(html, url, debug);
-    } else {
-      // If not a specialized site or extraction failed, try generic methods
+    } 
+    
+    // If not MBA Exchange or extraction failed, try generic methods
+    if (!jobDescription) {
       jobDescription = extractJobDescription(html, url, debug);
     }
 
@@ -120,8 +102,7 @@ serve(async (req) => {
       debugInfo = {
         htmlLength: html.length,
         extractionDomainInfo: new URL(url).hostname,
-        detectedPatterns: detectContentPatterns(html),
-        requiresLogin: requiresLogin
+        detectedPatterns: detectContentPatterns(html)
       };
     }
 
@@ -130,7 +111,6 @@ serve(async (req) => {
         companyName: companyName || null, 
         jobDescription: jobDescription || null,
         jobTitle: jobTitle || null,
-        requiresLogin: requiresLogin,
         debug: debug ? debugInfo : undefined
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -145,146 +125,6 @@ serve(async (req) => {
   }
 });
 
-// New function to detect if the site requires login
-function detectLoginRequirement(html: string, url: string): boolean {
-  // Check URL redirects to login
-  if (url.includes('login') || url.includes('signin') || url.includes('auth')) {
-    return true;
-  }
-  
-  // Check for login forms and common login page elements
-  const loginPatterns = [
-    /<form[^>]*(?:login|signin|auth)[^>]*>/i,
-    /<input[^>]*(?:password|username|email)[^>]*>/i,
-    /<button[^>]*(?:login|signin|log[ -]in|sign[ -]in)[^>]*>/i,
-    /<a[^>]*(?:login|signin|log[ -]in|sign[ -]in)[^>]*>/i,
-    /(?:login|signin|log[ -]in|sign[ -]in).*(?:to view|to continue|to access|required)/i,
-    /<div[^>]*(?:login|signin|auth|membership)[ -](?:wall|gate|form)[^>]*>/i,
-    /(?:please|you must|required to) (?:login|log in|signin|sign in|authenticate|register)/i,
-    /access (?:is|requires) (?:restricted|limited|denied)/i,
-    /members[- ]only/i
-  ];
-  
-  for (const pattern of loginPatterns) {
-    if (pattern.test(html)) {
-      return true;
-    }
-  }
-  
-  // Check if HTML content is very short (common for restricted pages)
-  if (html.length < 8000 && !html.includes('job') && !html.includes('description')) {
-    // Check if there is little meaningful content
-    const cleanedHtml = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-                           .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
-    
-    if (cleanedHtml.length < 5000) {
-      return true;
-    }
-  }
-  
-  return false;
-}
-
-// Added: Function to extract content from login-protected pages
-function extractLoginProtectedContent(html: string, url: string, debug = false): string | null {
-  if (debug) {
-    console.log("Attempting simplified extraction for login-protected content");
-  }
-  
-  // Try to extract any visible job content that might be shown before login wall
-  const previewPatterns = [
-    /<meta[^>]*name="description"[^>]*content="([^"]+)"/i,
-    /<meta[^>]*property="og:description"[^>]*content="([^"]+)"/i,
-    /<div[^>]*class="[^"]*preview[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="[^"]*teaser[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="[^"]*summary[^"]*"[^>]*>([\s\S]*?)<\/div>/i
-  ];
-  
-  for (const pattern of previewPatterns) {
-    const match = html.match(pattern);
-    if (match && match[1]) {
-      const text = convertHtmlToText(match[1]);
-      if (text && text.length > 100 && 
-          (text.includes('job') || 
-           text.includes('position') || 
-           text.includes('role') ||
-           text.includes('experience'))) {
-        return `[Preview - Login required for full content]\n\n${text}`;
-      }
-    }
-  }
-  
-  // Look for any job-related content paragraphs
-  const paragraphs = html.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
-  let relevantContent = '';
-  
-  for (const paragraph of paragraphs) {
-    const text = convertHtmlToText(paragraph);
-    if (text.length > 50 && 
-        (text.includes('experience') || 
-         text.includes('responsibilities') || 
-         text.includes('requirements') ||
-         text.includes('position') ||
-         text.includes('job'))) {
-      relevantContent += text + '\n\n';
-    }
-  }
-  
-  if (relevantContent.length > 100) {
-    return `[Partial Content - Login required for full description]\n\n${relevantContent}`;
-  }
-  
-  return null;
-}
-
-// Added: Function to extract job description from SGCareers sites
-function extractSGCareersJobDescription(html: string, debug = false): string | null {
-  if (debug) {
-    console.log("Using specialized SG Careers extraction method");
-  }
-  
-  // Look for job details in specific structures
-  const jobDetailPatterns = [
-    /<div[^>]*class="[^"]*(?:job|position)[-_]?(?:details|description)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<section[^>]*class="[^"]*(?:job|position)[-_]?(?:details|description)[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
-    /<div[^>]*class="[^"]*(?:info-box|content-box|job-box)[^"]*"[^>]*>([\s\S]*?)<\/div>/i
-  ];
-  
-  for (const pattern of jobDetailPatterns) {
-    const match = html.match(pattern);
-    if (match && match[1]) {
-      const text = convertHtmlToText(match[1]);
-      if (text && text.length > 200) {
-        return text;
-      }
-    }
-  }
-  
-  // Look for any structured sections with job keywords
-  const sectionPatterns = [
-    /<h[2-4][^>]*>(?:Job Description|Role|Responsibilities|Requirements)<\/h[2-4]>\s*([\s\S]*?)(?:<h[2-4]|<div class)/i,
-    /<strong>(?:Job Description|Role|Responsibilities|Requirements)<\/strong>\s*([\s\S]*?)(?:<strong>|<div class)/i
-  ];
-  
-  let combinedSections = '';
-  
-  for (const pattern of sectionPatterns) {
-    const matches = html.matchAll(new RegExp(pattern, 'gi'));
-    for (const match of matches) {
-      if (match[1]) {
-        combinedSections += convertHtmlToText(match[1]) + '\n\n';
-      }
-    }
-  }
-  
-  if (combinedSections.length > 200) {
-    return combinedSections;
-  }
-  
-  // Fall back to generic extraction
-  return null;
-}
-
 // Helper function to detect content patterns for debugging
 function detectContentPatterns(html: string) {
   const patterns = {
@@ -297,9 +137,7 @@ function detectContentPatterns(html: string) {
     divCount: (html.match(/<div/g) || []).length,
     mainContentGuess: html.includes('main-content') ? 'main-content' : 
                       html.includes('content-main') ? 'content-main' : 
-                      html.includes('job-content') ? 'job-content' : 'unknown',
-    hasLoginForms: html.includes('login') || html.includes('signin') || html.includes('password'),
-    hasAccessRestriction: html.includes('restricted') || html.includes('members only') || html.includes('subscription')
+                      html.includes('job-content') ? 'job-content' : 'unknown'
   };
   
   return patterns;
@@ -650,26 +488,6 @@ function extractJobDescription(html: string, url: string, debug = false): string
     }
   }
   
-  // Try to find sections with job-related headings
-  const headingPatterns = [
-    /<h[1-4][^>]*>[^<]*(?:job\s+description|responsibilities|requirements|qualifications)[^<]*<\/h[1-4]>([\s\S]*?)(?:<h[1-4]|<div\s+class=|$)/i,
-    /<strong>[^<]*(?:job\s+description|responsibilities|requirements|qualifications)[^<]*<\/strong>([\s\S]*?)(?:<strong>|<div\s+class=|$)/i
-  ];
-  
-  let sections = '';
-  for (const pattern of headingPatterns) {
-    const matches = [...cleanedHtml.matchAll(new RegExp(pattern, 'gi'))];
-    for (const match of matches) {
-      if (match[1] && match[1].length > 100) {
-        sections += convertHtmlToText(match[1]) + '\n\n';
-      }
-    }
-  }
-  
-  if (sections.length > 200) {
-    return sections;
-  }
-  
   const contentPatterns = [
     /<article[^>]*>([\s\S]*?)<\/article>/i,
     /<main[^>]*>([\s\S]*?)<\/main>/i,
@@ -721,55 +539,20 @@ function extractJobDescription(html: string, url: string, debug = false): string
 
 // Convert HTML to plain text with better formatting
 function convertHtmlToText(html: string): string {
-  if (!html) return '';
-  
-  // First remove all script and style elements
-  let text = html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
-  
-  // Replace common block elements with newlines before and after
-  text = text
-    .replace(/<\/div>|<\/p>|<\/h[1-6]>|<\/li>|<br\s*\/?>/gi, '$&\n')
-    .replace(/<div>|<p>|<h[1-6]>|<ul>|<ol>|<li>/gi, '\n$&');
-  
-  // Replace list items with bullet points
-  text = text
-    .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '• $1\n');
-  
-  // Remove all remaining HTML tags
-  text = text.replace(/<[^>]+>/g, '');
-  
-  // Handle HTML entities
-  text = text
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<li\b[^>]*>([\s\S]*?)<\/li>/gi, '• $1\n')
+    .replace(/<\/p>\s*<p/gi, '</p>\n<p')
+    .replace(/<\/div>\s*<div/gi, '</div>\n<div')
+    .replace(/<\/h[1-6]>\s*<(?!h[1-6])/gi, '</h$1>\n<')
+    .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&ldquo;/g, '"')
-    .replace(/&rdquo;/g, '"')
-    .replace(/&lsquo;/g, "'")
-    .replace(/&rsquo;/g, "'");
-  
-  // Handle bullet points and special characters
-  text = text
-    .replace(/\u2022/g, '•') // Ensure consistent bullet points
-    .replace(/\u2023/g, '•')
-    .replace(/\u25E6/g, '◦')
-    .replace(/\u2043/g, '⁃')
-    .replace(/\u2219/g, '∙')
-    .replace(/\u00B7/g, '·');
-  
-  // Clean up whitespace
-  text = text
-    .replace(/^\s+/gm, '')       // Remove leading whitespace from each line
-    .replace(/\s+$/gm, '')       // Remove trailing whitespace from each line
-    .replace(/\n{3,}/g, '\n\n')  // Normalize line breaks (no more than 2 consecutive)
-    .replace(/\t/g, '  ')        // Replace tabs with spaces
-    .replace(/\s+/g, ' ');       // Replace multiple spaces with single space
-  
-  return text.trim();
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
-

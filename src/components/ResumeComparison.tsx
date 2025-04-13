@@ -20,7 +20,7 @@ interface ResumeComparisonProps {
 
 const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => {
   const [activeTab, setActiveTab] = useState<string>('original');
-  const { resumeFile, jobDescription } = useAppContext();
+  const { resumeFile, jobDescription, analysisResults } = useAppContext();
   const [resumeText, setResumeText] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
@@ -78,19 +78,43 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
   }, [resumeFile, jobDescription, starAnalysis]);
   
   const identifyMissingSkills = (resumeText: string, jobDesc: string) => {
-    // Common skills for analytics and AI roles that might be missing
+    // Get missing skills from analysis results if available
+    if (analysisResults?.weaknesses) {
+      // Extract skill-related weaknesses
+      const skillWeaknesses = analysisResults.weaknesses.filter(weakness => 
+        weakness.toLowerCase().includes('skill') || 
+        weakness.toLowerCase().includes('experience') ||
+        weakness.toLowerCase().includes('knowledge')
+      );
+      
+      if (skillWeaknesses.length > 0) {
+        // Extract key terms from weaknesses
+        const extractedSkills = skillWeaknesses.flatMap(weakness => {
+          // Extract phrases that might be skills
+          const skillMatches = weakness.match(/\b([A-Z][a-z]+(?:\s[a-z]+){0,2}|[a-z]+(?:\s[a-z]+){0,2})\b/g) || [];
+          return skillMatches.filter(skill => 
+            skill.length > 3 && 
+            !['the', 'and', 'with', 'your', 'resume', 'lack', 'missing', 'more', 'need'].includes(skill.toLowerCase())
+          );
+        });
+        
+        setMissingSkills(extractedSkills);
+        return;
+      }
+    }
+
+    // Fallback to predefined skill detection if analysis results don't have useful weaknesses
     const commonSkills = [
-      { term: "data science platform", alias: ["dataiku", "alteryx", "databricks"] },
-      { term: "stakeholder management", alias: ["stakeholder", "stakeholders"] },
-      { term: "commercial acumen", alias: ["business acumen", "commercial sense"] },
+      { term: "stakeholder management", alias: ["stakeholder", "stakeholders", "relationship management"] },
+      { term: "data science", alias: ["data scientist", "data analysis", "data analytics"] },
+      { term: "commercial acumen", alias: ["business acumen", "commercial sense", "business sense"] },
       { term: "ai models", alias: ["artificial intelligence", "machine learning models", "ml models"] },
-      { term: "data modeling", alias: ["data modelling", "data model"] },
-      { term: "proof of concept", alias: ["POC", "proof-of-concept"] },
-      { term: "cross-functional collaboration", alias: ["cross-departmental", "cross functional"] },
-      { term: "retail analytics", alias: ["retail data", "retail metrics"] },
-      { term: "omni-channel", alias: ["omnichannel", "multi-channel"] },
-      { term: "beauty industry", alias: ["beauty sector", "cosmetics"] },
-      { term: "luxury retail", alias: ["luxury brand", "luxury market"] }
+      { term: "data modeling", alias: ["data modelling", "data model", "database design"] },
+      { term: "communication skills", alias: ["communicator", "verbal communication", "written communication"] },
+      { term: "cross-functional collaboration", alias: ["cross-departmental", "cross functional", "team collaboration"] },
+      { term: "leadership", alias: ["team leadership", "people management", "managing teams"] },
+      { term: "project management", alias: ["project coordination", "project delivery", "program management"] },
+      { term: "strategic thinking", alias: ["strategic planning", "strategy development", "strategic vision"] }
     ];
     
     const resumeLower = resumeText.toLowerCase();
@@ -126,7 +150,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
       <div className="space-y-6">
         {missingSkills.length > 0 && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-            <h3 className="text-blue-800 font-medium mb-2">Skills to highlight or develop for this role:</h3>
+            <h3 className="text-blue-800 font-medium mb-2">Key skills to highlight or develop for this role:</h3>
             <div className="flex flex-wrap gap-2">
               {missingSkills.map((skill, idx) => (
                 <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">
@@ -135,7 +159,8 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
               ))}
             </div>
             <p className="mt-3 text-xs text-gray-600">
-              These skills are mentioned in the job description but not found in your resume. Consider adding relevant experience or future learning plans.
+              These skills are explicitly mentioned in the job description but not found in your resume. 
+              Consider adding relevant experiences or demonstrating how your existing experience relates to these areas.
             </p>
           </div>
         )}
@@ -187,17 +212,25 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
           <h2 className="text-lg font-semibold text-consulting-navy mb-3">
             Recommended Additions for this Role
           </h2>
-          <ul className="list-disc pl-6 space-y-3 text-sm">
-            <li className="text-gray-700">
-              <span className="font-medium">Certifications:</span> Consider AI/ML certifications from cloud providers (AWS, Azure, GCP) or specialized platforms (Dataiku, Alteryx)
-            </li>
-            <li className="text-gray-700">
-              <span className="font-medium">Projects:</span> Highlight any experience with retail analytics, customer segmentation, or product recommendation systems
-            </li>
-            <li className="text-gray-700">
-              <span className="font-medium">Skills to emphasize:</span> Stakeholder management, data modeling, commercial acumen, and experience with omni-channel retail data
-            </li>
-          </ul>
+          {analysisResults?.recommendations && analysisResults.recommendations.length > 0 ? (
+            <ul className="list-disc pl-6 space-y-3 text-sm">
+              {analysisResults.recommendations.map((recommendation, idx) => (
+                <li key={idx} className="text-gray-700">{recommendation}</li>
+              ))}
+            </ul>
+          ) : (
+            <ul className="list-disc pl-6 space-y-3 text-sm">
+              <li className="text-gray-700">
+                <span className="font-medium">Skills emphasis:</span> Highlight any experience with stakeholder management, communication, and project delivery
+              </li>
+              <li className="text-gray-700">
+                <span className="font-medium">Quantify results:</span> Add metrics and specific outcomes to strengthen your bullet points
+              </li>
+              <li className="text-gray-700">
+                <span className="font-medium">Keywords:</span> Incorporate terminology from the job description into your resume
+              </li>
+            </ul>
+          )}
         </div>
       </div>
     );
