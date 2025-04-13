@@ -56,6 +56,8 @@ interface AppContextType {
   analyzeResume: (resumeText: string, jobDescription: string) => Promise<AnalysisResult | null>;
   analysisResults: AnalysisResult | null;
   setAnalysisResults: (results: AnalysisResult | null) => void;
+  companyName: string;
+  setCompanyName: (name: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -71,6 +73,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [userEmail, setUserEmail] = useState<string>('');
   const [currentLeadId, setCurrentLeadId] = useState<string | null>(null);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult | null>(null);
+  const [companyName, setCompanyName] = useState<string>('');
 
   const resetApplication = () => {
     setCurrentStage('landing');
@@ -83,6 +86,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUserEmail('');
     setCurrentLeadId(null);
     setAnalysisResults(null);
+    setCompanyName('');
   };
 
   const saveLeadInfo = async (): Promise<string | null> => {
@@ -283,6 +287,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         analyzeResume,
         analysisResults,
         setAnalysisResults,
+        companyName,
+        setCompanyName,
       }}
     >
       {children}

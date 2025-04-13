@@ -6,3 +6,4 @@ verify_jwt = false
 
 [functions.extract-job-content]
 verify_jwt = false
+

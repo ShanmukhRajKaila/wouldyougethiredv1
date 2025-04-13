@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -720,4 +721,55 @@ function extractJobDescription(html: string, url: string, debug = false): string
 
 // Convert HTML to plain text with better formatting
 function convertHtmlToText(html: string): string {
-  return html
+  if (!html) return '';
+  
+  // First remove all script and style elements
+  let text = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+  
+  // Replace common block elements with newlines before and after
+  text = text
+    .replace(/<\/div>|<\/p>|<\/h[1-6]>|<\/li>|<br\s*\/?>/gi, '$&\n')
+    .replace(/<div>|<p>|<h[1-6]>|<ul>|<ol>|<li>/gi, '\n$&');
+  
+  // Replace list items with bullet points
+  text = text
+    .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '• $1\n');
+  
+  // Remove all remaining HTML tags
+  text = text.replace(/<[^>]+>/g, '');
+  
+  // Handle HTML entities
+  text = text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&ldquo;/g, '"')
+    .replace(/&rdquo;/g, '"')
+    .replace(/&lsquo;/g, ''')
+    .replace(/&rsquo;/g, ''');
+  
+  // Handle bullet points and special characters
+  text = text
+    .replace(/\u2022/g, '•') // Ensure consistent bullet points
+    .replace(/\u2023/g, '•')
+    .replace(/\u25E6/g, '◦')
+    .replace(/\u2043/g, '⁃')
+    .replace(/\u2219/g, '∙')
+    .replace(/\u00B7/g, '·');
+  
+  // Clean up whitespace
+  text = text
+    .replace(/^\s+/gm, '')       // Remove leading whitespace from each line
+    .replace(/\s+$/gm, '')       // Remove trailing whitespace from each line
+    .replace(/\n{3,}/g, '\n\n')  // Normalize line breaks (no more than 2 consecutive)
+    .replace(/\t/g, '  ')        // Replace tabs with spaces
+    .replace(/\s+/g, ' ');       // Replace multiple spaces with single space
+  
+  return text.trim();
+}
+

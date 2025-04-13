@@ -9,20 +9,21 @@ import { UrlExtractor } from '@/utils/UrlExtractor';
 import { Loader2, Link as LinkIcon } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const CompanySelector = () => {
-  const { selectedCompany, setSelectedCompany, setJobDescription, jobDescription } = useAppContext();
+interface CompanySelectorProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}
+
+const CompanySelector = ({ value, onChange, placeholder }: CompanySelectorProps) => {
+  const { setJobDescription, jobDescription } = useAppContext();
   const [jobUrl, setJobUrl] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('url');
   const [extractionAttempted, setExtractionAttempted] = useState(false);
   
   const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const companyName = e.target.value;
-    setSelectedCompany(companyName ? { 
-      id: 'custom', 
-      name: companyName,
-      logo: '' 
-    } : null);
+    onChange(e.target.value);
   };
 
   const handleUrlExtraction = async () => {
@@ -56,11 +57,7 @@ const CompanySelector = () => {
 
       // Update company name if available (but it's now optional)
       if (extractionResult.companyName) {
-        setSelectedCompany({
-          id: 'extracted',
-          name: extractionResult.companyName,
-          logo: ''
-        });
+        onChange(extractionResult.companyName);
         console.log('Company name extracted:', extractionResult.companyName);
       }
     } catch (error) {
@@ -136,9 +133,9 @@ const CompanySelector = () => {
             <Input
               id="company-url"
               type="text"
-              value={selectedCompany?.name || ''}
+              value={value}
               onChange={handleCompanyChange}
-              placeholder="Company name will appear here if extracted"
+              placeholder={placeholder}
               className="w-full"
             />
           </div>
@@ -152,9 +149,9 @@ const CompanySelector = () => {
             <Input
               id="company-manual"
               type="text"
-              value={selectedCompany?.name || ''}
+              value={value}
               onChange={handleCompanyChange}
-              placeholder="Enter the company name (optional)"
+              placeholder={placeholder}
               className="w-full"
             />
           </div>
