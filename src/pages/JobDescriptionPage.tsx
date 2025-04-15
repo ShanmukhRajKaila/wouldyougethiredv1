@@ -2,10 +2,12 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/context/AppContext';
 import PageContainer from '@/components/PageContainer';
 import CompanySelector from '@/components/CompanySelector';
 import { toast } from 'sonner';
+import { Label } from '@/components/ui/label';
 
 const JobDescriptionPage: React.FC = () => {
   const { 
@@ -19,6 +21,7 @@ const JobDescriptionPage: React.FC = () => {
   } = useAppContext();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [roleTitle, setRoleTitle] = useState('');
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +39,11 @@ const JobDescriptionPage: React.FC = () => {
     setIsSubmitting(true);
     
     try {
+      // Store role title in local storage for later use
+      if (roleTitle.trim()) {
+        localStorage.setItem('jobRoleTitle', roleTitle.trim());
+      }
+      
       const jobDescriptionId = await saveJobDescription(currentLeadId);
       
       if (jobDescriptionId) {
@@ -54,16 +62,29 @@ const JobDescriptionPage: React.FC = () => {
           Job Description
         </h1>
         <p className="text-consulting-gray mb-8">
-          Paste the job description for the role you're applying to. You can enter company name optionally.
+          Paste the job description for the role you're applying to. You can enter company name and role title optionally.
         </p>
         
         <form onSubmit={handleSubmit}>
           <CompanySelector />
           
           <div className="mb-6">
-            <label htmlFor="jobDescription" className="block text-consulting-charcoal font-medium mb-2">
+            <Label htmlFor="roleTitle" className="block text-consulting-charcoal font-medium mb-2">
+              Role Title <span className="text-gray-500 text-sm font-normal">(optional)</span>
+            </Label>
+            <Input
+              id="roleTitle"
+              value={roleTitle}
+              onChange={(e) => setRoleTitle(e.target.value)}
+              placeholder="e.g., Data Analyst, Software Engineer"
+              className="w-full"
+            />
+          </div>
+          
+          <div className="mb-6">
+            <Label htmlFor="jobDescription" className="block text-consulting-charcoal font-medium mb-2">
               Job Description <span className="text-red-500">*</span>
-            </label>
+            </Label>
             <Textarea
               id="jobDescription"
               value={jobDescription}

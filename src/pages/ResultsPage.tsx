@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,13 +17,21 @@ const ResultsPage: React.FC = () => {
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [inputRole, setInputRole] = useState('');
   const [expandAll, setExpandAll] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   
   useEffect(() => {
     if (!analysisResults) {
       console.error('No analysis results available');
     }
     
-    // Extract role from job description
+    // Try to get role from localStorage first (saved from JobDescriptionPage)
+    const savedRole = localStorage.getItem('jobRoleTitle');
+    if (savedRole) {
+      setSelectedRole(savedRole);
+      return;
+    }
+    
+    // Otherwise extract role from job description
     if (jobDescription) {
       const jobTitle = extractJobTitle(jobDescription);
       if (jobTitle) {
@@ -70,7 +77,37 @@ const ResultsPage: React.FC = () => {
   };
   
   const handleExpandToggle = () => {
-    setExpandAll(!expandAll);
+    const newExpandState = !expandAll;
+    setExpandAll(newExpandState);
+    
+    // Update all items based on the new expand state
+    let updatedItems: Record<string, boolean> = {};
+    if (analysisResults) {
+      if (analysisResults.strengths) {
+        analysisResults.strengths.forEach((_, idx) => {
+          updatedItems[`strength-${idx}`] = newExpandState;
+        });
+      }
+      if (analysisResults.weaknesses) {
+        analysisResults.weaknesses.forEach((_, idx) => {
+          updatedItems[`weakness-${idx}`] = newExpandState;
+        });
+      }
+      if (analysisResults.recommendations) {
+        analysisResults.recommendations.forEach((_, idx) => {
+          updatedItems[`recommendation-${idx}`] = newExpandState;
+        });
+      }
+    }
+    
+    setExpandedItems(updatedItems);
+  };
+  
+  const toggleItemExpand = (key: string) => {
+    setExpandedItems(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
   
   // If no results are available, show an error message
@@ -178,26 +215,41 @@ const ResultsPage: React.FC = () => {
                 </h2>
                 <ul className="space-y-4">
                   {strengths && strengths.length > 0 ? (
-                    strengths.map((strength, index) => (
-                      <li key={index}>
-                        <Collapsible open={expandAll} className="border rounded-md">
-                          <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-gray-50">
-                            <div className="flex items-start">
-                              <span className="text-green-600 mr-2 mt-1">✓</span>
-                              <span className="font-medium">{strength.split(':')[0] || strength}</span>
-                            </div>
-                            <ChevronDown className="h-4 w-4 text-gray-500 transition-transform" />
-                          </CollapsibleTrigger>
-                          <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
-                            <p className="mb-2">{strength}</p>
-                            <div className="mt-2 pt-2 border-t border-gray-200">
-                              <h4 className="font-semibold text-xs text-gray-700">Why this matters:</h4>
-                              <p className="text-xs mt-1">This strength directly aligns with the job requirements. Employers are specifically looking for candidates who demonstrate this capability in the role.</p>
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      </li>
-                    ))
+                    strengths.map((strength, index) => {
+                      const itemKey = `strength-${index}`;
+                      const isExpanded = expandedItems[itemKey] || expandAll;
+                      
+                      return (
+                        <li key={index}>
+                          <Collapsible 
+                            open={isExpanded} 
+                            onOpenChange={(open) => {
+                              toggleItemExpand(itemKey);
+                            }}
+                            className="border rounded-md"
+                          >
+                            <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-gray-50">
+                              <div className="flex items-start">
+                                <span className="text-green-600 mr-2 mt-1">✓</span>
+                                <span className="font-medium">{strength.split(':')[0] || strength}</span>
+                              </div>
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4 text-gray-500" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-gray-500" />
+                              )}
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
+                              <p className="mb-2">{strength}</p>
+                              <div className="mt-2 pt-2 border-t border-gray-200">
+                                <h4 className="font-semibold text-xs text-gray-700">Why this matters:</h4>
+                                <p className="text-xs mt-1">This strength directly aligns with the job requirements. Employers are specifically looking for candidates who demonstrate this capability in the role.</p>
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </li>
+                      );
+                    })
                   ) : (
                     <li>No strengths identified</li>
                   )}
@@ -210,22 +262,37 @@ const ResultsPage: React.FC = () => {
                 </h2>
                 <ul className="space-y-4">
                   {weaknesses && weaknesses.length > 0 ? (
-                    weaknesses.map((weakness, index) => (
-                      <li key={index}>
-                        <Collapsible open={expandAll} className="border rounded-md">
-                          <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-gray-50">
-                            <div className="flex items-start">
-                              <span className="text-red-600 mr-2 mt-1">✗</span>
-                              <span className="font-medium">{weakness.split(':')[0] || weakness}</span>
-                            </div>
-                            <ChevronDown className="h-4 w-4 text-gray-500 transition-transform" />
-                          </CollapsibleTrigger>
-                          <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
-                            <p>{weakness}</p>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      </li>
-                    ))
+                    weaknesses.map((weakness, index) => {
+                      const itemKey = `weakness-${index}`;
+                      const isExpanded = expandedItems[itemKey] || expandAll;
+                      
+                      return (
+                        <li key={index}>
+                          <Collapsible 
+                            open={isExpanded}
+                            onOpenChange={(open) => {
+                              toggleItemExpand(itemKey);
+                            }}
+                            className="border rounded-md"
+                          >
+                            <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-gray-50">
+                              <div className="flex items-start">
+                                <span className="text-red-600 mr-2 mt-1">✗</span>
+                                <span className="font-medium">{weakness.split(':')[0] || weakness}</span>
+                              </div>
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4 text-gray-500" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-gray-500" />
+                              )}
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
+                              <p>{weakness}</p>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </li>
+                      );
+                    })
                   ) : (
                     <li>No areas for improvement identified</li>
                   )}
@@ -238,22 +305,37 @@ const ResultsPage: React.FC = () => {
                 </h2>
                 <ul className="space-y-4">
                   {recommendations && recommendations.length > 0 ? (
-                    recommendations.map((recommendation, index) => (
-                      <li key={index}>
-                        <Collapsible open={expandAll} className="border rounded-md">
-                          <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-gray-50">
-                            <div className="flex items-start">
-                              <span className="text-consulting-accent mr-2 mt-1">→</span>
-                              <span className="font-medium">{recommendation.split(':')[0] || recommendation}</span>
-                            </div>
-                            <ChevronDown className="h-4 w-4 text-gray-500 transition-transform" />
-                          </CollapsibleTrigger>
-                          <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
-                            <p>{recommendation}</p>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      </li>
-                    ))
+                    recommendations.map((recommendation, index) => {
+                      const itemKey = `recommendation-${index}`;
+                      const isExpanded = expandedItems[itemKey] || expandAll;
+                      
+                      return (
+                        <li key={index}>
+                          <Collapsible 
+                            open={isExpanded}
+                            onOpenChange={(open) => {
+                              toggleItemExpand(itemKey);
+                            }}
+                            className="border rounded-md"
+                          >
+                            <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-gray-50">
+                              <div className="flex items-start">
+                                <span className="text-consulting-accent mr-2 mt-1">→</span>
+                                <span className="font-medium">{recommendation.split(':')[0] || recommendation}</span>
+                              </div>
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4 text-gray-500" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-gray-500" />
+                              )}
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
+                              <p>{recommendation}</p>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </li>
+                      );
+                    })
                   ) : (
                     <li>No recommendations available</li>
                   )}

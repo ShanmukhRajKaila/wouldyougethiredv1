@@ -85,7 +85,10 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
       if (skillWeaknesses.length > 0) {
         const extractedSkills = skillWeaknesses.flatMap(weakness => {
           const cleaned = cleanSkillName(weakness);
-          return cleaned.split(/(?:,|\sand\s)+/).map(s => s.trim()).filter(s => s.length > 2);
+          return cleaned.split(/(?:,|\sand\s)+/)
+            .map(s => s.trim())
+            .filter(s => s.length > 2)
+            .map(s => s.charAt(0).toUpperCase() + s.slice(1));
         });
         
         setMissingSkills(extractedSkills);
@@ -132,6 +135,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
       .replace(/as mentioned in the job requirements\.?/ig, '')
       .replace(/is not mentioned in your resume\.?/ig, '')
       .replace(/not highlighted in your experience\.?/ig, '')
+      .replace(/\.$/g, '')
       .trim();
   };
   
