@@ -5,11 +5,12 @@ import { X } from 'lucide-react';
 
 interface WeaknessesCardProps {
   weaknesses: string[];
+  className?: string;
 }
 
-const WeaknessesCard: React.FC<WeaknessesCardProps> = ({ weaknesses }) => {
+const WeaknessesCard: React.FC<WeaknessesCardProps> = ({ weaknesses, className }) => {
   return (
-    <Card className="p-6">
+    <Card className={`p-6 ${className || ''}`}>
       <h2 className="text-xl font-serif font-bold text-red-600 mb-4 flex items-center">
         <X className="mr-2 h-5 w-5" /> Areas for Improvement
       </h2>

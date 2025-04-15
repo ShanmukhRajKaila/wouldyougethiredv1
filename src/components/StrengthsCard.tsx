@@ -5,11 +5,12 @@ import { Check } from 'lucide-react';
 
 interface StrengthsCardProps {
   strengths: string[];
+  className?: string;
 }
 
-const StrengthsCard: React.FC<StrengthsCardProps> = ({ strengths }) => {
+const StrengthsCard: React.FC<StrengthsCardProps> = ({ strengths, className }) => {
   return (
-    <Card className="p-6">
+    <Card className={`p-6 ${className || ''}`}>
       <h2 className="text-xl font-serif font-bold text-green-600 mb-4 flex items-center">
         <Check className="mr-2 h-5 w-5" /> Key Strengths
       </h2>
