@@ -2,6 +2,37 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { AnalysisResult } from './types';
 
+function extractKeywords(text: string): string[] {
+  if (!text || typeof text !== 'string') {
+    return [];
+  }
+  
+  // Common words to filter out
+  const commonWords = new Set([
+    'the', 'and', 'that', 'this', 'with', 'for', 'have', 'from', 'about',
+    'you', 'will', 'your', 'who', 'are', 'our', 'can', 'been', 'has', 'not',
+    'they', 'their', 'them', 'would', 'could', 'should', 'than', 'then',
+    'some', 'when', 'what', 'where', 'which', 'while', 'want'
+  ]);
+  
+  // Get all words, filter out common words and short words
+  const words = text.toLowerCase().split(/\W+/).filter(w => 
+    w.length > 3 && !commonWords.has(w)
+  );
+  
+  // Count word frequency
+  const frequency: Record<string, number> = {};
+  words.forEach(word => {
+    frequency[word] = (frequency[word] || 0) + 1;
+  });
+  
+  // Sort by frequency and return top words
+  return Object.entries(frequency)
+    .sort((a, b) => b[1] - a[1])
+    .map(entry => entry[0])
+    .slice(0, 20);
+}
+
 export const analyzeResume = async (
   resumeText: string, 
   jobDescription: string,
