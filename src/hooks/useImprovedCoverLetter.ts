@@ -51,7 +51,7 @@ export const useImprovedCoverLetter = (
     
     // Mark as run to prevent infinite loop
     hasRun.current = true;
-  }, [coverLetterText, analysis, applyRecommendations, calculateUpdatedRelevance, selectedCompany]);
+  }, [coverLetterText, analysis, applyRecommendations, calculateUpdatedRelevance, selectedCompany, setImprovedData]);
 
   return improvedData;
 };

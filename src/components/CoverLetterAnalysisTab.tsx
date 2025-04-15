@@ -54,6 +54,9 @@ const CoverLetterAnalysisTab: React.FC = () => {
     if (score >= 60) return 'text-amber-500';
     return 'text-red-500';
   };
+
+  // Check if the improved text contains the enhancement section
+  const hasEnhancementSection = improvedText?.includes("==== SUGGESTED ENHANCEMENTS ====");
   
   return (
     <div className="space-y-6">
@@ -307,6 +310,16 @@ const CoverLetterAnalysisTab: React.FC = () => {
                   </p>
                 </div>
               </div>
+            </div>
+
+            <div className="bg-blue-50 p-4 rounded-md mb-4 text-blue-800 text-sm">
+              <p className="font-medium">How to use the enhanced letter:</p>
+              <ol className="list-decimal pl-5 mt-2">
+                <li>Review your original letter below</li>
+                <li>Check the suggested enhancements at the bottom</li>
+                <li>Incorporate those suggestions into your letter in the appropriate places</li>
+                <li>Do not copy the entire enhanced section with the brackets</li>
+              </ol>
             </div>
             
             <div className="bg-gray-50 p-4 rounded-md shadow-sm whitespace-pre-wrap text-gray-700">

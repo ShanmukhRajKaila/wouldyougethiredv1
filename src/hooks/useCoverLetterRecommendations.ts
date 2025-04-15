@@ -1,3 +1,4 @@
+
 import { CoverLetterAnalysis } from '@/context/types';
 
 export const useCoverLetterRecommendations = () => {
@@ -22,70 +23,35 @@ export const useCoverLetterRecommendations = () => {
     const firstParagraph = paragraphs[0] || "";
     const hasSalutation = /^(dear|to whom|hello)/i.test(firstParagraph.trim());
     
-    // Keep track of the sections we've modified to avoid duplicate enhancements
-    const modifiedSections = new Set();
+    // The original text with proper paragraphs
+    const originalText = paragraphs.join("\n\n");
     
-    // Preserve salutation if it exists
-    const result = [];
-    if (paragraphs.length > 0) {
-      // Always keep the first paragraph (salutation) unchanged
-      result.push(paragraphs[0]);
-      modifiedSections.add(0);
+    // Store our enhancement suggestions
+    let enhancements = [];
+    
+    // Generate company insight enhancement
+    if (hasCompanyInsights && analysis.companyInsights.length > 0) {
+      const companyInsight = analysis.companyInsights.slice(0, 2).join(" and ");
+      enhancements.push(`[COMPANY INSIGHT: Consider adding: "I am particularly drawn to ${companyName} because of its ${companyInsight}."]`);
     }
     
-    // Enhance introduction paragraph with company insights (after salutation)
-    if (hasCompanyInsights && paragraphs.length > 1) {
-      let introductionIndex = hasSalutation ? 1 : 0;
-      
-      if (!modifiedSections.has(introductionIndex)) {
-        const introduction = paragraphs[introductionIndex];
-        
-        // Create enhanced introduction with company insights
-        const companyInsight = analysis.companyInsights.slice(0, 2).join(" and ");
-        const enhancedIntro = `I am particularly drawn to ${companyName} because of its ${companyInsight}. ${paragraphs[introductionIndex]}`;
-        
-        result.push(enhancedIntro);
-        modifiedSections.add(introductionIndex);
-      }
+    // Generate key requirements enhancement
+    if (hasKeyRequirements && analysis.keyRequirements.length > 0) {
+      const requirements = analysis.keyRequirements.join(", ");
+      enhancements.push(`[KEY REQUIREMENTS: Consider adding: "My experience aligns well with the ${requirements} that ${companyName} is looking for."]`);
     }
     
-    // Add key requirements to a middle paragraph
-    if (hasKeyRequirements && hasSuggestedPhrases) {
-      // Find a good spot to insert requirements-focused content (around middle of letter)
-      const middleIndex = Math.floor(paragraphs.length / 2);
-      
-      if (middleIndex > 0 && middleIndex < paragraphs.length && !modifiedSections.has(middleIndex)) {
-        const middleParagraph = paragraphs[middleIndex];
-        
-        // Create enhanced paragraph with requirements
-        const enhancedPara = `${middleParagraph} My experience aligns well with the ${
-          analysis.keyRequirements?.join(", ")
-        } that ${companyName} is looking for. ${
-          analysis.suggestedPhrases?.slice(0, 1).join(" ")
-        }`;
-        
-        result.push(enhancedPara);
-        modifiedSections.add(middleIndex);
-      }
+    // Generate suggested phrases enhancement
+    if (hasSuggestedPhrases && analysis.suggestedPhrases.length > 0) {
+      analysis.suggestedPhrases.forEach((phrase, index) => {
+        enhancements.push(`[SUGGESTED PHRASE ${index + 1}: Consider incorporating: "${phrase}"]`);
+      });
     }
     
-    // Add remaining paragraphs that haven't been modified yet
-    for (let i = 0; i < paragraphs.length; i++) {
-      if (!modifiedSections.has(i)) {
-        result.push(paragraphs[i]);
-      }
-    }
+    // Add the enhancements at the end with clear instructions
+    const enhancedText = `${originalText}\n\n\n==== SUGGESTED ENHANCEMENTS ====\n(INCORPORATE THESE INTO YOUR COVER LETTER - DO NOT COPY THIS ENTIRE SECTION)\n\n${enhancements.join("\n\n")}`;
     
-    // Enhance the closing paragraph (second to last) if we haven't already
-    const lastContentIndex = result.length - 2;
-    if (lastContentIndex >= 0 && hasSuggestedPhrases && analysis.suggestedPhrases.length > 1) {
-      const lastContentPara = result[lastContentIndex];
-      const closingPhrase = analysis.suggestedPhrases[analysis.suggestedPhrases.length - 1];
-      
-      result[lastContentIndex] = `${lastContentPara} I am confident that ${closingPhrase}`;
-    }
-    
-    return result.join("\n\n");
+    return enhancedText;
   };
   
   // Helper function to extract company name from insights
