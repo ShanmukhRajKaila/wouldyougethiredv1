@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { AnalysisResult } from './types';
@@ -59,7 +58,7 @@ export const analyzeResume = async (
       
       if (response.status === 408 || response.status >= 500) {
         console.log('Generating fallback analysis due to timeout or server error');
-        return generateFallbackAnalysis(trimmedResume, trimmedJobDesc);
+        return generateFallbackAnalysis(trimmedResume, trimmedJobDesc, trimmedCoverLetter);
       }
       
       let errorMessage = 'Failed to analyze resume';
@@ -82,12 +81,16 @@ export const analyzeResume = async (
     console.error('Error analyzing resume:', error);
     toast.error('Our analysis service is currently experiencing high volume. Using simplified analysis instead.');
     
-    return generateFallbackAnalysis(resumeText, jobDescription);
+    return generateFallbackAnalysis(resumeText, jobDescription, coverLetterText);
   }
 };
 
 // Improved fallback analysis with better ATS optimization suggestions
-function generateFallbackAnalysis(resumeText: string, jobDescription: string): AnalysisResult {
+function generateFallbackAnalysis(
+  resumeText: string, 
+  jobDescription: string, 
+  coverLetterText?: string
+): AnalysisResult {
   // Extract skills from job description (enhanced)
   const jobSkills = extractSkills(jobDescription);
   
@@ -142,14 +145,231 @@ function generateFallbackAnalysis(resumeText: string, jobDescription: string): A
   // Create improved STAR analysis for bullet points
   const starAnalysis = bulletPoints.map(bullet => generateSTARAnalysis(bullet, jobDescription));
   
+  // Generate cover letter analysis if cover letter is provided
+  const coverLetterAnalysis = coverLetterText ? generateCoverLetterAnalysis(coverLetterText, jobDescription) : undefined;
+  
   return {
     alignmentScore,
     verdict: alignmentScore >= 60,
     strengths: matchingSkills.slice(0, 5),
     weaknesses: missingSkills.slice(0, 5),
     recommendations,
-    starAnalysis
+    starAnalysis,
+    coverLetterAnalysis
   };
+}
+
+// Generate cover letter analysis from text
+function generateCoverLetterAnalysis(coverLetterText: string, jobDescription: string) {
+  if (!coverLetterText || !jobDescription) {
+    return undefined;
+  }
+  
+  const coverLetterWords = coverLetterText.toLowerCase().split(/\W+/).filter(w => w.length > 3);
+  const jobDescWords = jobDescription.toLowerCase().split(/\W+/).filter(w => w.length > 3);
+  
+  // Calculate relevance score based on word overlap
+  const matchingWords = jobDescWords.filter(w => coverLetterWords.includes(w));
+  const relevance = Math.min(Math.round((matchingWords.length / Math.max(jobDescWords.length, 1)) * 100), 100);
+  
+  // Identify strengths and weaknesses based on heuristics
+  const strengths = [];
+  const weaknesses = [];
+  const recommendations = [];
+  
+  // Check tone
+  let tone = "Professional";
+  if (coverLetterText.match(/thank you|grateful|appreciate|excited|passion|enthusiastic/gi)) {
+    tone = "Enthusiastic and Professional";
+    strengths.push("Conveys enthusiasm for the role and company");
+  } else if (coverLetterText.match(/experience|expertise|skills|qualified|accomplished|achieved/gi)) {
+    tone = "Confident and Professional";
+    strengths.push("Projects confidence through emphasis on qualifications");
+  }
+  
+  // Check for specificity
+  if (coverLetterText.match(/specific project|specific achievement|increased by|improved|implemented|led|managed/gi)) {
+    strengths.push("Includes specific achievements and examples");
+  } else {
+    weaknesses.push("Lacks specific achievements and measurable results");
+    recommendations.push("Add 2-3 specific examples of past achievements with measurable results");
+  }
+  
+  // Check for company mentions
+  const jobCompanyNames = extractCompanyNames(jobDescription);
+  const hasCompanyMention = jobCompanyNames.some(company => 
+    coverLetterText.toLowerCase().includes(company.toLowerCase())
+  );
+  
+  if (hasCompanyMention) {
+    strengths.push("Customized with company references");
+  } else {
+    weaknesses.push("Does not mention the company specifically");
+    recommendations.push("Incorporate the company name and show knowledge of their mission or values");
+  }
+  
+  // Check for call to action
+  if (coverLetterText.match(/look forward|follow up|interview|discuss|opportunity|contact/gi)) {
+    strengths.push("Includes appropriate call to action");
+  } else {
+    weaknesses.push("Missing strong closing with call to action");
+    recommendations.push("Add a clear call to action in your closing paragraph");
+  }
+
+  // Check for addressing key requirements
+  const keyRequirements = extractKeyRequirements(jobDescription, 3);
+  const addressedRequirements = keyRequirements.filter(req => 
+    coverLetterWords.some(word => req.toLowerCase().includes(word))
+  );
+  
+  if (addressedRequirements.length >= 2) {
+    strengths.push("Addresses key job requirements");
+  } else {
+    weaknesses.push("Does not clearly address key job requirements");
+    recommendations.push("Directly address the top requirements mentioned in the job posting");
+  }
+  
+  // Extract company insights
+  const companyInsights = extractCompanyInsights(jobDescription);
+  
+  // Create suggested phrases based on job description and company
+  const suggestedPhrases = [
+    `I am particularly drawn to your company's focus on ${companyInsights[0] || "innovation and excellence"}`,
+    `My experience with ${keyRequirements[0] || "relevant skills"} directly aligns with your needs`,
+    `I am confident I can contribute to your team's success by ${keyRequirements[1] ? "leveraging my expertise in " + keyRequirements[1] : "applying my relevant experience"}`
+  ];
+  
+  return {
+    tone,
+    relevance,
+    strengths: strengths.slice(0, 3),
+    weaknesses: weaknesses.slice(0, 3),
+    recommendations: recommendations.slice(0, 3),
+    companyInsights,
+    keyRequirements,
+    suggestedPhrases
+  };
+}
+
+// Extract company insights from job description
+function extractCompanyInsights(jobDescription: string): string[] {
+  if (!jobDescription) {
+    return [];
+  }
+  
+  const insights = [];
+  
+  // Look for company culture/values statements
+  const cultureMatches = jobDescription.match(/(?:our|we|company) (?:values?|cultures?|believes?|focuses? on|prioritizes?|specializes? in) ([^.!?]+)/gi) || [];
+  for (const match of cultureMatches) {
+    const insight = match.replace(/(?:our|we|company) (?:values?|cultures?|believes?|focuses? on|prioritizes?|specializes? in) /gi, '').trim();
+    if (insight.length > 10 && insight.length < 100) {
+      insights.push(insight);
+    }
+  }
+  
+  // Look for mission statements
+  const missionMatches = jobDescription.match(/(?:our|company) (?:mission|vision|goal|aim) (?:is|statement) ([^.!?]+)/gi) || [];
+  for (const match of missionMatches) {
+    const insight = match.replace(/(?:our|company) (?:mission|vision|goal|aim) (?:is|statement) /gi, '').trim();
+    if (insight.length > 10 && insight.length < 100) {
+      insights.push(insight);
+    }
+  }
+  
+  // Extract company description statements
+  const descMatches = jobDescription.match(/(?:we are|our company is|company that) ([^.!?]+)/gi) || [];
+  for (const match of descMatches) {
+    const insight = match.replace(/(?:we are|our company is|company that) /gi, '').trim();
+    if (insight.length > 10 && insight.length < 100) {
+      insights.push(insight);
+    }
+  }
+  
+  // If no insights found, create generic ones based on industry keywords
+  if (insights.length === 0) {
+    const industries = ['technology', 'healthcare', 'finance', 'education', 'retail', 'manufacturing'];
+    for (const industry of industries) {
+      if (jobDescription.toLowerCase().includes(industry)) {
+        insights.push(`leading ${industry} solutions`);
+        break;
+      }
+    }
+    
+    // Add innovation as default insight if nothing else found
+    if (insights.length === 0) {
+      insights.push('innovation and customer satisfaction');
+    }
+  }
+  
+  return insights.slice(0, 3);
+}
+
+// Extract key requirements from job description
+function extractKeyRequirements(jobDescription: string, limit: number = 5): string[] {
+  if (!jobDescription) {
+    return [];
+  }
+  
+  const requirements = [];
+  
+  // Look for explicit requirements
+  const reqMatches = jobDescription.match(/(?:required|must have|should have|you will need|you have|you should have|requirements include) ([^.!?]+)/gi) || [];
+  for (const match of reqMatches) {
+    const req = match.replace(/(?:required|must have|should have|you will need|you have|you should have|requirements include) /gi, '').trim();
+    if (req.length > 5 && req.length < 100) {
+      requirements.push(req);
+    }
+  }
+  
+  // Look for skills or qualifications 
+  const skillMatches = jobDescription.match(/(?:skills|qualifications|experience with|knowledge of|proficiency in) ([^.!?]+)/gi) || [];
+  for (const match of skillMatches) {
+    const skill = match.replace(/(?:skills|qualifications|experience with|knowledge of|proficiency in) /gi, '').trim();
+    if (skill.length > 5 && skill.length < 100) {
+      requirements.push(skill);
+    }
+  }
+  
+  // Look for education requirements
+  const eduMatches = jobDescription.match(/(?:degree|education|bachelor'?s|master'?s|phd|diploma) ([^.!?]+)/gi) || [];
+  for (const match of eduMatches) {
+    const edu = match.trim();
+    if (edu.length > 5 && edu.length < 100) {
+      requirements.push(edu);
+    }
+  }
+  
+  // If no requirements found, extract by frequency of terms
+  if (requirements.length === 0) {
+    const keyTerms = extractKeywordsByFrequency(jobDescription).slice(0, limit);
+    requirements.push(...keyTerms.map(term => `experience with ${term}`));
+  }
+  
+  return requirements.slice(0, limit);
+}
+
+// Extract company names from text
+function extractCompanyNames(text: string): string[] {
+  if (!text) {
+    return [];
+  }
+  
+  const names = new Set<string>();
+  
+  // Look for company names with common indicators
+  const companyMatches = text.match(/(?:at|by|for|with|join) ([A-Z][A-Za-z0-9\s&,.]+?)(?:\.|\,|\s+is|\s+in|\s+we|\s+and|\s+the)/g) || [];
+  for (const match of companyMatches) {
+    const nameMatch = match.match(/(?:at|by|for|with|join) ([A-Z][A-Za-z0-9\s&,.]+?)(?:\.|\,|\s+is|\s+in|\s+we|\s+and|\s+the)/);
+    if (nameMatch && nameMatch[1]) {
+      const name = nameMatch[1].trim();
+      if (name.length > 1 && name.length < 30) {
+        names.add(name);
+      }
+    }
+  }
+  
+  return Array.from(names);
 }
 
 // Check if two skills are related (synonyms or related concepts)
@@ -408,28 +628,6 @@ function generateSTARAnalysis(bullet: string, jobDescription: string) {
   };
 }
 
-// Extract keywords by frequency from text
-function extractKeywordsByFrequency(text: string): string[] {
-  if (!text || typeof text !== 'string') {
-    return [];
-  }
-  
-  const words = text.toLowerCase().split(/\W+/).filter(w => 
-    w.length > 3 && 
-    !['with', 'that', 'have', 'this', 'from', 'they', 'will', 'would', 'about', 'their', 'there', 'what', 'which'].includes(w)
-  );
-  
-  const frequency: Record<string, number> = {};
-  words.forEach(word => {
-    frequency[word] = (frequency[word] || 0) + 1;
-  });
-  
-  return Object.entries(frequency)
-    .sort((a, b) => b[1] - a[1])
-    .map(entry => entry[0])
-    .slice(0, 10);
-}
-
 // Get a relevant action verb for the bullet point based on job description
 function getRelevantActionVerb(bullet: string, jobDescription: string): string {
   if (!bullet || typeof bullet !== 'string') {
@@ -465,6 +663,28 @@ function getRelevantActionVerb(bullet: string, jobDescription: string): string {
   } else {
     return achievementVerbs[Math.floor(Math.random() * achievementVerbs.length)];
   }
+}
+
+// Extract keywords by frequency from text
+function extractKeywordsByFrequency(text: string): string[] {
+  if (!text || typeof text !== 'string') {
+    return [];
+  }
+  
+  const words = text.toLowerCase().split(/\W+/).filter(w => 
+    w.length > 3 && 
+    !['with', 'that', 'have', 'this', 'from', 'they', 'will', 'would', 'about', 'their', 'there', 'what', 'which'].includes(w)
+  );
+  
+  const frequency: Record<string, number> = {};
+  words.forEach(word => {
+    frequency[word] = (frequency[word] || 0) + 1;
+  });
+  
+  return Object.entries(frequency)
+    .sort((a, b) => b[1] - a[1])
+    .map(entry => entry[0])
+    .slice(0, 10);
 }
 
 // Generate dynamic recommendations based on analysis
