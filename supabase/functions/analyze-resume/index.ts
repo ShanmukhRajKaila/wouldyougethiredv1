@@ -16,6 +16,9 @@ interface AnalysisRequest {
   options?: {
     useFastModel?: boolean;
     prioritizeSpeed?: boolean;
+    enhancedAtsAnalysis?: boolean;
+    keywordOptimization?: boolean;
+    atsCompatibilityCheck?: boolean;
   };
   companyName?: string;
 }
@@ -32,39 +35,116 @@ function truncateText(text: string, maxTokens: number): string {
   return text.substring(0, maxChars) + "\n[content truncated for processing]";
 }
 
-// Simplified cleanup function
+// Improved text cleanup with enhanced formatting detection
 function cleanupText(text: string): string {
   if (!text) return '';
+  
   // Remove excessive whitespace and non-printable characters
-  return text.replace(/[^\x20-\x7E\n\r\t]/g, ' ')
+  let cleaned = text.replace(/[^\x20-\x7E\n\r\t]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+    
+  // Preserve important formatting like bullet points
+  cleaned = cleaned.replace(/•\s+/g, '• ');
+  cleaned = cleaned.replace(/-\s+/g, '- ');
+  cleaned = cleaned.replace(/\*\s+/g, '* ');
+  
+  return cleaned;
 }
 
-// Extract key skills and requirements
+// Enhanced keyword extraction that prioritizes ATS-relevant terms
 function extractKeywords(text: string): string[] {
   if (!text) return [];
   
   // Common words to filter out
   const commonWords = new Set([
     'the', 'and', 'that', 'this', 'with', 'for', 'have', 'from', 'about',
-    'you', 'will', 'your', 'who', 'are', 'our', 'can', 'been', 'has', 'not'
+    'you', 'will', 'your', 'who', 'are', 'our', 'can', 'been', 'has', 'not',
+    'they', 'their', 'them', 'would', 'could', 'should', 'than', 'then',
+    'some', 'when', 'what', 'where', 'which', 'while', 'want'
   ]);
   
   // Extract potential skill terms (technical terms, capitalized words, etc)
   const keywords = new Set<string>();
   
-  // Simple regex for skills (3+ characters, not common words)
-  const skillTerms = text.match(/\b[A-Za-z][A-Za-z\-]{2,}\b/g) || [];
-  
-  for (const term of skillTerms) {
-    const normalized = term.toLowerCase();
-    if (!commonWords.has(normalized) && normalized.length > 2) {
-      keywords.add(normalized);
+  // Match likely skills or requirements
+  // 1. Words after "in" or "with" (like "experience in X" or "proficient with Y")
+  const experienceMatches = text.match(/(?:experience|expertise|proficient|skilled|knowledge)\s+(?:in|with|of)\s+([A-Za-z0-9][A-Za-z0-9\s\-\/]{2,30}?)(?:\.|\,|\;|\s+and|\s+or|\(|\)|\s+to)/gi) || [];
+  for (const match of experienceMatches) {
+    const parts = match.split(/(?:in|with|of)\s+/);
+    if (parts.length > 1) {
+      const skill = parts[1].replace(/\.|\,|\;|\s+and|\s+or|\(|\)|\s+to.*$/, '').trim();
+      if (skill.length > 2) {
+        keywords.add(skill);
+      }
     }
   }
   
-  return Array.from(keywords).slice(0, 25); // Limit to 25 keywords
+  // 2. Required or preferred skills (explicit mentions)
+  const requiredMatches = text.match(/(?:required|preferred|must have|should have|demonstrate)\s+([A-Za-z0-9][A-Za-z0-9\s\-\/]{2,30}?)(?:\.|\,|\;|\s+and|\s+or|\(|\))/gi) || [];
+  for (const match of requiredMatches) {
+    const parts = match.split(/(?:required|preferred|must have|should have|demonstrate)\s+/);
+    if (parts.length > 1) {
+      const skill = parts[1].replace(/\.|\,|\;|\s+and|\s+or|\(|\)/, '').trim();
+      if (skill.length > 2) {
+        keywords.add(skill);
+      }
+    }
+  }
+  
+  // 3. Bullet points that likely contain skills
+  const bulletPoints = text.match(/(?:•|-|\*|\+|\d+\.)\s+([^\n\r.]+)/g) || [];
+  for (const bullet of bulletPoints) {
+    // Remove the bullet character itself
+    const content = bullet.replace(/(?:•|-|\*|\+|\d+\.)\s+/, '');
+    // Check if this bullet might be describing a skill
+    if (content.match(/(?:ability|skills|proficiency|experience|knowledge|understanding) (?:in|with|of|to)/i)) {
+      const words = content.split(/\s+/);
+      // Look for capitalized words or technical terms
+      for (const word of words) {
+        if (word.length > 2 && !commonWords.has(word.toLowerCase())) {
+          if (word.match(/^[A-Z][a-zA-Z0-9]+$/) || 
+              word.match(/^[a-zA-Z0-9]+([-\/][a-zA-Z0-9]+)+$/) ||
+              word.match(/^(?:[A-Za-z]\.)+$/)) {
+            keywords.add(word);
+          }
+        }
+      }
+    }
+  }
+  
+  // 4. Simple capitalized words that might be technologies, platforms, etc.
+  const technicalTerms = text.match(/\b[A-Z][a-zA-Z0-9]*(?:\.[A-Za-z0-9]+)*\b/g) || [];
+  for (const term of technicalTerms) {
+    if (term.length > 2 && 
+        !commonWords.has(term.toLowerCase()) &&
+        !term.match(/^(I|We|They|He|She|It|You|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Mon|Tue|Wed|Thu|Fri|Sat|Sun|The|This|That|These|Those|A|An|And|But|Or|For|Nor|On|At|To|From)$/)) {
+      keywords.add(term);
+    }
+  }
+  
+  // 5. Common technical terms and business skills
+  const skillTerms = [
+    // Technical skills
+    'python', 'javascript', 'java', 'c++', 'nodejs', 'react', 'angular', 'vue', 'typescript',
+    'sql', 'mysql', 'postgresql', 'mongodb', 'nosql', 'database', 'aws', 'azure', 'gcp',
+    'docker', 'kubernetes', 'terraform', 'ci/cd', 'jenkins', 'git', 'github', 'devops',
+    'machine learning', 'deep learning', 'ai', 'artificial intelligence', 'data science',
+    // Business skills
+    'project management', 'agile', 'scrum', 'product management', 'stakeholder management',
+    'leadership', 'team management', 'strategic planning', 'business analysis',
+    'financial analysis', 'marketing', 'sales', 'customer service', 'operations',
+    'communication', 'presentation', 'negotiation', 'problem solving', 'critical thinking'
+  ];
+  
+  // Add common skills if they appear in the text
+  for (const skill of skillTerms) {
+    if (text.toLowerCase().includes(skill)) {
+      keywords.add(skill);
+    }
+  }
+  
+  return Array.from(keywords).filter(k => k.length > 2).slice(0, 40);
 }
 
 serve(async (req) => {
@@ -73,7 +153,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log("Starting resume analysis...");
+  console.log("Starting resume analysis with enhanced ATS optimization...");
 
   try {
     const { resumeText, jobDescription, coverLetterText, options = {}, companyName } = await req.json() as AnalysisRequest;
@@ -85,17 +165,18 @@ serve(async (req) => {
       );
     }
 
-    console.log('Analyzing resume against job description');
+    console.log('Analyzing resume against job description with enhanced ATS focus');
     console.log('Cover letter provided:', !!coverLetterText);
     console.log('Company name provided:', companyName || 'No');
+    console.log('Enhanced ATS analysis:', options.enhancedAtsAnalysis || false);
     
     // Always use the most efficient model to prevent timeouts
     const model = 'gpt-4o-mini';
     
     // More aggressive truncation to prevent timeouts
-    const maxResumeTokens = options.prioritizeSpeed ? 1500 : 2500; // Reduced from 4000
-    const maxJobTokens = options.prioritizeSpeed ? 500 : 750; // Reduced from 1000
-    const maxCoverLetterTokens = options.prioritizeSpeed ? 1000 : 1500; // Reduced from 3000
+    const maxResumeTokens = options.prioritizeSpeed ? 1500 : 2500;
+    const maxJobTokens = options.prioritizeSpeed ? 500 : 750;
+    const maxCoverLetterTokens = options.prioritizeSpeed ? 1000 : 1500;
     
     const truncatedResume = truncateText(cleanupText(resumeText), maxResumeTokens);
     const truncatedJobDesc = truncateText(cleanupText(jobDescription), maxJobTokens);
@@ -109,22 +190,43 @@ serve(async (req) => {
     
     // Extract important keywords to help guide the analysis
     const jobKeywords = extractKeywords(jobDescription);
-    console.log(`Extracted ${jobKeywords.length} keywords`);
+    console.log(`Extracted ${jobKeywords.length} keywords for ATS optimization`);
     
     // Use a shorter timeout to ensure response within the edge function's limits
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 seconds max
     
     try {
-      // Enhanced system prompt with company research capabilities
-      const systemPrompt = `You are an ATS resume analyst comparing resumes to job descriptions.
-      
-${companyName ? `The candidate is applying to ${companyName}. Based on the job description, infer the company's values, culture, and key requirements.` : ''}
+      // Enhanced system prompt with ATS-focused analysis capabilities
+      const systemPrompt = `You are an expert ATS (Applicant Tracking System) analyst specializing in resume optimization.
+Your task is to thoroughly analyze a resume against a job description like an actual ATS would.
+${companyName ? `The candidate is applying to ${companyName}. Research this company's values and culture from the job description.` : ''}
+
+${options.enhancedAtsAnalysis ? `As an enhanced ATS analyzer:
+1. Identify exact keyword matches between resume and job description 
+2. Detect semantic matches (similar meanings but different words)
+3. Analyze resume formatting for ATS compatibility
+4. Evaluate bullet point structure and impact
+5. Assess overall ATS pass probability` : ''}
+
+${options.atsCompatibilityCheck ? `Check for ATS compatibility issues:
+- Poor formatting that could confuse parsing
+- Use of tables, images or complex layouts
+- Non-standard section headers
+- Improper use of keywords
+- Lack of context for acronyms
+- Missing essential contact information` : ''}
+
+${options.keywordOptimization ? `Provide keyword optimization guidance:
+- Identify critical missing keywords
+- Suggest natural keyword placement opportunities
+- Recommend phrasing improvements for better ATS scoring
+- Identify overused keywords that appear unnatural` : ''}
 
 Return a JSON object with:
 {
-  "alignmentScore": Integer from 1-100 representing match percentage,
-  "verdict": Boolean indicating if the candidate would pass screening,
+  "alignmentScore": Integer from 1-100 representing ATS match percentage,
+  "verdict": Boolean indicating if the candidate would pass ATS screening,
   "strengths": Array of strings highlighting matches (max 5),
   "weaknesses": Array of strings identifying gaps (max 5), 
   "recommendations": Array of strings with improvements (max 5),
@@ -141,8 +243,8 @@ Return a JSON object with:
   "starAnalysis": Array of max 3 objects:
     {
       "original": String with original bullet point,
-      "improved": String with optimized version,
-      "feedback": String explaining improvements
+      "improved": String with optimized version that would score higher in ATS systems,
+      "feedback": String explaining improvements for ATS optimization
     }
 }`;
 
@@ -191,7 +293,7 @@ Return a JSON object with:
       try {
         const content = data.choices[0].message.content;
         analysisResult = JSON.parse(content);
-        console.log('Analysis complete');
+        console.log('ATS-optimized analysis complete');
         
         // Clean up and format strengths/weaknesses for better UX
         if (analysisResult.strengths) {

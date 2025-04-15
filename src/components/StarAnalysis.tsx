@@ -77,38 +77,116 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
     }
   };
   
+  // Generate ATS-specific advice based on the bullet point
+  const generateAtsAdvice = (original: string, improved: string): string => {
+    // Check what's missing from the original that was added to the improved version
+    if (improved.includes('%') && !original.includes('%')) {
+      return "ATS systems prioritize quantifiable achievements. Numbers grab attention and provide concrete evidence of your impact.";
+    }
+    
+    if ((improved.match(/\$\d+[k|K|M]?/) || improved.match(/\d+\s*(dollars|USD)/i)) && 
+        !(original.match(/\$\d+[k|K|M]?/) || original.match(/\d+\s*(dollars|USD)/i))) {
+      return "ATS systems are trained to identify financial impact. Including dollar amounts helps your resume pass both algorithmic and human screening.";
+    }
+    
+    if ((improved.match(/\d+\s*(people|team members|employees|staff)/i)) && 
+        !(original.match(/\d+\s*(people|team members|employees|staff)/i))) {
+      return "ATS systems look for management scope. Quantifying team size signals leadership capability and organizational impact.";
+    }
+    
+    if ((improved.toLowerCase().includes("result") || 
+        improved.toLowerCase().includes("leading to") || 
+        improved.toLowerCase().includes("achieving")) &&
+        !(original.toLowerCase().includes("result") || 
+        original.toLowerCase().includes("leading to") || 
+        original.toLowerCase().includes("achieving"))) {
+      return "ATS systems are programmed to identify cause-effect relationships. Explicitly linking actions to outcomes significantly increases your resume's efficacy.";
+    }
+    
+    const actionVerbs = ["led", "managed", "developed", "created", "implemented", "designed", "increased", "improved"];
+    const hasActionVerb = actionVerbs.some(verb => improved.toLowerCase().startsWith(verb));
+    const originalHasActionVerb = actionVerbs.some(verb => original.toLowerCase().startsWith(verb));
+    
+    if (hasActionVerb && !originalHasActionVerb) {
+      return "ATS systems scan for strong action verbs at the beginning of bullet points. This formatting pattern signals achievement orientation.";
+    }
+    
+    return "ATS systems prioritize specific, concrete language over general descriptions. Adding industry terminology and metrics substantially increases match scores.";
+  };
+  
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-serif font-bold text-consulting-navy">
-        Enhanced Experience Statements
-      </h2>
-      <p className="text-consulting-gray">
-        Here's how your experience could be better communicated to highlight relevant skills and achievements:
-      </p>
+      <div className="bg-white p-6 rounded-lg shadow mb-6">
+        <h2 className="text-2xl font-serif font-bold text-consulting-navy mb-2">
+          STAR Analysis Enhancement
+        </h2>
+        <p className="text-consulting-gray mb-4">
+          Below are your original experience bullet points transformed to better align with ATS (Applicant Tracking System) scanning patterns and hiring manager preferences.
+        </p>
+        <div className="bg-consulting-lightblue p-4 rounded-md">
+          <h3 className="font-medium text-consulting-navy mb-2 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1 text-consulting-accent" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            What is STAR?
+          </h3>
+          <p className="text-consulting-gray text-sm">
+            <strong>S</strong>ituation, <strong>T</strong>ask, <strong>A</strong>ction, <strong>R</strong>esult - This framework helps reshape your experience into compelling narratives that pass ATS filters and resonate with hiring managers.
+          </p>
+        </div>
+      </div>
       
       {validStarAnalysis.map((item, index) => (
         <div key={index} className="p-6 bg-white rounded-lg shadow mb-4">
           <div className="space-y-4">
             <div>
-              <h3 className="font-medium text-consulting-charcoal mb-1">Original:</h3>
-              <p className="p-3 bg-gray-100 rounded text-consulting-gray">"{item.original}"</p>
+              <h3 className="font-medium text-consulting-charcoal mb-1 flex items-center">
+                <span className="inline-flex items-center justify-center w-6 h-6 bg-red-100 text-red-500 rounded-full mr-2 text-xs font-bold">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                  </svg>
+                </span>
+                Original Bullet Point:
+              </h3>
+              <p className="p-3 bg-gray-100 rounded text-consulting-gray">{item.original}</p>
             </div>
             
             <div>
-              <h3 className="font-medium text-consulting-charcoal mb-1">ATS-Optimized Version:</h3>
+              <h3 className="font-medium text-consulting-charcoal mb-1 flex items-center">
+                <span className="inline-flex items-center justify-center w-6 h-6 bg-green-100 text-green-500 rounded-full mr-2 text-xs font-bold">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </span>
+                ATS-Optimized Version:
+              </h3>
               <p className="p-3 bg-consulting-lightblue rounded text-consulting-blue font-medium">
-                "{item.improved}"
+                {item.improved}
               </p>
             </div>
             
             <div>
-              <h3 className="font-medium text-consulting-charcoal mb-1">Why It Improves Alignment:</h3>
+              <h3 className="font-medium text-consulting-charcoal mb-1 flex items-center">
+                <span className="inline-flex items-center justify-center w-6 h-6 bg-amber-100 text-amber-500 rounded-full mr-2 text-xs font-bold">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </span>
+                Why This Improves Alignment:
+              </h3>
               <p className="text-consulting-gray">{item.feedback}</p>
             </div>
             
-            <div className="bg-gray-50 p-3 rounded mt-2">
-              <p className="text-xs text-consulting-charcoal font-medium">Next step suggestion:</p>
-              <p className="text-xs text-consulting-gray mt-1">{generateSuggestion(item.improved)}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+              <div className="bg-gray-50 p-4 rounded">
+                <p className="text-xs text-consulting-charcoal font-medium">Interview Preparation:</p>
+                <p className="text-xs text-consulting-gray mt-1">{generateSuggestion(item.improved)}</p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded">
+                <p className="text-xs text-consulting-charcoal font-medium">ATS Insight:</p>
+                <p className="text-xs text-consulting-gray mt-1">{generateAtsAdvice(item.original, item.improved)}</p>
+              </div>
             </div>
           </div>
         </div>

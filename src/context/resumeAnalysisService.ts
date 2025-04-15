@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { AnalysisResult } from './types';
@@ -12,9 +13,9 @@ export const analyzeResume = async (
     console.log('Calling analyze-resume edge function...');
     
     // Further reduce the content length to prevent timeouts
-    const maxResumeLength = 4000;  // Reduced from 8000 
-    const maxJobDescLength = 2000; // Reduced from 4000
-    const maxCoverLetterLength = 3000; // Reduced from 6000
+    const maxResumeLength = 4000;
+    const maxJobDescLength = 2000;
+    const maxCoverLetterLength = 3000;
     
     const trimmedResume = resumeText.length > maxResumeLength 
       ? resumeText.substring(0, maxResumeLength) + "... [trimmed for processing]" 
@@ -44,18 +45,18 @@ export const analyzeResume = async (
         companyName: companyName,
         options: {
           useFastModel: true,
-          prioritizeSpeed: true
+          prioritizeSpeed: true,
+          enhancedAtsAnalysis: true, // Enable enhanced ATS analysis
+          keywordOptimization: true, // Enable intelligent keyword optimization
+          atsCompatibilityCheck: true // Enable ATS compatibility checking
         }
       }),
-      // Set a longer timeout for the fetch request
       signal: AbortSignal.timeout(60000) // 60 second timeout
     });
 
-    // If we get a status code that's not in the 200-299 range, check for error
     if (!response.ok) {
       console.error('Error response from analyze-resume:', response.status, response.statusText);
       
-      // If timeout (408) or server error (5xx), generate fallback analysis
       if (response.status === 408 || response.status >= 500) {
         console.log('Generating fallback analysis due to timeout or server error');
         return generateFallbackAnalysis(trimmedResume, trimmedJobDesc);
@@ -81,24 +82,24 @@ export const analyzeResume = async (
     console.error('Error analyzing resume:', error);
     toast.error('Our analysis service is currently experiencing high volume. Using simplified analysis instead.');
     
-    // Generate a simple fallback analysis if the main analysis fails
     return generateFallbackAnalysis(resumeText, jobDescription);
   }
 };
 
-// Fallback function to generate a simple analysis when the edge function times out
+// Improved fallback analysis with better ATS optimization suggestions
 function generateFallbackAnalysis(resumeText: string, jobDescription: string): AnalysisResult {
-  // Extract skills from job description (simplified)
+  // Extract skills from job description (enhanced)
   const jobSkills = extractSkills(jobDescription);
   
-  // Extract skills from resume (simplified)
+  // Extract skills from resume (enhanced)
   const resumeSkills = extractSkills(resumeText);
   
-  // Find matching skills
+  // Find matching skills with improved matching algorithm
   const matchingSkills = jobSkills.filter(skill => 
     resumeSkills.some(resumeSkill => 
       resumeSkill.toLowerCase().includes(skill.toLowerCase()) || 
-      skill.toLowerCase().includes(resumeSkill.toLowerCase())
+      skill.toLowerCase().includes(resumeSkill.toLowerCase()) ||
+      areRelatedSkills(resumeSkill, skill)
     )
   );
   
@@ -106,35 +107,40 @@ function generateFallbackAnalysis(resumeText: string, jobDescription: string): A
   const missingSkills = jobSkills.filter(skill => 
     !resumeSkills.some(resumeSkill => 
       resumeSkill.toLowerCase().includes(skill.toLowerCase()) || 
-      skill.toLowerCase().includes(resumeSkill.toLowerCase())
+      skill.toLowerCase().includes(resumeSkill.toLowerCase()) ||
+      areRelatedSkills(resumeSkill, skill)
     )
   );
   
-  // Calculate a simple alignment score based on matching skills
-  const alignmentScore = Math.min(
+  // Calculate a more sophisticated alignment score
+  // Considers keyword matching, keyword positioning, and formatting factors
+  const keywordScore = Math.min(
     Math.round((matchingSkills.length / Math.max(jobSkills.length, 1)) * 100),
-    100
+    70 // Cap keyword score at 70% of total
   );
   
-  // Create recommendations
-  const recommendations = [
-    "Add more specific metrics and results to your achievements",
-    "Tailor your resume to better match the job requirements",
-    "Highlight your most relevant experience more prominently"
-  ];
+  // Check for proper formatting (estimate)
+  const formattingScore = resumeText.includes('RESUME') || 
+                         resumeText.includes('EXPERIENCE') || 
+                         resumeText.includes('EDUCATION') ? 15 : 5;
   
-  // Extract bullet points from resume
-  const bulletPoints = resumeText
-    .split(/[\n\r]/g)
-    .filter(line => line.trim().startsWith('•') || line.trim().startsWith('-'))
-    .slice(0, 3);
+  // Check for contact information (estimate)
+  const contactScore = (resumeText.includes('@') && 
+                       (resumeText.includes('phone') || 
+                        resumeText.includes('tel') || 
+                        /\d{3}[-\.\s]?\d{3}[-\.\s]?\d{4}/.test(resumeText))) ? 10 : 5;
   
-  // Create STAR analysis for bullet points
-  const starAnalysis = bulletPoints.map(bullet => ({
-    original: bullet.trim(),
-    improved: bullet.trim() + " (quantify this achievement with specific metrics)",
-    feedback: "Add specific numbers and outcomes to strengthen this bullet point"
-  }));
+  // Final alignment score
+  const alignmentScore = Math.min(keywordScore + formattingScore + contactScore, 100);
+  
+  // Create dynamic recommendations based on analysis
+  const recommendations = generateRecommendations(resumeText, jobDescription, missingSkills);
+  
+  // Extract bullet points from resume with improved detection
+  const bulletPoints = extractBulletPoints(resumeText);
+  
+  // Create improved STAR analysis for bullet points
+  const starAnalysis = bulletPoints.map(bullet => generateSTARAnalysis(bullet, jobDescription));
   
   return {
     alignmentScore,
@@ -146,35 +152,329 @@ function generateFallbackAnalysis(resumeText: string, jobDescription: string): A
   };
 }
 
-// Simple function to extract potential skills
+// Check if two skills are related (synonyms or related concepts)
+function areRelatedSkills(skill1: string, skill2: string): boolean {
+  // Map of related skills
+  const relatedSkillsMap: Record<string, string[]> = {
+    'python': ['programming', 'coding', 'scripting', 'development'],
+    'javascript': ['js', 'frontend', 'web development', 'coding'],
+    'react': ['frontend', 'ui', 'javascript framework', 'web development'],
+    'angular': ['frontend', 'ui', 'javascript framework', 'web development'],
+    'vue': ['frontend', 'ui', 'javascript framework', 'web development'],
+    'java': ['backend', 'programming', 'software development'],
+    'sql': ['database', 'data', 'mysql', 'postgresql', 'oracle'],
+    'leadership': ['management', 'team lead', 'supervision'],
+    'communication': ['interpersonal skills', 'presentation', 'writing'],
+    'analysis': ['analytics', 'data analysis', 'research', 'insights'],
+  };
+  
+  const s1 = skill1.toLowerCase();
+  const s2 = skill2.toLowerCase();
+  
+  // Check direct relations
+  if (relatedSkillsMap[s1] && relatedSkillsMap[s1].some(rel => s2.includes(rel) || rel.includes(s2))) {
+    return true;
+  }
+  
+  if (relatedSkillsMap[s2] && relatedSkillsMap[s2].some(rel => s1.includes(rel) || rel.includes(s1))) {
+    return true;
+  }
+  
+  return false;
+}
+
+// More comprehensive skill extraction
 function extractSkills(text: string): string[] {
   const commonSkills = [
-    'python', 'javascript', 'java', 'sql', 'aws', 'azure', 'react', 'angular', 'vue', 'node',
-    'excel', 'powerpoint', 'word', 'leadership', 'communication', 'teamwork', 'project management',
-    'agile', 'scrum', 'analytics', 'data analysis', 'marketing', 'sales', 'customer service',
-    'presentation', 'research', 'writing', 'editing', 'design', 'photoshop', 'illustrator',
-    'html', 'css', 'database', 'cloud', 'machine learning', 'ai', 'product management'
+    // Technical skills
+    'python', 'javascript', 'typescript', 'java', 'c++', 'c#', 'go', 'rust', 'swift',
+    'react', 'angular', 'vue', 'svelte', 'node', 'express', 'django', 'flask',
+    'sql', 'nosql', 'mongodb', 'postgresql', 'mysql', 'oracle', 'firebase',
+    'aws', 'azure', 'gcp', 'cloud', 'docker', 'kubernetes', 'terraform',
+    'machine learning', 'deep learning', 'ai', 'artificial intelligence', 'nlp', 'data science',
+    'git', 'github', 'gitlab', 'bitbucket', 'ci/cd', 'jenkins', 'github actions',
+    
+    // Business skills
+    'excel', 'powerpoint', 'word', 'office', 'google workspace', 'g suite',
+    'leadership', 'management', 'team lead', 'project management', 'scrum', 'agile',
+    'communication', 'presentation', 'public speaking', 'negotiation', 'conflict resolution',
+    'analytics', 'data analysis', 'research', 'market research', 'competitive analysis',
+    'strategy', 'strategic thinking', 'business development', 'sales', 'marketing',
+    'financial analysis', 'budgeting', 'forecasting', 'accounting', 'finance',
+    'customer service', 'client relationship', 'account management', 'stakeholder management',
+    'operations', 'supply chain', 'logistics', 'procurement', 'inventory management',
+    'human resources', 'recruiting', 'talent acquisition', 'employee development',
+    'product management', 'product development', 'ux', 'ui', 'user research', 'wireframing',
+    'content creation', 'copywriting', 'editing', 'social media', 'seo', 'digital marketing'
   ];
   
   const skills = new Set<string>();
+  const lowerText = text.toLowerCase();
   
-  // Look for common skills in the text
+  // Find common skills in text
   commonSkills.forEach(skill => {
-    if (text.toLowerCase().includes(skill.toLowerCase())) {
+    if (lowerText.includes(skill.toLowerCase())) {
       skills.add(skill);
     }
   });
   
-  // Look for capitalized multi-word phrases that might be technologies or skills
-  const potentialSkillMatches = text.match(/\b[A-Z][a-z]+ [A-Z][a-z]+\b/g) || [];
-  potentialSkillMatches.forEach(match => skills.add(match));
-  
-  // Look for words after "experience with" or "expertise in"
-  const experienceMatches = text.match(/experience (?:with|in) ([\w\s,]+)/gi) || [];
-  experienceMatches.forEach(match => {
-    const skill = match.replace(/experience (?:with|in) /i, '').trim();
-    skills.add(skill);
+  // Extract technical skills (typically capitalized terms or terms after "with" or "using")
+  const techMatches = text.match(/(?:using|with|in|through|via)\s+([A-Za-z0-9/\-+#]+(?:\s+[A-Za-z0-9/\-+#]+){0,2})/gi) || [];
+  techMatches.forEach(match => {
+    const skill = match.replace(/(?:using|with|in|through|via)\s+/i, '').trim();
+    if (skill.length > 2 && !commonSkills.includes(skill.toLowerCase())) {
+      skills.add(skill);
+    }
   });
   
-  return Array.from(skills).slice(0, 15);
+  // Look for capitalized words that might be technologies
+  const capitalizedMatches = text.match(/\b[A-Z][a-zA-Z0-9]*(?:\.[A-Za-z0-9]+)*\b/g) || [];
+  capitalizedMatches.forEach(match => {
+    if (match.length > 2 && !match.match(/^(I|We|They|He|She|It|You|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/)) {
+      skills.add(match);
+    }
+  });
+  
+  // Extract skills from bullet points
+  const bulletPoints = text.split(/[\n\r]/).filter(line => line.trim().startsWith('•') || line.trim().startsWith('-') || line.trim().startsWith('*'));
+  bulletPoints.forEach(point => {
+    const words = point.split(/\s+/);
+    words.forEach(word => {
+      const cleaned = word.replace(/[.,;:()\[\]]/g, '');
+      if (cleaned.length > 2 && cleaned.match(/^[A-Z][a-zA-Z0-9]*$/) && !cleaned.match(/^(I|We|They|He|She|It|You)$/)) {
+        skills.add(cleaned);
+      }
+    });
+  });
+  
+  return Array.from(skills).slice(0, 25);
+}
+
+// Extract bullet points with improved detection algorithm
+function extractBulletPoints(text: string): string[] {
+  const lines = text.split(/[\n\r]/);
+  
+  // Get all lines that look like bullet points
+  const bulletPoints = lines.filter(line => {
+    const trimmed = line.trim();
+    return trimmed.startsWith('•') || 
+           trimmed.startsWith('-') || 
+           trimmed.startsWith('*') || 
+           trimmed.match(/^\d+\./) || 
+           trimmed.match(/^[\s]*[\-\•\*\✓\✔\→\♦\◆\o\◦\■\▪\▫\+][\s]/);
+  });
+  
+  // If we don't find bullet points with markers, try to identify bullet-like sentences
+  if (bulletPoints.length < 3) {
+    const experienceSection = extractExperienceSection(text);
+    if (experienceSection) {
+      const sentences = experienceSection.match(/[^.!?]+[.!?]+/g) || [];
+      // Get sentences that start with action verbs (common in resumes)
+      const actionSentences = sentences.filter(s => {
+        const firstWord = s.trim().split(/\s+/)[0].toLowerCase();
+        return ['developed', 'created', 'managed', 'led', 'implemented', 'designed', 
+                'increased', 'decreased', 'improved', 'built', 'delivered', 'achieved', 
+                'coordinated', 'established', 'executed', 'generated', 'launched', 
+                'maintained', 'performed', 'reduced', 'resolved', 'streamlined'].includes(firstWord);
+      }).slice(0, 5);
+      
+      if (actionSentences.length > 0) {
+        return actionSentences.map(s => s.trim());
+      }
+    }
+  }
+  
+  // Clean the bullet points and return top 5
+  return bulletPoints
+    .map(b => b.trim().replace(/^[\-\•\*\✓\✔\→\♦\◆\o\◦\■\▪\▫\+\d\.]\s*/, ''))
+    .filter(b => b.length > 10 && b.split(/\s+/).length > 3)
+    .slice(0, 5);
+}
+
+// Extract experience section from resume text
+function extractExperienceSection(text: string): string | null {
+  const sections = text.split(/\n\s*\n/);
+  
+  // Look for experience section by common headers
+  for (let i = 0; i < sections.length; i++) {
+    const section = sections[i];
+    if (section.match(/^EXPERIENCE|^WORK EXPERIENCE|^PROFESSIONAL EXPERIENCE|^EMPLOYMENT HISTORY/i)) {
+      // Return this section and possibly the next one if it doesn't have a header
+      let experienceText = section;
+      if (i < sections.length - 1 && !sections[i+1].match(/^[A-Z\s]{5,30}$/m)) {
+        experienceText += "\n\n" + sections[i+1];
+      }
+      return experienceText;
+    }
+  }
+  
+  // If no section header found, look for job titles with dates (common format)
+  const jobTitlePattern = /(?:^|\n)([A-Z][A-Za-z\s&,]+)(?:[-–|]|\sat\s)([A-Z][A-Za-z\s&,.]+)(?:[-–|]|\s)(\w+\s\d{4}\s?[-–|]?\s?(?:\w+\s\d{4}|Present|Current))/;
+  const match = text.match(jobTitlePattern);
+  if (match) {
+    // Find the section containing this job
+    const jobStart = text.indexOf(match[0]);
+    const nextSection = text.slice(jobStart).split(/\n\s*\n[A-Z\s]{5,30}\n/)[0];
+    return nextSection;
+  }
+  
+  return null;
+}
+
+// Generate improved STAR analysis for a bullet point
+function generateSTARAnalysis(bullet: string, jobDescription: string) {
+  const lowerBullet = bullet.toLowerCase();
+  const lowerJobDesc = jobDescription.toLowerCase();
+  
+  // Check for action verbs
+  const actionVerbs = ['led', 'managed', 'developed', 'created', 'implemented', 'designed', 'increased', 'decreased'];
+  const hasActionVerb = actionVerbs.some(verb => lowerBullet.includes(verb));
+  
+  // Check for metrics
+  const hasMetrics = /\d+%|\$\d+|\d+x|\d+\s(?:percent|dollars|users|customers|clients|hours|days)/.test(lowerBullet);
+  
+  // Check for alignment with job description
+  const jobWords = lowerJobDesc.split(/\W+/).filter(w => w.length > 3);
+  const bulletWords = lowerBullet.split(/\W+/).filter(w => w.length > 3);
+  const matchingWords = jobWords.filter(w => bulletWords.includes(w));
+  const alignmentScore = matchingWords.length / Math.max(bulletWords.length, 1);
+  
+  // Create improved version
+  let improved = bullet;
+  let feedback = "";
+  
+  if (!hasActionVerb) {
+    const suggestedVerb = getRelevantActionVerb(bullet, jobDescription);
+    improved = `${suggestedVerb} ${improved.charAt(0).toLowerCase() + improved.slice(1)}`;
+    feedback = "Added a strong action verb to start the bullet point for greater impact.";
+  }
+  
+  if (!hasMetrics) {
+    // Look for potential achievements to quantify
+    if (lowerBullet.includes("improve") || lowerBullet.includes("increase") || lowerBullet.includes("enhance")) {
+      improved = improved + " by 25%, exceeding team targets";
+      feedback = feedback ? `${feedback} Added specific metrics to quantify your achievement.` : "Added specific metrics to quantify your achievement.";
+    } else if (lowerBullet.includes("project") || lowerBullet.includes("initiative")) {
+      improved = improved + " resulting in $100K annual savings";
+      feedback = feedback ? `${feedback} Added concrete outcome metrics to demonstrate business impact.` : "Added concrete outcome metrics to demonstrate business impact.";
+    } else if (lowerBullet.includes("team") || lowerBullet.includes("collaborat")) {
+      improved = improved + " across 3 departments, improving efficiency by 15%";
+      feedback = feedback ? `${feedback} Added scope and outcome details to highlight cross-functional impact.` : "Added scope and outcome details to highlight cross-functional impact.";
+    }
+  }
+  
+  // Add relevant keywords from job description if missing
+  if (alignmentScore < 0.2) {
+    // Find important keywords from job description that could be added
+    const keyJobTerms = extractKeywordsByFrequency(jobDescription);
+    const relevantKeyword = keyJobTerms.find(term => !lowerBullet.includes(term.toLowerCase()));
+    
+    if (relevantKeyword) {
+      improved = improved + ` leveraging ${relevantKeyword} expertise`;
+      feedback = feedback ? `${feedback} Added key term "${relevantKeyword}" from job description to improve ATS matching.` : `Added key term "${relevantKeyword}" from job description to improve ATS matching.`;
+    }
+  }
+  
+  return {
+    original: bullet,
+    improved: improved,
+    feedback: feedback || "Enhanced for better ATS performance and hiring manager appeal."
+  };
+}
+
+// Extract keywords by frequency from text
+function extractKeywordsByFrequency(text: string): string[] {
+  const words = text.toLowerCase().split(/\W+/).filter(w => 
+    w.length > 3 && 
+    !['with', 'that', 'have', 'this', 'from', 'they', 'will', 'would', 'about', 'their', 'there', 'what', 'which'].includes(w)
+  );
+  
+  const frequency: Record<string, number> = {};
+  words.forEach(word => {
+    frequency[word] = (frequency[word] || 0) + 1;
+  });
+  
+  return Object.entries(frequency)
+    .sort((a, b) => b[1] - a[1])
+    .map(entry => entry[0])
+    .slice(0, 10);
+}
+
+// Get a relevant action verb for the bullet point based on job description
+function getRelevantActionVerb(bullet: string, jobDescription: string): string {
+  const lowerBullet = bullet.toLowerCase();
+  const lowerJobDesc = jobDescription.toLowerCase();
+  
+  const technicalVerbs = ['developed', 'implemented', 'programmed', 'engineered', 'designed', 'architected', 'built'];
+  const leadershipVerbs = ['led', 'managed', 'directed', 'supervised', 'oversaw', 'coordinated'];
+  const analyticalVerbs = ['analyzed', 'assessed', 'evaluated', 'researched', 'investigated', 'studied'];
+  const creativeVerbs = ['created', 'designed', 'conceived', 'established', 'formulated', 'initiated'];
+  const communicationVerbs = ['presented', 'communicated', 'authored', 'documented', 'negotiated', 'persuaded'];
+  const achievementVerbs = ['achieved', 'exceeded', 'improved', 'enhanced', 'increased', 'optimized'];
+  
+  // Determine the most appropriate verb category based on bullet and job description
+  if ((lowerBullet.includes('code') || lowerBullet.includes('develop') || lowerBullet.includes('program')) ||
+      (lowerJobDesc.includes('software') || lowerJobDesc.includes('develop') || lowerJobDesc.includes('engineer'))) {
+    return technicalVerbs[Math.floor(Math.random() * technicalVerbs.length)];
+  } else if ((lowerBullet.includes('team') || lowerBullet.includes('lead') || lowerBullet.includes('direct')) ||
+            (lowerJobDesc.includes('manage') || lowerJobDesc.includes('lead') || lowerJobDesc.includes('direct'))) {
+    return leadershipVerbs[Math.floor(Math.random() * leadershipVerbs.length)];
+  } else if ((lowerBullet.includes('data') || lowerBullet.includes('research') || lowerBullet.includes('analysis')) ||
+            (lowerJobDesc.includes('data') || lowerJobDesc.includes('research') || lowerJobDesc.includes('analysis'))) {
+    return analyticalVerbs[Math.floor(Math.random() * analyticalVerbs.length)];
+  } else if ((lowerBullet.includes('create') || lowerBullet.includes('design') || lowerBullet.includes('new')) ||
+            (lowerJobDesc.includes('creative') || lowerJobDesc.includes('innovation') || lowerJobDesc.includes('design'))) {
+    return creativeVerbs[Math.floor(Math.random() * creativeVerbs.length)];
+  } else if ((lowerBullet.includes('present') || lowerBullet.includes('report') || lowerBullet.includes('communicate')) ||
+            (lowerJobDesc.includes('communicate') || lowerJobDesc.includes('presentation') || lowerJobDesc.includes('stakeholder'))) {
+    return communicationVerbs[Math.floor(Math.random() * communicationVerbs.length)];
+  } else {
+    return achievementVerbs[Math.floor(Math.random() * achievementVerbs.length)];
+  }
+}
+
+// Generate dynamic recommendations based on analysis
+function generateRecommendations(resumeText: string, jobDescription: string, missingSkills: string[]): string[] {
+  const recommendations = [];
+  
+  // Check for missing skills
+  if (missingSkills.length > 0) {
+    recommendations.push(`Add these key skills to your resume: ${missingSkills.slice(0, 3).join(', ')}`);
+  }
+  
+  // Check for metrics
+  const hasMetrics = /\d+%|\$\d+|\d+x|\d+\s(?:percent|dollars|users|customers|clients|hours|days)/.test(resumeText);
+  if (!hasMetrics) {
+    recommendations.push('Quantify your achievements with specific metrics (e.g., "increased sales by 20%", "reduced costs by $50K")');
+  }
+  
+  // Check for formatting issues
+  if (!resumeText.includes('EXPERIENCE') && !resumeText.includes('EDUCATION') && !resumeText.includes('SKILLS')) {
+    recommendations.push('Use clear section headings (EXPERIENCE, EDUCATION, SKILLS) to help ATS systems parse your resume correctly');
+  }
+  
+  // Check for action verbs
+  const actionVerbs = ['led', 'managed', 'developed', 'created', 'implemented', 'designed', 'increased', 'decreased'];
+  const hasActionVerbs = actionVerbs.some(verb => resumeText.toLowerCase().includes(verb));
+  if (!hasActionVerbs) {
+    recommendations.push('Begin bullet points with strong action verbs (e.g., "Led", "Developed", "Achieved")');
+  }
+  
+  // Check job description keywords
+  const keyJobTerms = extractKeywordsByFrequency(jobDescription).slice(0, 5);
+  const missingJobTerms = keyJobTerms.filter(term => !resumeText.toLowerCase().includes(term.toLowerCase()));
+  if (missingJobTerms.length > 0) {
+    recommendations.push(`Include these key terms from the job description: ${missingJobTerms.join(', ')}`);
+  }
+  
+  // Always include these general best practices
+  if (recommendations.length < 5) {
+    recommendations.push('Customize your resume for each job application to maximize keyword matching');
+    recommendations.push('Use a clean, ATS-friendly format with standard section headings');
+    recommendations.push('Include a targeted professional summary at the top of your resume');
+    recommendations.push('Focus on achievements rather than responsibilities in your bullet points');
+    recommendations.push('Proofread carefully—ATS systems may reject resumes with spelling and grammar errors');
+  }
+  
+  return recommendations.slice(0, 5);
 }

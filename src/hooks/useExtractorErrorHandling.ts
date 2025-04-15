@@ -30,22 +30,25 @@ export const useExtractorErrorHandling = ({
       return false;
     }
     
-    // Basic validation for any extracted text
-    if (text.includes('Error extracting') || text.includes('binary file')) {
+    // Enhanced validation for any extracted text
+    if (text.includes('Error extracting') || 
+        text.includes('binary file') || 
+        text.includes('unable to parse') ||
+        text.includes('invalid format')) {
       handleExtractionError(type);
       return false;
     }
     
-    // Length validation based on content type
-    if ((type === 'resume' && text.length < 100) ||
-        (type === 'coverLetter' && text.length < 50)) {
+    // Length validation based on content type with improved thresholds
+    if ((type === 'resume' && text.length < 200) ||
+        (type === 'coverLetter' && text.length < 100)) {
       handleExtractionError(type);
       return false;
     }
     
     // Enhanced validation for job descriptions
     if (type === 'jobDescription') {
-      // Check for common non-job description content
+      // Check for common non-job description content - expanded patterns
       const invalidPatterns = [
         /log\s*in/i,
         /sign\s*in/i,
@@ -56,16 +59,33 @@ export const useExtractorErrorHandling = ({
         /page\s*not\s*found/i,
         /access\s*denied/i,
         /subscription/i,
+        /cookies/i,
+        /privacy\s*policy/i,
+        /terms\s*of\s*service/i,
+        /sign\s*up/i,
+        /home\s*page/i,
+        /website\s*uses\s*cookies/i,
+        /javascript\s*is\s*disabled/i,
+        /browser\s*is\s*out\s*of\s*date/i,
+        /please\s*enable\s*javascript/i,
       ];
       
-      // If multiple invalid patterns match, it's likely not a job description
-      const matchCount = invalidPatterns.filter(pattern => pattern.test(text)).length;
-      if (matchCount >= 2) {
+      // More aggressive validation: if ANY of these appear prominently in the text, it's likely not a job description
+      const prominentInvalidContent = invalidPatterns.some(pattern => {
+        const matches = text.match(pattern);
+        if (!matches) return false;
+        
+        // Check if the match appears in the first 20% of the text (suggesting it's a login page, etc)
+        const firstMatchPos = text.search(pattern);
+        return firstMatchPos >= 0 && firstMatchPos < text.length * 0.2;
+      });
+      
+      if (prominentInvalidContent) {
         handleExtractionError(type);
         return false;
       }
       
-      // Check for job-related terms
+      // Check for job-related terms - expanded job-related patterns
       const jobTerms = [
         /responsibilities/i,
         /requirements/i,
@@ -74,14 +94,33 @@ export const useExtractorErrorHandling = ({
         /skills/i,
         /role/i,
         /position/i,
-        /job\s*description/i
+        /job\s*description/i,
+        /we\s*are\s*looking/i,
+        /about\s*the\s*role/i,
+        /about\s*the\s*position/i,
+        /what\s*you\s*will\s*do/i,
+        /what\s*you\s*ll\s*do/i,
+        /day\s*to\s*day/i,
+        /who\s*we\s*are\s*looking/i,
+        /desired\s*skills/i,
+        /key\s*skills/i,
+        /what\s*you\s*bring/i,
+        /your\s*background/i,
+        /your\s*experience/i,
       ];
       
-      // Count how many job-related terms appear
+      // Count how many job-related terms appear (improved matching)
       const jobTermCount = jobTerms.filter(term => term.test(text)).length;
       
-      // If there are few job-related terms, it's likely not a job description
-      if (jobTermCount < 1 && text.length < 200) {
+      // If there are very few job-related terms and the text is short, it's likely not a job description
+      if (jobTermCount < 2 && text.length < 300) {
+        handleExtractionError(type);
+        return false;
+      }
+      
+      // Check for extremely short paragraphs that suggest it's not a proper job description
+      const paragraphs = text.split(/\n\s*\n/);
+      if (paragraphs.length < 2 && text.length < 400) {
         handleExtractionError(type);
         return false;
       }
