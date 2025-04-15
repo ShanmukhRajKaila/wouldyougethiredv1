@@ -1,6 +1,6 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import * as cheerio from "https://esm.sh/cheerio@1.0.0-rc.12";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -87,19 +87,22 @@ serve(async (req) => {
                          html.includes('Create an account')) && 
                          html.includes('linkedin.com');
     
-    // More advanced extraction techniques
-    const companyName = extractCompanyName(html, url);
-    const jobTitle = extractJobTitle(html, url);
+    // Load HTML with Cheerio for better parsing
+    const $ = cheerio.load(html);
     
-    // IMPROVED: Extract job description with specialized handling for MBA Exchange
-    let jobDescription = null;
+    // Enhanced extraction with Cheerio
+    const companyName = extractCompanyNameWithCheerio($, url) || extractCompanyName(html, url);
+    const jobTitle = extractJobTitleWithCheerio($, url) || extractJobTitle(html, url);
+    
+    // Extract job description with Cheerio first, fall back to regex if needed
+    let jobDescription = extractJobDescriptionWithCheerio($, url);
     
     // Special handling for MBA Exchange website
-    if (url.includes('mba-exchange.com')) {
+    if (!jobDescription && url.includes('mba-exchange.com')) {
       jobDescription = extractMBAExchangeJobDescription(html, debug);
     } 
     
-    // If not MBA Exchange or extraction failed, try generic methods
+    // If Cheerio extraction failed, try generic regex methods
     if (!jobDescription) {
       jobDescription = extractJobDescription(html, url, debug);
     }
@@ -111,6 +114,7 @@ serve(async (req) => {
         htmlLength: html.length,
         extractionDomainInfo: new URL(url).hostname,
         detectedPatterns: detectContentPatterns(html),
+        cheerioUsed: true,
         requiresLogin
       };
     }
@@ -134,6 +138,204 @@ serve(async (req) => {
     );
   }
 });
+
+/**
+ * Extract job description using Cheerio
+ */
+function extractJobDescriptionWithCheerio($: cheerio.CheerioAPI, url: string): string | null {
+  const domain = new URL(url).hostname.toLowerCase();
+  
+  // Common job description selectors by site
+  const selectors = [
+    '.job-description',
+    '.jobDescriptionText',
+    '.description__text',
+    '.description',
+    '.job-details',
+    '#job-description',
+    '#jobDescriptionText',
+    '[data-automation="jobDescription"]',
+    '[data-testid="job-description"]',
+    '.jobs-description',
+    '.jobs-box__html-content'
+  ];
+  
+  // LinkedIn specific selectors
+  if (domain.includes('linkedin.com')) {
+    const linkedinSelectors = [
+      '.show-more-less-html',
+      '.description__text',
+      'section.description',
+      '.job-description'
+    ];
+    
+    for (const selector of linkedinSelectors) {
+      const element = $(selector).first();
+      if (element.length) {
+        return element.text().trim();
+      }
+    }
+  }
+  
+  // Try all common selectors
+  for (const selector of selectors) {
+    const element = $(selector).first();
+    if (element.length) {
+      return element.text().trim();
+    }
+  }
+  
+  // Try article or main content
+  const contentSelectors = ['article', 'main', '.content', '.main', '.job', '.body'];
+  for (const selector of contentSelectors) {
+    const element = $(selector).first();
+    if (element.length && element.text().length > 300) {
+      return element.text().trim();
+    }
+  }
+  
+  // Look for large div blocks with job-related content
+  let bestMatch = { text: "", score: 0 };
+  
+  $('div').each((_, element) => {
+    const text = $(element).text().trim();
+    if (text.length > 300) {
+      const keywordCount = countJobKeywords(text);
+      const score = keywordCount * 5 + Math.min(text.length / 100, 50);
+      
+      if (score > bestMatch.score) {
+        bestMatch = { text, score };
+      }
+    }
+  });
+  
+  if (bestMatch.score > 20) {
+    return bestMatch.text;
+  }
+  
+  return null;
+}
+
+/**
+ * Count job-related keywords in text
+ */
+function countJobKeywords(text: string): number {
+  const keywords = [
+    'experience', 'skills', 'requirements', 'qualifications', 
+    'responsibilities', 'job', 'position', 'role', 'work',
+    'candidate', 'applicant', 'team', 'salary', 'benefits'
+  ];
+  
+  const lowerText = text.toLowerCase();
+  return keywords.reduce((count, keyword) => {
+    return count + (lowerText.match(new RegExp(keyword, 'g')) || []).length;
+  }, 0);
+}
+
+/**
+ * Extract company name using Cheerio
+ */
+function extractCompanyNameWithCheerio($: cheerio.CheerioAPI, url: string): string | null {
+  const domain = new URL(url).hostname.toLowerCase();
+  
+  // LinkedIn specific selectors
+  if (domain.includes('linkedin.com')) {
+    const linkedinSelectors = [
+      '.topcard__org-name-link',
+      '.company-name',
+      '[data-testid="topcard-org-name"]',
+      '.jobs-unified-top-card__company-name'
+    ];
+    
+    for (const selector of linkedinSelectors) {
+      const element = $(selector).first();
+      if (element.length) {
+        return cleanCompanyName(element.text());
+      }
+    }
+  }
+  
+  // General selectors
+  const companySelectors = [
+    '[data-testid="company-name"]',
+    '[itemprop="hiringOrganization"]',
+    '.company-name',
+    '.employer-name',
+    '.organization-name',
+    '.hiring-organization',
+    '[data-automation="jobCompany"]'
+  ];
+  
+  for (const selector of companySelectors) {
+    const element = $(selector).first();
+    if (element.length) {
+      return cleanCompanyName(element.text());
+    }
+  }
+  
+  // Try to find company in text patterns
+  const aboutCompanySection = $(':contains("About ")').filter((_, el) => {
+    const text = $(el).text();
+    return /About [A-Z][a-z]+/.test(text) && text.length < 200;
+  });
+  
+  if (aboutCompanySection.length) {
+    const text = aboutCompanySection.first().text();
+    const match = text.match(/About ([A-Z][a-zA-Z0-9\s&]+)(?:[\.\n]|$|\sis)/);
+    if (match && match[1]) {
+      return cleanCompanyName(match[1]);
+    }
+  }
+  
+  // Extract from domain if all else fails
+  return extractFromDomain(url);
+}
+
+/**
+ * Extract job title using Cheerio
+ */
+function extractJobTitleWithCheerio($: cheerio.CheerioAPI, url: string): string | null {
+  const domain = new URL(url).hostname.toLowerCase();
+  
+  // Common title selectors
+  const titleSelectors = [
+    '[data-testid="job-title"]',
+    '.job-title',
+    '.jobsearch-JobInfoHeader-title',
+    '.jobs-unified-top-card__job-title',
+    '[itemprop="title"]',
+    'h1'
+  ];
+  
+  for (const selector of titleSelectors) {
+    const element = $(selector).first();
+    if (element.length) {
+      const title = element.text().trim();
+      // Only return if it looks like a job title (not too short or long)
+      if (title.length > 3 && title.length < 100) {
+        return title;
+      }
+    }
+  }
+  
+  // Try the page title
+  const pageTitle = $('title').text();
+  if (pageTitle) {
+    // Clean up title - remove site name and other common elements
+    let cleanTitle = pageTitle
+      .replace(/\s*[-|]\s*.+$/, '') // Remove anything after dash or pipe
+      .replace(/\s*at\s+.+$/, '')   // Remove "at Company"
+      .replace(/^Job:\s*/, '')      // Remove "Job:" prefix
+      .replace(/^\s*[\d.,]+\s+/, '') // Remove leading numbers
+      .trim();
+      
+    if (cleanTitle.length > 5 && cleanTitle.length < 100) {
+      return cleanTitle;
+    }
+  }
+  
+  return null;
+}
 
 // Helper function to detect content patterns for debugging
 function detectContentPatterns(html: string) {
