@@ -17,6 +17,7 @@ interface AnalysisRequest {
     useFastModel?: boolean;
     prioritizeSpeed?: boolean;
   };
+  companyName?: string;
 }
 
 // More aggressive text truncation to prevent timeouts
@@ -75,7 +76,7 @@ serve(async (req) => {
   console.log("Starting resume analysis...");
 
   try {
-    const { resumeText, jobDescription, coverLetterText, options = {} } = await req.json() as AnalysisRequest;
+    const { resumeText, jobDescription, coverLetterText, options = {}, companyName } = await req.json() as AnalysisRequest;
 
     if (!resumeText || !jobDescription) {
       return new Response(
@@ -86,6 +87,7 @@ serve(async (req) => {
 
     console.log('Analyzing resume against job description');
     console.log('Cover letter provided:', !!coverLetterText);
+    console.log('Company name provided:', companyName || 'No');
     
     // Always use the most efficient model to prevent timeouts
     const model = 'gpt-4o-mini';
@@ -114,9 +116,11 @@ serve(async (req) => {
     const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 seconds max
     
     try {
-      // Simplified system prompt to reduce token usage
+      // Enhanced system prompt with company research capabilities
       const systemPrompt = `You are an ATS resume analyst comparing resumes to job descriptions.
       
+${companyName ? `The candidate is applying to ${companyName}. Based on the job description, infer the company's values, culture, and key requirements.` : ''}
+
 Return a JSON object with:
 {
   "alignmentScore": Integer from 1-100 representing match percentage,
@@ -129,7 +133,10 @@ Return a JSON object with:
     "relevance": Integer from 1-100 on job relevance,
     "strengths": Array of strings with good points (max 3),
     "weaknesses": Array of strings with issues (max 3),
-    "recommendations": Array of strings with suggestions (max 3)
+    "recommendations": Array of strings with suggestions (max 3),
+    "companyInsights": Array of strings with insights about the company based on the job description (max 3),
+    "keyRequirements": Array of strings with the most important skills/experiences for this role (max 3),
+    "suggestedPhrases": Array of strings with 3-5 tailored phrases to include in the cover letter
   },` : ''}
   "starAnalysis": Array of max 3 objects:
     {
@@ -140,8 +147,8 @@ Return a JSON object with:
 }`;
 
       const userPrompt = truncatedCoverLetter ?
-        `Job description:\n\n${truncatedJobDesc}\n\nResume:\n\n${truncatedResume}\n\nCover Letter:\n\n${truncatedCoverLetter}` :
-        `Job description:\n\n${truncatedJobDesc}\n\nResume:\n\n${truncatedResume}`;
+        `Job description:\n\n${truncatedJobDesc}\n\nResume:\n\n${truncatedResume}\n\nCover Letter:\n\n${truncatedCoverLetter}${companyName ? `\n\nCompany name: ${companyName}` : ''}` :
+        `Job description:\n\n${truncatedJobDesc}\n\nResume:\n\n${truncatedResume}${companyName ? `\n\nCompany name: ${companyName}` : ''}`;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -214,6 +221,16 @@ Return a JSON object with:
             analysisResult.coverLetterAnalysis.weaknesses = 
               analysisResult.coverLetterAnalysis.weaknesses.map((str: string) => str.trim());
           }
+          
+          // Ensure the new fields are always arrays even if not returned by the API
+          analysisResult.coverLetterAnalysis.companyInsights = 
+            analysisResult.coverLetterAnalysis.companyInsights || [];
+          
+          analysisResult.coverLetterAnalysis.keyRequirements = 
+            analysisResult.coverLetterAnalysis.keyRequirements || [];
+          
+          analysisResult.coverLetterAnalysis.suggestedPhrases = 
+            analysisResult.coverLetterAnalysis.suggestedPhrases || [];
         }
         
       } catch (error) {

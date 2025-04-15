@@ -8,7 +8,7 @@ import { useImprovedCoverLetter } from '@/hooks/useImprovedCoverLetter';
 import Gauge from './Gauge';
 
 const CoverLetterAnalysisTab: React.FC = () => {
-  const { analysisResults, coverLetterText } = useAppContext();
+  const { analysisResults, coverLetterText, selectedCompany } = useAppContext();
   const [activeTab, setActiveTab] = useState<string>('original');
   
   const coverLetterAnalysis = analysisResults?.coverLetterAnalysis;
@@ -37,7 +37,16 @@ const CoverLetterAnalysisTab: React.FC = () => {
     );
   }
   
-  const { tone, relevance, strengths, weaknesses, recommendations } = coverLetterAnalysis;
+  const { 
+    tone, 
+    relevance, 
+    strengths, 
+    weaknesses, 
+    recommendations,
+    companyInsights = [],
+    keyRequirements = [],
+    suggestedPhrases = []
+  } = coverLetterAnalysis;
   
   // Determine relevance score color
   const getRelevanceColorClass = (score: number) => {
@@ -49,10 +58,11 @@ const CoverLetterAnalysisTab: React.FC = () => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="original">Original Letter</TabsTrigger>
           <TabsTrigger value="improved">Enhanced Letter</TabsTrigger>
+          <TabsTrigger value="company-insights">Company Insights</TabsTrigger>
         </TabsList>
         
         <TabsContent value="overview">
@@ -163,6 +173,117 @@ const CoverLetterAnalysisTab: React.FC = () => {
           </Card>
         </TabsContent>
         
+        <TabsContent value="company-insights">
+          <div className="space-y-6">
+            {selectedCompany && (
+              <div className="flex items-center gap-4 mb-6">
+                <div className="h-16 w-16 flex items-center justify-center bg-white rounded-lg shadow-sm p-2">
+                  <img
+                    src={selectedCompany.logoUrl}
+                    alt={selectedCompany.name}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
+                <div>
+                  <h3 className="text-xl font-serif font-medium text-gray-700">
+                    {selectedCompany.name}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Company Analysis Results
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="shadow-md">
+                <CardHeader className="bg-purple-50 border-b pb-3">
+                  <CardTitle className="text-purple-700 text-lg">Company Insights</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  {companyInsights.length > 0 ? (
+                    <ul className="list-disc pl-5 space-y-3">
+                      {companyInsights.map((insight, index) => (
+                        <li key={index} className="text-sm text-gray-700">
+                          {insight}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">
+                      No specific company insights available.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+              
+              <Card className="shadow-md">
+                <CardHeader className="bg-blue-50 border-b pb-3">
+                  <CardTitle className="text-blue-700 text-lg">Key Requirements</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  {keyRequirements.length > 0 ? (
+                    <ul className="list-disc pl-5 space-y-3">
+                      {keyRequirements.map((requirement, index) => (
+                        <li key={index} className="text-sm text-gray-700">
+                          {requirement}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">
+                      No key requirements identified.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+              
+              <Card className="shadow-md">
+                <CardHeader className="bg-amber-50 border-b pb-3">
+                  <CardTitle className="text-amber-700 text-lg">Suggested Phrases</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  {suggestedPhrases.length > 0 ? (
+                    <ul className="list-disc pl-5 space-y-3">
+                      {suggestedPhrases.map((phrase, index) => (
+                        <li key={index} className="text-sm text-gray-700 italic">
+                          "{phrase}"
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">
+                      No suggested phrases available.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+            
+            <Card className="shadow-md mt-6">
+              <CardHeader className="bg-green-50 border-b pb-3">
+                <CardTitle className="text-green-700 text-lg">How to Use These Insights</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <ol className="list-decimal pl-5 space-y-3 text-sm text-gray-700">
+                  <li>
+                    <span className="font-medium">Company Insights:</span> Mention these in your opening paragraph 
+                    to show you've researched the company and connect with their mission.
+                  </li>
+                  <li>
+                    <span className="font-medium">Key Requirements:</span> Address each of these directly in your 
+                    body paragraphs, providing examples from your experience.
+                  </li>
+                  <li>
+                    <span className="font-medium">Suggested Phrases:</span> Incorporate these phrases throughout 
+                    your letter to align your language with the company's values and job description.
+                  </li>
+                </ol>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
         <TabsContent value="improved">
           <Card className="p-6">
             <h3 className="text-xl font-serif font-medium text-gray-700 mb-4">Enhanced Cover Letter</h3>
@@ -194,13 +315,31 @@ const CoverLetterAnalysisTab: React.FC = () => {
             
             <div className="mt-6 space-y-4">
               <h4 className="text-lg font-medium text-gray-700">Key Improvements:</h4>
-              <ul className="list-disc pl-5 space-y-2">
-                {recommendations.map((recommendation, index) => (
-                  <li key={index} className="text-sm text-gray-700">
-                    {recommendation}
-                  </li>
-                ))}
-              </ul>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h5 className="font-medium text-gray-700 mb-2">Cover Letter Recommendations</h5>
+                  <ul className="list-disc pl-5 space-y-2">
+                    {recommendations.map((recommendation, index) => (
+                      <li key={index} className="text-sm text-gray-700">
+                        {recommendation}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                {suggestedPhrases.length > 0 && (
+                  <div>
+                    <h5 className="font-medium text-gray-700 mb-2">Added Company-Specific Language</h5>
+                    <ul className="list-disc pl-5 space-y-2">
+                      {suggestedPhrases.map((phrase, index) => (
+                        <li key={index} className="text-sm text-gray-700 italic">
+                          "{phrase}"
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           </Card>
         </TabsContent>

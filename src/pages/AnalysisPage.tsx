@@ -15,7 +15,8 @@ const AnalysisPage: React.FC = () => {
     analysisResults, 
     analyzeResume,
     currentLeadId,
-    saveAnalysisResults 
+    saveAnalysisResults,
+    selectedCompany
   } = useAppContext();
   const [loadingMessage, setLoadingMessage] = useState<string>("Extracting text from resume...");
   const [progressValue, setProgressLocal] = useState<number>(0);
@@ -30,7 +31,24 @@ const AnalysisPage: React.FC = () => {
       return;
     }
     
-    const messages = [
+    // Company-specific loading messages if we have a company
+    const companyName = selectedCompany?.name;
+    
+    const messages = companyName ? [
+      "Extracting text from resume...",
+      `Researching ${companyName}...`,
+      `Analyzing company values and culture...`,
+      "Connecting to OpenAI GPT-4o...",
+      "Analyzing resume content...",
+      `Comparing to ${companyName}'s job description...`,
+      "Applying STAR methodology...",
+      "Evaluating alignment with position requirements...",
+      "Generating tailored recommendations...",
+      "Creating customized cover letter suggestions...",
+      "Processing results...",
+      "This may take a few minutes for longer documents...",
+      `Finalizing analysis for ${companyName} application...`
+    ] : [
       "Extracting text from resume...",
       "Connecting to OpenAI GPT-4o...",
       "Analyzing resume content...",
@@ -70,14 +88,14 @@ const AnalysisPage: React.FC = () => {
     return () => {
       clearInterval(interval);
     };
-  }, [analysisResults, navigate, setCurrentStage, setProgress]);
+  }, [analysisResults, navigate, setCurrentStage, setProgress, selectedCompany]);
   
   return (
     <PageContainer>
       <div className="step-container animate-fade-in text-center py-16">
         <div className="max-w-md mx-auto">
           <h1 className="text-3xl font-serif font-bold text-consulting-navy mb-8">
-            Analyzing Your Application
+            {selectedCompany ? `Analyzing Your ${selectedCompany.name} Application` : 'Analyzing Your Application'}
           </h1>
           
           <div className="mb-8">
@@ -96,6 +114,7 @@ const AnalysisPage: React.FC = () => {
           <div className="mt-8">
             <p className="text-sm text-consulting-gray">
               Our AI is analyzing your resume against the job description, 
+              {selectedCompany && ` researching ${selectedCompany.name} and its requirements, `}
               applying industry-standard evaluation criteria and the STAR method.
               This may take several minutes for longer documents.
             </p>

@@ -20,6 +20,9 @@ export interface CoverLetterAnalysis {
   strengths: string[];
   weaknesses: string[];
   recommendations: string[];
+  companyInsights?: string[];
+  keyRequirements?: string[];
+  suggestedPhrases?: string[];
   improvedText?: string;
   updatedRelevance?: number;
 }

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { AnalysisResult } from './types';
@@ -6,7 +5,8 @@ import { AnalysisResult } from './types';
 export const analyzeResume = async (
   resumeText: string, 
   jobDescription: string,
-  coverLetterText?: string
+  coverLetterText?: string,
+  companyName?: string
 ): Promise<AnalysisResult | null> => {
   try {
     console.log('Calling analyze-resume edge function...');
@@ -41,6 +41,7 @@ export const analyzeResume = async (
         resumeText: trimmedResume,
         jobDescription: trimmedJobDesc,
         coverLetterText: trimmedCoverLetter,
+        companyName: companyName,
         options: {
           useFastModel: true,
           prioritizeSpeed: true

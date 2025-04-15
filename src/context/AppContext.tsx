@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 import { 
   AppContextType, 
@@ -60,7 +61,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const results = await analyzeResumeService(
       resumeText, 
       jobDescText, 
-      isCoverLetterIncluded ? coverLetterText : undefined
+      isCoverLetterIncluded ? coverLetterText : undefined,
+      selectedCompany?.name // Pass the company name to the analysis service
     );
     if (results) {
       setAnalysisResults(results);
