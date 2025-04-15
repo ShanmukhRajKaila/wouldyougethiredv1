@@ -11,7 +11,7 @@ import {
   saveJobDescription as saveJobDescriptionService,
   saveResume as saveResumeService,
   saveAnalysisResults as saveAnalysisResultsService
-} from './leadOperations';
+} from './operations';
 import { analyzeResume as analyzeResumeService } from './resumeAnalysisService';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
