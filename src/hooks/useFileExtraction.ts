@@ -1,45 +1,51 @@
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { useAppContext } from '@/context/AppContext';
 import PDFExtractor from '@/utils/PDFExtractor';
 
-export const useFileExtraction = (resumeFile: File | null) => {
+export const useFileExtraction = (resumeFile: File | null, coverLetterFile: File | null = null) => {
   const [extractionWarning, setExtractionWarning] = useState<string | null>(null);
+  const { setCoverLetterText } = useAppContext();
 
   const checkFileExtraction = async () => {
+    // Check resume file
     if (resumeFile) {
-      setExtractionWarning(null);
-      // Test extract text to verify it can be read properly
       try {
         const text = await PDFExtractor.extractText(resumeFile);
-        // Check if we got a valid extraction or an error message
-        if (text && (text.includes('Error extracting') || 
-                    text.includes('binary file') || 
-                    text.includes('scanned document'))) {
-          setExtractionWarning(
-            "Warning: Your file may not be properly readable. For best results, use a text-based PDF, Word document (.docx), or a .txt file."
-          );
-        } else if (!text || text.trim().length < 50) {
-          setExtractionWarning(
-            "Warning: Very little text could be extracted from your file. Use a text-based file for best results."
-          );
+        
+        if (text && text.includes('This PDF appears to be')) {
+          setExtractionWarning(text);
+        } else if (text && text.includes('Error extracting')) {
+          setExtractionWarning('There was an issue extracting text from your resume. Try uploading a different file format.');
+        } else {
+          setExtractionWarning(null);
         }
-      } catch (err) {
-        setExtractionWarning("Warning: There might be issues reading this file format.");
-        console.error("Preview extraction error:", err);
+      } catch (error) {
+        console.error('Error checking file extraction:', error);
+        setExtractionWarning('Could not validate the PDF. Please try uploading as a Word or text file instead.');
+      }
+    }
+
+    // Check cover letter file
+    if (coverLetterFile) {
+      try {
+        const text = await PDFExtractor.extractText(coverLetterFile);
+        
+        if (text && text.includes('Error extracting')) {
+          toast.error('There was an issue extracting text from your cover letter. Try uploading a different file format.');
+        } else if (text && text.trim().length > 0) {
+          setCoverLetterText(text);
+        }
+      } catch (error) {
+        console.error('Error checking cover letter extraction:', error);
+        toast.error('Could not extract text from your cover letter. Please try a different file format.');
       }
     }
   };
 
-  // Reset warning when file changes
-  useEffect(() => {
-    if (resumeFile) {
-      setExtractionWarning(null);
-    }
-  }, [resumeFile]);
-
-  return { 
-    extractionWarning, 
-    setExtractionWarning, 
-    checkFileExtraction 
+  return {
+    extractionWarning,
+    setExtractionWarning,
+    checkFileExtraction
   };
 };

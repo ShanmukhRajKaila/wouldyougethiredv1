@@ -10,6 +10,7 @@ import AlignmentScoreCard from '@/components/AlignmentScoreCard';
 import ResultsSummaryTab from '@/components/ResultsSummaryTab';
 import RoleSelectionDialog from '@/components/RoleSelectionDialog';
 import ResultsHeader from '@/components/ResultsHeader';
+import CoverLetterAnalysisTab from '@/components/CoverLetterAnalysisTab';
 
 const ResultsPage: React.FC = () => {
   const { resetApplication, jobDescription, analysisResults, selectedCompany } = useAppContext();
@@ -90,8 +91,21 @@ const ResultsPage: React.FC = () => {
     strengths = [],
     weaknesses = [],
     recommendations = [],
-    starAnalysis = []
+    starAnalysis = [],
+    coverLetterAnalysis
   } = analysisResults || {};
+
+  // Create tabs array based on available analyses
+  const tabs = [
+    { id: "summary", label: "Summary" },
+    { id: "resume", label: "Resume Comparison" },
+    { id: "star", label: "STAR Analysis" },
+  ];
+
+  // Add cover letter tab only if cover letter analysis exists
+  if (coverLetterAnalysis) {
+    tabs.push({ id: "coverletter", label: "Cover Letter Analysis" });
+  }
   
   return (
     <PageContainer>
@@ -106,10 +120,10 @@ const ResultsPage: React.FC = () => {
         </div>
         
         <Tabs defaultValue="summary">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="summary">Summary</TabsTrigger>
-            <TabsTrigger value="resume">Resume Comparison</TabsTrigger>
-            <TabsTrigger value="star">STAR Analysis</TabsTrigger>
+          <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
+            {tabs.map(tab => (
+              <TabsTrigger key={tab.id} value={tab.id}>{tab.label}</TabsTrigger>
+            ))}
           </TabsList>
           
           <TabsContent value="summary">
@@ -128,6 +142,12 @@ const ResultsPage: React.FC = () => {
           <TabsContent value="star">
             <StarAnalysis starAnalysis={starAnalysis} />
           </TabsContent>
+
+          {coverLetterAnalysis && (
+            <TabsContent value="coverletter">
+              <CoverLetterAnalysisTab />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
       

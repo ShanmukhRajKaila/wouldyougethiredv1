@@ -2,6 +2,9 @@
 import React from 'react';
 import FileUpload from '@/components/FileUpload';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { useAppContext } from '@/context/AppContext';
 
 interface ResumeUploadFormProps {
   resumeFile: File | null;
@@ -24,6 +27,8 @@ const ResumeUploadForm: React.FC<ResumeUploadFormProps> = ({
   onBack,
   onSubmit
 }) => {
+  const { isCoverLetterIncluded, setIsCoverLetterIncluded } = useAppContext();
+
   return (
     <form onSubmit={onSubmit}>
       <FileUpload
@@ -45,13 +50,31 @@ const ResumeUploadForm: React.FC<ResumeUploadFormProps> = ({
         </div>
       )}
       
-      <FileUpload
-        label="Cover Letter (Optional)"
-        accept=".pdf,.txt,.docx"
-        onChange={setCoverLetterFile}
-        value={coverLetterFile}
-        maxSizeMB={5}
-      />
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="cover-letter-toggle" className="text-consulting-charcoal font-medium">
+            Cover Letter Analysis
+          </Label>
+          <Switch 
+            id="cover-letter-toggle"
+            checked={isCoverLetterIncluded}
+            onCheckedChange={setIsCoverLetterIncluded}
+          />
+        </div>
+        <p className="text-xs text-gray-600 mt-1">
+          Include your cover letter in the analysis for more comprehensive feedback.
+        </p>
+      </div>
+      
+      {isCoverLetterIncluded && (
+        <FileUpload
+          label="Cover Letter"
+          accept=".pdf,.txt,.docx"
+          onChange={setCoverLetterFile}
+          value={coverLetterFile}
+          maxSizeMB={5}
+        />
+      )}
       
       <div className="flex justify-end">
         <Button 
@@ -65,7 +88,7 @@ const ResumeUploadForm: React.FC<ResumeUploadFormProps> = ({
         </Button>
         <Button 
           type="submit"
-          disabled={!resumeFile || isSubmitting}
+          disabled={!resumeFile || (isCoverLetterIncluded && !coverLetterFile) || isSubmitting}
           className="bg-consulting-navy hover:bg-consulting-blue"
         >
           {isSubmitting ? 'Processing...' : 'Run AI Analysis'}

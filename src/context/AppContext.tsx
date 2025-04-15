@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 import { 
   AppContextType, 
@@ -27,6 +26,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [userEmail, setUserEmail] = useState<string>('');
   const [currentLeadId, setCurrentLeadId] = useState<string | null>(null);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult | null>(null);
+  const [coverLetterText, setCoverLetterText] = useState<string>('');
+  const [isCoverLetterIncluded, setIsCoverLetterIncluded] = useState<boolean>(false);
 
   const resetApplication = () => {
     setCurrentStage('landing');
@@ -34,6 +35,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSelectedCompany(null);
     setResumeFile(null);
     setCoverLetterFile(null);
+    setCoverLetterText('');
+    setIsCoverLetterIncluded(false);
     setProgress(0);
     setUserName('');
     setUserEmail('');
@@ -54,7 +57,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const analyzeResume = async (resumeText: string, jobDescText: string): Promise<AnalysisResult | null> => {
-    const results = await analyzeResumeService(resumeText, jobDescText);
+    const results = await analyzeResumeService(
+      resumeText, 
+      jobDescText, 
+      isCoverLetterIncluded ? coverLetterText : undefined
+    );
     if (results) {
       setAnalysisResults(results);
     }
@@ -99,6 +106,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         analyzeResume,
         analysisResults,
         setAnalysisResults,
+        coverLetterText,
+        setCoverLetterText,
+        isCoverLetterIncluded,
+        setIsCoverLetterIncluded,
       }}
     >
       {children}

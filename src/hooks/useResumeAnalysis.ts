@@ -8,6 +8,8 @@ import { useAnalysisSubmission } from './useAnalysisSubmission';
 export const useResumeAnalysis = () => {
   const {
     resumeFile,
+    coverLetterFile,
+    isCoverLetterIncluded,
     setCurrentStage,
   } = useAppContext();
 
@@ -19,7 +21,7 @@ export const useResumeAnalysis = () => {
     extractionWarning, 
     setExtractionWarning, 
     checkFileExtraction 
-  } = useFileExtraction(resumeFile);
+  } = useFileExtraction(resumeFile, isCoverLetterIncluded ? coverLetterFile : null);
 
   // Extract submission logic to a separate hook
   const { handleSubmission } = useAnalysisSubmission({
@@ -33,6 +35,11 @@ export const useResumeAnalysis = () => {
     
     if (!resumeFile) {
       toast.error('Please upload your resume');
+      return;
+    }
+    
+    if (isCoverLetterIncluded && !coverLetterFile) {
+      toast.error('Please upload your cover letter or disable cover letter analysis');
       return;
     }
     

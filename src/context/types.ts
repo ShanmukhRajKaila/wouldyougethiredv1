@@ -1,12 +1,23 @@
+import { Dispatch, SetStateAction } from 'react';
 
-import type { Database } from '@/integrations/supabase/types';
-
-export type AppStage = 'landing' | 'jobDescription' | 'resumeUpload' | 'analysis' | 'results';
+export type AppStage = 
+  'landing' | 
+  'jobDescription' | 
+  'resumeUpload' | 
+  'analysis' | 
+  'results';
 
 export interface Company {
-  id: string;
   name: string;
-  logo?: string;
+  logoUrl: string;
+}
+
+export interface CoverLetterAnalysis {
+  tone: string;
+  relevance: number;
+  strengths: string[];
+  weaknesses: string[];
+  recommendations: string[];
 }
 
 export interface AnalysisResult {
@@ -15,11 +26,12 @@ export interface AnalysisResult {
   strengths: string[];
   weaknesses: string[];
   recommendations: string[];
-  starAnalysis: {
+  starAnalysis: Array<{
     original: string;
     improved: string;
     feedback: string;
-  }[];
+  }>;
+  coverLetterAnalysis?: CoverLetterAnalysis;
 }
 
 export interface AppContextType {
@@ -33,6 +45,10 @@ export interface AppContextType {
   setResumeFile: (file: File | null) => void;
   coverLetterFile: File | null;
   setCoverLetterFile: (file: File | null) => void;
+  coverLetterText: string;
+  setCoverLetterText: (text: string) => void;
+  isCoverLetterIncluded: boolean;
+  setIsCoverLetterIncluded: (included: boolean) => void;
   progress: number;
   setProgress: (progress: number) => void;
   resetApplication: () => void;
@@ -51,7 +67,7 @@ export interface AppContextType {
     jobDescriptionId: string;
     results: AnalysisResult;
   }) => Promise<void>;
-  analyzeResume: (resumeText: string, jobDescription: string) => Promise<AnalysisResult | null>;
+  analyzeResume: (resumeText: string, jobDescText: string) => Promise<AnalysisResult | null>;
   analysisResults: AnalysisResult | null;
   setAnalysisResults: (results: AnalysisResult | null) => void;
 }

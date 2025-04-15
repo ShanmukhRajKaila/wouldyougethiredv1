@@ -38,10 +38,10 @@ const ResumeUploadPage: React.FC = () => {
     }
   }, [setAnalysisResults]);
   
-  // Check file extraction when resumeFile changes
+  // Check file extraction when resumeFile or coverLetterFile changes
   useEffect(() => {
     checkFileExtraction();
-  }, [resumeFile]);
+  }, [resumeFile, coverLetterFile]);
   
   const handleBack = () => {
     setCurrentStage('jobDescription');

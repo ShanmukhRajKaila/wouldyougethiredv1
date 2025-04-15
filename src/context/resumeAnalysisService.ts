@@ -5,7 +5,8 @@ import { AnalysisResult } from './types';
 
 export const analyzeResume = async (
   resumeText: string, 
-  jobDescription: string
+  jobDescription: string,
+  coverLetterText?: string
 ): Promise<AnalysisResult | null> => {
   try {
     console.log('Calling analyze-resume edge function...');
@@ -13,6 +14,7 @@ export const analyzeResume = async (
     // Trim the inputs if they're too long to avoid timeouts
     const maxResumeLength = 8000;
     const maxJobDescLength = 4000;
+    const maxCoverLetterLength = 6000;
     
     const trimmedResume = resumeText.length > maxResumeLength 
       ? resumeText.substring(0, maxResumeLength) + "... [trimmed for processing]" 
@@ -21,6 +23,10 @@ export const analyzeResume = async (
     const trimmedJobDesc = jobDescription.length > maxJobDescLength
       ? jobDescription.substring(0, maxJobDescLength) + "... [trimmed for processing]"
       : jobDescription;
+
+    const trimmedCoverLetter = coverLetterText && coverLetterText.length > maxCoverLetterLength
+      ? coverLetterText.substring(0, maxCoverLetterLength) + "... [trimmed for processing]"
+      : coverLetterText;
     
     const { data: sessionData } = await supabase.auth.getSession();
     
@@ -33,6 +39,7 @@ export const analyzeResume = async (
       body: JSON.stringify({
         resumeText: trimmedResume,
         jobDescription: trimmedJobDesc,
+        coverLetterText: trimmedCoverLetter,
         options: {
           useFastModel: true, // Hint to use a faster model if possible
           prioritizeSpeed: true // Hint to prioritize speed over detail

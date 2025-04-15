@@ -12,6 +12,7 @@ const corsHeaders = {
 interface AnalysisRequest {
   resumeText: string;
   jobDescription: string;
+  coverLetterText?: string;
   options?: {
     useFastModel?: boolean;
     prioritizeSpeed?: boolean;
@@ -63,7 +64,7 @@ serve(async (req) => {
   console.log("Starting resume analysis...");
 
   try {
-    const { resumeText, jobDescription, options = {} } = await req.json() as AnalysisRequest;
+    const { resumeText, jobDescription, coverLetterText, options = {} } = await req.json() as AnalysisRequest;
 
     if (!resumeText || !jobDescription) {
       return new Response(
@@ -73,6 +74,7 @@ serve(async (req) => {
     }
 
     console.log('Analyzing resume against job description');
+    console.log('Cover letter provided:', !!coverLetterText);
     
     // Use the most efficient model based on options
     const model = options.useFastModel ? 'gpt-4o-mini' : 'gpt-4o-mini';
@@ -80,11 +82,17 @@ serve(async (req) => {
     // Truncate content more aggressively for speed
     const maxResumeTokens = options.prioritizeSpeed ? 2000 : 4000;
     const maxJobTokens = options.prioritizeSpeed ? 500 : 1000;
+    const maxCoverLetterTokens = options.prioritizeSpeed ? 1500 : 3000;
     
     const truncatedResume = truncateText(cleanupText(resumeText), maxResumeTokens);
     const truncatedJobDesc = truncateText(cleanupText(jobDescription), maxJobTokens);
+    const truncatedCoverLetter = coverLetterText ? 
+      truncateText(cleanupText(coverLetterText), maxCoverLetterTokens) : null;
     
     console.log(`Truncated resume length: ${truncatedResume.length}, job description length: ${truncatedJobDesc.length}`);
+    if (truncatedCoverLetter) {
+      console.log(`Truncated cover letter length: ${truncatedCoverLetter.length}`);
+    }
     
     // Extract important keywords to help guide the analysis
     const jobKeywords = extractKeywords(jobDescription);
@@ -94,18 +102,32 @@ serve(async (req) => {
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds max
     
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: [
-            {
-              role: 'system',
-              content: `You are an expert ATS analyzer that reviews resumes against job descriptions.
+      const systemPrompt = truncatedCoverLetter ?
+        `You are an expert ATS analyzer that reviews resumes and cover letters against job descriptions.
+              
+OUTPUT FORMAT:
+Return a valid JSON object with this structure:
+{
+  "alignmentScore": Integer from 1-100 representing match percentage,
+  "verdict": Boolean indicating if the candidate would pass ATS screening,
+  "strengths": Array of strings highlighting matches (max 5),
+  "weaknesses": Array of strings identifying gaps (max 5), 
+  "recommendations": Array of strings with specific improvements (max 5),
+  "coverLetterAnalysis": {
+    "tone": String describing the tone (professional, conversational, etc.),
+    "relevance": Integer from 1-100 representing how relevant it is to the job,
+    "strengths": Array of strings highlighting good points (max 3),
+    "weaknesses": Array of strings identifying issues (max 3),
+    "recommendations": Array of strings with improvement suggestions (max 3)
+  },
+  "starAnalysis": Array of objects containing:
+    {
+      "original": String with original bullet point from resume,
+      "improved": String with optimized version,
+      "feedback": String explaining improvements
+    }
+}` :
+        `You are an expert ATS analyzer that reviews resumes against job descriptions.
               
 OUTPUT FORMAT:
 Return a valid JSON object with this structure:
@@ -121,16 +143,31 @@ Return a valid JSON object with this structure:
       "improved": String with optimized version,
       "feedback": String explaining improvements
     }
-}
+}`;
 
-IMPORTANT GUIDELINES:
+      const userPrompt = truncatedCoverLetter ?
+        `Job description:\n\n${truncatedJobDesc}\n\nResume:\n\n${truncatedResume}\n\nCover Letter:\n\n${truncatedCoverLetter}\n\nAnalyze how well this resume and cover letter match the job description.` :
+        `Job description:\n\n${truncatedJobDesc}\n\nResume:\n\n${truncatedResume}\n\nAnalyze how well this resume matches the job description.`;
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            {
+              role: 'system',
+              content: `${systemPrompt}\n\nIMPORTANT GUIDELINES:
 1. For strengths and weaknesses, only include the skill name without phrases like "lacks specific mention of" or "which could be".
 2. Identify up to 5 bullet points from the resume and suggest improvements using the STAR method.
 3. Key job keywords: ${jobKeywords.join(', ')}`
             },
             {
               role: 'user',
-              content: `Job description:\n\n${truncatedJobDesc}\n\nResume:\n\n${truncatedResume}\n\nAnalyze how well this resume matches the job description.`
+              content: userPrompt
             }
           ],
           temperature: 0.2,
@@ -201,6 +238,25 @@ IMPORTANT GUIDELINES:
               .replace(/not highlighted in your experience\.?/ig, '')
               .trim();
           });
+        }
+
+        // Also clean up cover letter analysis if present
+        if (analysisResult.coverLetterAnalysis) {
+          if (analysisResult.coverLetterAnalysis.strengths) {
+            analysisResult.coverLetterAnalysis.strengths = analysisResult.coverLetterAnalysis.strengths.map((str: string) => {
+              return str.replace(/lacks (specific )?(mention of |experience in |knowledge of )?/ig, '')
+                .replace(/which (could|would|might|may) be /ig, '')
+                .trim();
+            });
+          }
+          
+          if (analysisResult.coverLetterAnalysis.weaknesses) {
+            analysisResult.coverLetterAnalysis.weaknesses = analysisResult.coverLetterAnalysis.weaknesses.map((str: string) => {
+              return str.replace(/lacks (specific )?(mention of |experience in |knowledge of )?/ig, '')
+                .replace(/which (could|would|might|may) be /ig, '')
+                .trim();
+            });
+          }
         }
         
       } catch (error) {

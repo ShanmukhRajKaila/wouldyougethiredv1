@@ -20,6 +20,8 @@ export const useAnalysisSubmission = ({
     resumeFile,
     coverLetterFile,
     currentLeadId,
+    isCoverLetterIncluded,
+    setCoverLetterText,
     saveResume,
     saveJobDescription,
     saveAnalysisResults,
@@ -74,23 +76,40 @@ export const useAnalysisSubmission = ({
             return;
           }
           
-          console.log('Extracted text from file. Length:', resumeText.length);
+          console.log('Extracted text from resume. Length:', resumeText.length);
           
           // Handle error messages returned from extraction
           if (resumeText.includes('Error extracting') || 
               resumeText.includes('binary file') ||
               resumeText.length < 100) {
-            toast.error('Could not properly read your document. Please try uploading a Word document (.docx) or a .txt file instead.');
+            toast.error('Could not properly read your resume. Please try uploading a Word document (.docx) or a .txt file instead.');
             setCurrentStage('resumeUpload');
             setIsSubmitting(false);
             return;
+          }
+
+          // Extract cover letter text if included
+          if (isCoverLetterIncluded && coverLetterFile) {
+            const coverLetterText = await PDFExtractor.extractText(coverLetterFile);
+
+            if (!coverLetterText || 
+                coverLetterText.includes('Error extracting') || 
+                coverLetterText.length < 50) {
+              toast.error('Could not properly read your cover letter. Please try uploading a Word document (.docx) or a .txt file instead.');
+              setCurrentStage('resumeUpload');
+              setIsSubmitting(false);
+              return;
+            }
+
+            console.log('Extracted text from cover letter. Length:', coverLetterText.length);
+            setCoverLetterText(coverLetterText);
           }
           
           // Analyze the resume against the job description
           console.log('Starting resume analysis...');
           try {
             // Add a loading toast for better UX during potentially slow analysis
-            const loadingToast = toast.loading('Analyzing your resume...');
+            const loadingToast = toast.loading('Analyzing your documents...');
             
             // Try up to 2 times in case of temporary errors
             let analysisResults = null;
@@ -168,9 +187,9 @@ export const useAnalysisSubmission = ({
             setProcessingError(error.message || 'An unknown error occurred during analysis');
             setCurrentStage('resumeUpload');
             if (error.message?.includes('token') || error.message?.includes('too large')) {
-              toast.error('Your resume is too large to analyze. Please try with a shorter or simpler resume.');
+              toast.error('Your documents are too large to analyze. Please try with shorter or simpler files.');
             } else {
-              toast.error('Failed to analyze your resume. Please try again later.');
+              toast.error('Failed to analyze your documents. Please try again later.');
             }
           }
         }
