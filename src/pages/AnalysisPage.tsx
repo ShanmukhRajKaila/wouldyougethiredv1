@@ -50,42 +50,13 @@ const AnalysisPage: React.FC = () => {
         setProgressLocal((currentIndex / (messages.length - 1)) * 100);
       } else {
         clearInterval(interval);
-        // After all messages are shown, check if we have results yet
-        if (!analysisResults && !analysisTimeout) {
-          setAnalysisTimeout(true);
-        }
       }
     }, 2000);
     
-    // Set a timeout to show retry option after 5 minutes instead of 3 minutes
-    const timeout = setTimeout(() => {
-      if (!analysisResults) {
-        setAnalysisTimeout(true);
-      }
-    }, 300000); // 5 minutes timeout
-    
     return () => {
       clearInterval(interval);
-      clearTimeout(timeout);
     };
   }, [analysisResults, navigate, setCurrentStage, setProgress]);
-
-  const handleRetry = async () => {
-    if (!resumeFile || !jobDescription) {
-      toast.error("Missing resume or job description. Please go back and try again.");
-      return;
-    }
-
-    setIsRetrying(true);
-    setAnalysisTimeout(false);
-    setProgressLocal(0);
-    setLoadingMessage("Retrying analysis...");
-    
-    // Navigate back to resume upload to try again
-    setCurrentStage('resumeUpload');
-    setProgress(50);
-    navigate('/');
-  };
   
   return (
     <PageContainer>
@@ -104,35 +75,16 @@ const AnalysisPage: React.FC = () => {
             </div>
           </div>
           
-          {analysisTimeout ? (
-            <>
-              <p className="text-consulting-gray text-lg mb-4">
-                The analysis is taking longer than expected.
-              </p>
-              <div className="space-y-4 mt-8">
-                <Button 
-                  onClick={handleRetry} 
-                  className="w-full"
-                  disabled={isRetrying}
-                >
-                  {isRetrying ? "Processing..." : "Try Again"}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-consulting-gray text-lg animate-pulse">
-                {loadingMessage}
-              </p>
-              
-              <div className="mt-8">
-                <p className="text-sm text-consulting-gray">
-                  Our AI is using GPT-4o to analyze your resume against the job description, 
-                  applying industry-standard evaluation criteria and the STAR method.
-                </p>
-              </div>
-            </>
-          )}
+          <p className="text-consulting-gray text-lg animate-pulse">
+            {loadingMessage}
+          </p>
+          
+          <div className="mt-8">
+            <p className="text-sm text-consulting-gray">
+              Our AI is using GPT-4o to analyze your resume against the job description, 
+              applying industry-standard evaluation criteria and the STAR method.
+            </p>
+          </div>
         </div>
       </div>
     </PageContainer>
@@ -140,3 +92,4 @@ const AnalysisPage: React.FC = () => {
 };
 
 export default AnalysisPage;
+
