@@ -14,21 +14,33 @@ export const useCoverLetterRecommendations = () => {
     const hasKeyRequirements = analysis.keyRequirements && analysis.keyRequirements.length > 0;
     const hasSuggestedPhrases = analysis.suggestedPhrases && analysis.suggestedPhrases.length > 0;
     
+    // Find the greeting/salutation to preserve it at the top
+    const salutationRegex = /(dear\s+[\w\s\.]+,|to\s+whom\s+it\s+may\s+concern:?|hello\s+[\w\s\.]+,)/i;
+    const salutationMatch = updatedText.match(salutationRegex);
+    let salutation = '';
+    
+    if (salutationMatch && salutationMatch[0]) {
+      salutation = salutationMatch[0];
+      // Add the salutation and a line break to the beginning
+      updatedText = updatedText.replace(salutationRegex, '').trim();
+    }
+    
     // If we have company insights, add a paragraph about the company
+    // but preserve the salutation at the top
     if (hasCompanyInsights) {
-      // Find the end of the first paragraph (introduction) to insert company-specific content
-      const firstParaEnd = updatedText.indexOf("\n\n", 0);
-      if (firstParaEnd !== -1) {
-        // Insert after first paragraph
-        const companyPara = "\n\nI'm particularly drawn to " + 
-          analysis.companyInsights.slice(0, 2).join(" and ") + 
-          ". " + (analysis.companyInsights[2] || "");
-          
-        updatedText = 
-          updatedText.substring(0, firstParaEnd + 2) + 
-          companyPara + 
-          updatedText.substring(firstParaEnd + 2);
-      }
+      // Insert after salutation
+      const companyPara = "I'm particularly drawn to " + 
+        analysis.companyInsights.slice(0, 2).join(" and ") + 
+        ". " + (analysis.companyInsights[2] || "");
+        
+      // Build the improved letter with proper structure
+      updatedText = 
+        (salutation ? salutation + "\n\n" : "") +
+        companyPara + "\n\n" + 
+        updatedText;
+    } else {
+      // If no company insights, just make sure salutation is at the top
+      updatedText = (salutation ? salutation + "\n\n" : "") + updatedText;
     }
     
     // Add key requirements to the middle paragraphs
@@ -37,54 +49,63 @@ export const useCoverLetterRecommendations = () => {
       const enhancedPara = "\n\nMy experience aligns well with the " + 
         analysis.keyRequirements?.join(", ") + 
         " that you're looking for. " + 
-        analysis.suggestedPhrases?.slice(0, 2).join(" ") +
-        "\n\n";
+        analysis.suggestedPhrases?.slice(0, 2).join(" ");
         
       // Insert roughly in the middle of the letter
-      const insertPoint = Math.floor(updatedText.length / 2);
-      const nearestPara = updatedText.indexOf("\n\n", insertPoint);
+      const paragraphs = updatedText.split("\n\n");
       
-      if (nearestPara !== -1) {
-        updatedText = 
-          updatedText.substring(0, nearestPara) + 
-          enhancedPara + 
-          updatedText.substring(nearestPara + 2);
+      if (paragraphs.length > 2) {
+        const middleIndex = Math.floor(paragraphs.length / 2);
+        
+        // Insert the enhanced paragraph in the middle
+        paragraphs.splice(middleIndex, 0, enhancedPara.trim());
+        updatedText = paragraphs.join("\n\n");
       } else {
-        // If can't find a good spot, append to end
+        // If not enough paragraphs, add to the end of existing content
         updatedText += enhancedPara;
       }
     }
     
     // Apply recommendations to improve the text based on weaknesses
-    analysis.weaknesses.forEach(weakness => {
-      // Simple approach: Add a paragraph addressing each weakness
-      const weaknessLower = weakness.toLowerCase();
+    if (analysis.weaknesses && analysis.weaknesses.length > 0) {
+      let improvementsParagraph = "\n\n";
       
-      // Check if the weakness is already addressed in the text
-      if (!updatedText.toLowerCase().includes(weaknessLower)) {
-        // Add an improvement paragraph at the end
+      analysis.weaknesses.forEach((weakness, index) => {
+        // Find a recommendation that addresses this weakness
         const improvement = analysis.recommendations.find(rec => 
-          rec.toLowerCase().includes(weaknessLower)
+          rec.toLowerCase().includes(weakness.toLowerCase())
         );
         
         if (improvement) {
-          const enhancedParagraph = `\n\nRegarding ${weakness}: ${improvement}`;
-          updatedText += enhancedParagraph;
+          improvementsParagraph += improvement + " ";
         }
+      });
+      
+      // Only add if we found relevant improvements
+      if (improvementsParagraph.trim().length > 0) {
+        updatedText += improvementsParagraph;
       }
-    });
+    }
     
     // Add an enhanced closing if we have more suggested phrases
     if (hasSuggestedPhrases && analysis.suggestedPhrases.length > 2) {
       const closingPhrase = analysis.suggestedPhrases[analysis.suggestedPhrases.length - 1];
       
       if (closingPhrase) {
-        // Find the last paragraph
-        const lastParaStart = updatedText.lastIndexOf("\n\n");
-        if (lastParaStart !== -1) {
-          // Replace the closing or append to it
-          updatedText = updatedText.substring(0, lastParaStart) + 
-            "\n\nI am confident that " + closingPhrase + " Thank you for considering my application.\n\n" + 
+        // Find if there's already a closing paragraph
+        const closingMatches = updatedText.match(/(sincerely|thank you|regards|respectfully|yours)/i);
+        
+        if (closingMatches) {
+          // Replace existing closing
+          const closingIndex = updatedText.lastIndexOf(closingMatches[0]);
+          if (closingIndex !== -1) {
+            updatedText = updatedText.substring(0, closingIndex) + 
+              "\n\nI am confident that " + closingPhrase + " Thank you for considering my application.\n\n" + 
+              "Sincerely,\n[Your Name]";
+          }
+        } else {
+          // Add new closing
+          updatedText += "\n\nI am confident that " + closingPhrase + " Thank you for considering my application.\n\n" + 
             "Sincerely,\n[Your Name]";
         }
       }

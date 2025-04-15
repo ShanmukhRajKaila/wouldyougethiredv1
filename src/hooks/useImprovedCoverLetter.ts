@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { CoverLetterAnalysis } from '@/context/types';
 import { useCoverLetterState, ImprovedCoverLetterData } from './useCoverLetterState';
 import { useCoverLetterRecommendations } from './useCoverLetterRecommendations';
@@ -12,9 +12,10 @@ export const useImprovedCoverLetter = (
 ): ImprovedCoverLetterData => {
   const { improvedData, setImprovedData } = useCoverLetterState(coverLetterText, analysis?.relevance || 0);
   const { applyRecommendations, calculateUpdatedRelevance } = useCoverLetterRecommendations();
+  const hasRun = useRef(false);
   
   useEffect(() => {
-    if (!coverLetterText || !analysis) {
+    if (!coverLetterText || !analysis || hasRun.current) {
       return;
     }
     
@@ -28,6 +29,9 @@ export const useImprovedCoverLetter = (
       improvedText: updatedText,
       updatedRelevance: updatedScore
     });
+    
+    // Mark as run to prevent infinite loop
+    hasRun.current = true;
   }, [coverLetterText, analysis, applyRecommendations, calculateUpdatedRelevance]);
 
   return improvedData;
