@@ -25,38 +25,55 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
   
   // Generate a personalized suggestion based on the improved bullet point
   const generateSuggestion = (improved: string): string => {
-    if (improved.toLowerCase().includes("led")) {
-      return "When discussing leadership experience, prepare to articulate your specific leadership style and how it evolved in this context. Be ready to explain how you handled resistance or conflicts within the team, as these stories demonstrate emotional intelligence that complements your technical skills.";
-    } else if (improved.toLowerCase().includes("managed")) {
-      return "For management experiences, consider preparing examples that showcase different aspects of management: resource allocation, performance development, and strategic guidance. Highlight situations where you had to make difficult trade-off decisions with limited resources.";
-    } else if (improved.toLowerCase().includes("increase") || improved.toLowerCase().includes("%")) {
-      return "When discussing quantifiable improvements, be prepared to explain the methodology behind your measurements and any controls you implemented. Sophisticated employers value understanding the context behind metrics as much as the numbers themselves.";
-    } else if (improved.toLowerCase().includes("improve")) {
-      return "With improvement initiatives, consider discussing the diagnostic process that led to your approach. Explaining how you identified the root cause of issues demonstrates analytical thinking valuable across various organizational contexts.";
-    } else if (improved.toLowerCase().includes("develop")) {
-      return "For development work, prepare to discuss both the technical implementation and the business value proposition. Being able to connect your technical decisions to organizational outcomes demonstrates valuable strategic thinking beyond execution.";
-    } else if (improved.toLowerCase().includes("implement")) {
-      return "When discussing implementations, consider preparing a brief explanation of your approach to change management and stakeholder buy-in. The most technically perfect solution fails without effective implementation strategy.";
-    } else if (improved.toLowerCase().includes("create")) {
-      return "For creative initiatives, prepare to discuss your inspiration sources and how you validated that your creation would solve the intended problem. This demonstrates your ability to balance innovation with pragmatic business needs.";
-    } else if (improved.toLowerCase().includes("customer")) {
-      return "When highlighting customer-focused work, prepare specific examples of how you gathered and incorporated customer feedback into your approach. Stories that show your ability to translate customer needs into actionable insights are particularly valuable.";
-    } else if (improved.toLowerCase().includes("client")) {
-      return "For client work, consider preparing examples that demonstrate how you balanced client requests with business constraints or technical limitations. Navigating these tensions effectively is a sophisticated skill that many candidates struggle to articulate.";
-    } else if (improved.toLowerCase().includes("analyze")) {
-      return "When discussing analytical work, prepare to explain not just your methodology but also how you communicated complex findings to different audiences. The ability to translate technical analysis into actionable business insights is increasingly valuable in data-driven organizations.";
-    } else if (improved.toLowerCase().includes("research")) {
-      return "For research initiatives, consider discussing how you determined research priorities and balanced exploration with execution. This demonstrates strategic thinking that extends beyond pure analytical capabilities.";
-    } else if (improved.toLowerCase().includes("collaborate") || improved.toLowerCase().includes("partner")) {
-      return "When highlighting collaborative experiences, prepare examples that demonstrate how you navigated different working styles or priorities across teams. Stories that show you building consensus among diverse stakeholders showcase valuable organizational intelligence.";
-    } else if (improved.toLowerCase().includes("optimiz") || improved.toLowerCase().includes("efficien")) {
-      return "For optimization work, be ready to discuss the broader business context that prioritized this efficiency. Understanding and articulating the balance between optimization and other business considerations demonstrates valuable strategic thinking.";
-    } else if (improved.toLowerCase().includes("negotiat") || improved.toLowerCase().includes("contract")) {
-      return "When discussing negotiations, prepare to explain your preparation process and how you determined your position. The methodology behind negotiation often demonstrates more sophisticated thinking than the outcome itself.";
-    } else if (improved.toLowerCase().includes("present") || improved.toLowerCase().includes("communicat")) {
-      return "For communication experiences, consider discussing how you adapted your approach for different audiences or in response to feedback. This flexibility demonstrates emotional intelligence that complements your technical capabilities.";
-    } else {
-      return "As you refine this bullet point further, consider adding a brief narrative element that illustrates the before and after states. Storytelling elements make your experiences more memorable during interviews and demonstrate the contextual understanding employers value.";
+    const lowerImproved = improved.toLowerCase();
+    
+    if (lowerImproved.includes("led")) {
+      return "Beyond stating leadership experience, prepare to discuss what specifically distinguished your leadership approach. Were you more collaborative or directive? How did you adapt your style to the specific team dynamics? Hiring managers are looking for this level of self-awareness.";
+    } 
+    else if (lowerImproved.includes("managed")) {
+      return "When discussing management roles, be ready to articulate your framework for decision-making under constraints. Employers are particularly interested in how you handled competing priorities—this reveals your strategic thinking more effectively than listing accomplishments.";
+    } 
+    else if (lowerImproved.includes("increase") || lowerImproved.includes("%")) {
+      return "For metrics-based achievements, prepare to discuss the 'before' state that made your improvement significant. The context of your achievement often matters more than the percentage itself, as it demonstrates your ability to identify optimization opportunities.";
+    } 
+    else if (lowerImproved.includes("improve")) {
+      return "With improvement initiatives, consider the resistance you encountered and how you overcame it. Change management skills are often what distinguish successful professionals, yet candidates rarely articulate this dimension of their experience.";
+    } 
+    else if (lowerImproved.includes("develop")) {
+      return "For development accomplishments, prepare to discuss the constraints you operated under. Limited resources, tight timelines, or technical debt all create a more compelling narrative than the development work alone, showcasing your adaptability.";
+    } 
+    else if (lowerImproved.includes("implement")) {
+      return "With implementations, prepare to discuss the unexpected challenges that emerged and how you adapted. This reveals your problem-solving process and resilience—qualities that transcend specific technical skills and demonstrate your value in ambiguous situations.";
+    } 
+    else if (lowerImproved.includes("create")) {
+      return "When discussing creative initiatives, prepare to explain the specific insight that inspired your approach. Creative solutions that connect seemingly unrelated concepts or repurpose existing resources in novel ways demonstrate intellectual flexibility that employers increasingly value.";
+    } 
+    else if (lowerImproved.includes("customer")) {
+      return "For customer-focused work, prepare examples of when customer feedback conflicted with internal priorities. Your approach to these tensions reveals your ability to balance competing stakeholder needs—a nuanced skill that becomes increasingly valuable as you advance.";
+    } 
+    else if (lowerImproved.includes("client")) {
+      return "In client contexts, consider discussing moments when you had to push back on client requests. Your ability to manage expectations while maintaining relationships demonstrates emotional intelligence that purely technical candidates often lack.";
+    } 
+    else if (lowerImproved.includes("analyze")) {
+      return "With analytical achievements, prepare to discuss instances where the data pointed to counterintuitive conclusions. Your willingness to follow evidence despite conventional wisdom signals intellectual honesty that sophisticated employers highly value.";
+    } 
+    else if (lowerImproved.includes("research")) {
+      return "For research initiatives, be ready to discuss your approach when initial hypotheses proved incorrect. The pivot process often reveals more about your capabilities than successful projects where everything went according to plan.";
+    } 
+    else if (lowerImproved.includes("collaborate") || lowerImproved.includes("partner")) {
+      return "When highlighting collaboration, prepare examples of when you successfully integrated conflicting perspectives. Cross-functional partnerships often involve natural tensions—your ability to synthesize diverse viewpoints shows rare organizational intelligence.";
+    } 
+    else if (lowerImproved.includes("optimiz") || lowerImproved.includes("efficien")) {
+      return "For optimization work, consider preparing examples where you identified non-obvious inefficiencies that others had overlooked. This demonstrates systems thinking and an ability to question established processes—increasingly valuable traits in evolving organizations.";
+    } 
+    else if (lowerImproved.includes("negotiat") || lowerImproved.includes("contract")) {
+      return "When discussing negotiations, prepare to explain how you determined your BATNA (Best Alternative To Negotiated Agreement). Your preparation process often reveals more sophisticated thinking than the outcome itself.";
+    } 
+    else if (lowerImproved.includes("present") || lowerImproved.includes("communicat")) {
+      return "For communication accomplishments, consider discussing how you've tailored complex messages for different audiences. The ability to modulate technical depth based on audience needs demonstrates rare versatility that distinguishes senior professionals.";
+    } 
+    else {
+      return "As you prepare for interviews, consider developing a 'failure narrative' related to this experience—a setback you encountered and what you learned. Research shows candidates who can thoughtfully discuss failures appear more authentic and self-aware than those who only present successes.";
     }
   };
   
