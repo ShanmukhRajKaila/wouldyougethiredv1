@@ -1,4 +1,3 @@
-
 import * as cheerio from "https://esm.sh/cheerio@1.0.0-rc.12";
 import { convertHtmlToText, countJobKeywords } from "./html-utils.ts";
 
@@ -28,6 +27,11 @@ export function extractJobDescriptionContent(html: string, url: string): string 
     // Glassdoor
     if (domain.includes('glassdoor.com')) {
       return extractGlassdoorJobDescription($, html);
+    }
+    
+    // MBA Exchange
+    if (domain.includes('mbaexchange')) {
+      return extractMBAExchangeJobDescription(html);
     }
     
     // Singapore Career Sites
@@ -369,12 +373,138 @@ function splitIntoSections(text: string): string[] {
 }
 
 /**
+ * ADDED: Specialized extraction function for MBA Exchange website
+ */
+export function extractMBAExchangeJobDescription(html: string, debug = false): string | null {
+  if (debug) {
+    console.log("Using specialized MBA Exchange extraction method");
+  }
+  
+  // Look for tables with job content
+  const tablePattern = /<table[^>]*class="[^"]*(?:jd|job-description)[^"]*"[^>]*>([\s\S]*?)<\/table>/i;
+  let match = html.match(tablePattern);
+  
+  if (match && match[1]) {
+    return convertHtmlToText(match[1]);
+  }
+  
+  // Try to find job description in specific MBA Exchange structure
+  const jobDetailPattern = /<div[^>]*class="[^"]*jobs?[^"]*"[^>]*>([\s\S]*?)<\/div>/i;
+  match = html.match(jobDetailPattern);
+  
+  if (match && match[1]) {
+    return convertHtmlToText(match[1]);
+  }
+  
+  // Look for TD with content that likely contains job description
+  const tdContentPattern = /<td[^>]*>([\s\S]{200,}?)<\/td>/gi;
+  const tdMatches = [...html.matchAll(tdContentPattern)];
+  
+  for (const tdMatch of tdMatches) {
+    const content = tdMatch[1];
+    if (content && 
+        content.length > 300 && 
+        (content.includes('responsibilities') || 
+         content.includes('requirements') || 
+         content.includes('qualifications') || 
+         content.includes('experience'))) {
+      return convertHtmlToText(content);
+    }
+  }
+  
+  // Try to extract from any table with substantial content
+  const anyTable = /<table[^>]*>([\s\S]*?)<\/table>/gi;
+  const tableMatches = [...html.matchAll(anyTable)];
+  
+  if (debug) {
+    console.log(`Found ${tableMatches.length} tables on the page`);
+  }
+  
+  let bestTableMatch = { content: "", length: 0 };
+  for (const tableMatch of tableMatches) {
+    const tableContent = tableMatch[1];
+    if (tableContent.length > 500 &&
+        (tableContent.includes('experience') || 
+         tableContent.includes('requirements') || 
+         tableContent.includes('responsibilities') || 
+         tableContent.includes('qualifications'))) {
+      
+      if (tableContent.length > bestTableMatch.length) {
+        bestTableMatch = {
+          content: convertHtmlToText(tableContent),
+          length: tableContent.length
+        };
+      }
+    }
+  }
+  
+  if (bestTableMatch.content) {
+    return bestTableMatch.content;
+  }
+  
+  // Last resort: try to find any large block of text
+  const textBlockPattern = /<div[^>]*>([\s\S]{500,}?)<\/div>/gi;
+  const blockMatches = [...html.matchAll(textBlockPattern)];
+  
+  for (const blockMatch of blockMatches) {
+    const content = blockMatch[1];
+    if (content && content.length > 500 && !content.includes('<table')) {
+      return convertHtmlToText(content);
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Validate if the extracted text looks like a job description
+ */
+export function validateJobDescription(text: string): boolean {
+  if (!text || text.length < 200) return false;
+  
+  // Check for common non-job description content
+  const invalidPatterns = [
+    /log\s*in/i,
+    /sign\s*in/i,
+    /register/i,
+    /create\s*account/i,
+    /password/i,
+    /404/i,
+    /page\s*not\s*found/i,
+    /access\s*denied/i,
+    /subscription/i,
+  ];
+  
+  // If too many invalid patterns match, it's likely not a job description
+  const matchCount = invalidPatterns.filter(pattern => pattern.test(text)).length;
+  if (matchCount >= 3) return false;
+  
+  // Check for job-related terms
+  const jobTerms = [
+    /responsibilities/i,
+    /requirements/i,
+    /qualifications/i,
+    /experience/i,
+    /skills/i,
+    /role/i,
+    /position/i,
+    /job\s*description/i
+  ];
+  
+  // Count how many job-related terms appear
+  const jobTermCount = jobTerms.filter(term => term.test(text)).length;
+  
+  // Valid if we have job-related terms
+  return jobTermCount >= 2;
+}
+
+/**
  * Clean and format job description text
  */
 function cleanDescription(text: string): string {
   if (!text) return "";
   
-  return text
+  const cleaned = text
     .replace(/\s+/g, ' ') // Normalize whitespace
     .replace(/\n+/g, '\n') // Normalize line breaks
     .replace(/\.(\w)/g, '. $1') // Add space after periods
@@ -383,4 +513,12 @@ function cleanDescription(text: string): string {
     .replace(/([.!?])\s+/g, '$1\n') // Add line breaks after sentences for readability
     .replace(/\n{3,}/g, '\n\n') // Limit consecutive line breaks
     .trim();
+    
+  // Final validation
+  if (validateJobDescription(cleaned)) {
+    return cleaned;
+  } else {
+    console.log("Extracted content doesn't seem to be a valid job description");
+    return ""; // Return empty if validation fails
+  }
 }

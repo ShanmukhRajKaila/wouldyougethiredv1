@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { searchRoleDescriptions, convertJobToRoleDescription } from '@/context/operations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const JobDescriptionPage: React.FC = () => {
   const { 
@@ -26,89 +27,201 @@ const JobDescriptionPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [roleTitle, setRoleTitle] = useState('');
   const [customRole, setCustomRole] = useState('');
-  const [selectedRole, setSelectedRole] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedRole, setSelectedRole] = useState<string>('');
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('jobDescription');
+  const [availableRoles, setAvailableRoles] = useState<{value: string, label: string}[]>([]);
+  const [isJobDescriptionValid, setIsJobDescriptionValid] = useState(true);
   
-  // Comprehensive list of specific roles organized by industry
+  // Define role categories and their specific roles
   const roleCategories = [
     {
       name: "Tech Management",
+      value: "tech_management",
       roles: [
         { value: 'product_manager', label: 'Product Manager' },
         { value: 'technical_program_manager', label: 'Technical Program Manager' },
         { value: 'engineering_manager', label: 'Engineering Manager' },
         { value: 'cto', label: 'Chief Technology Officer (CTO)' },
-        { value: 'director_of_engineering', label: 'Director of Engineering' }
+        { value: 'director_of_engineering', label: 'Director of Engineering' },
+        { value: 'vp_of_engineering', label: 'VP of Engineering' },
+        { value: 'technical_director', label: 'Technical Director' },
+        { value: 'it_director', label: 'IT Director' },
+        { value: 'chief_product_officer', label: 'Chief Product Officer (CPO)' },
+        { value: 'product_director', label: 'Product Director' }
       ]
     },
     {
       name: "Finance",
+      value: "finance",
       roles: [
         { value: 'investment_banker', label: 'Investment Banker' },
         { value: 'finance_manager', label: 'Finance Manager' },
         { value: 'financial_analyst', label: 'Financial Analyst' },
         { value: 'portfolio_manager', label: 'Portfolio Manager' },
-        { value: 'private_equity_associate', label: 'Private Equity Associate' }
+        { value: 'private_equity_associate', label: 'Private Equity Associate' },
+        { value: 'hedge_fund_analyst', label: 'Hedge Fund Analyst' },
+        { value: 'investment_analyst', label: 'Investment Analyst' },
+        { value: 'equity_research_analyst', label: 'Equity Research Analyst' },
+        { value: 'cfo', label: 'Chief Financial Officer (CFO)' },
+        { value: 'treasury_manager', label: 'Treasury Manager' },
+        { value: 'corporate_finance_manager', label: 'Corporate Finance Manager' },
+        { value: 'fund_manager', label: 'Fund Manager' }
       ]
     },
     {
       name: "Consulting",
+      value: "consulting",
       roles: [
         { value: 'management_consultant', label: 'Management Consultant' },
         { value: 'strategy_consultant', label: 'Strategy Consultant' },
         { value: 'operations_consultant', label: 'Operations Consultant' },
         { value: 'technology_consultant', label: 'Technology Consultant' },
-        { value: 'healthcare_consultant', label: 'Healthcare Consultant' }
+        { value: 'healthcare_consultant', label: 'Healthcare Consultant' },
+        { value: 'financial_consultant', label: 'Financial Consultant' },
+        { value: 'human_capital_consultant', label: 'Human Capital Consultant' },
+        { value: 'digital_transformation_consultant', label: 'Digital Transformation Consultant' },
+        { value: 'sustainability_consultant', label: 'Sustainability Consultant' },
+        { value: 'risk_consultant', label: 'Risk Consultant' },
+        { value: 'supply_chain_consultant', label: 'Supply Chain Consultant' }
       ]
     },
     {
       name: "Marketing",
+      value: "marketing",
       roles: [
         { value: 'marketing_manager', label: 'Marketing Manager' },
         { value: 'brand_manager', label: 'Brand Manager' },
         { value: 'digital_marketing_director', label: 'Digital Marketing Director' },
         { value: 'growth_marketing_manager', label: 'Growth Marketing Manager' },
-        { value: 'seo_manager', label: 'SEO Manager' }
+        { value: 'seo_manager', label: 'SEO Manager' },
+        { value: 'content_marketing_manager', label: 'Content Marketing Manager' },
+        { value: 'marketing_director', label: 'Marketing Director' },
+        { value: 'cmo', label: 'Chief Marketing Officer (CMO)' },
+        { value: 'social_media_manager', label: 'Social Media Manager' },
+        { value: 'product_marketing_manager', label: 'Product Marketing Manager' },
+        { value: 'marketing_analyst', label: 'Marketing Analyst' }
       ]
     },
     {
       name: "Sustainability",
+      value: "sustainability",
       roles: [
         { value: 'sustainability_manager', label: 'Sustainability Manager' },
         { value: 'esg_director', label: 'ESG Director' },
         { value: 'environmental_program_manager', label: 'Environmental Program Manager' },
         { value: 'sustainable_business_consultant', label: 'Sustainable Business Consultant' },
-        { value: 'corporate_responsibility_manager', label: 'Corporate Responsibility Manager' }
+        { value: 'corporate_responsibility_manager', label: 'Corporate Responsibility Manager' },
+        { value: 'sustainability_director', label: 'Sustainability Director' },
+        { value: 'chief_sustainability_officer', label: 'Chief Sustainability Officer' },
+        { value: 'climate_change_specialist', label: 'Climate Change Specialist' },
+        { value: 'sustainable_finance_manager', label: 'Sustainable Finance Manager' },
+        { value: 'circular_economy_specialist', label: 'Circular Economy Specialist' }
       ]
     },
     {
       name: "Tech & Engineering",
+      value: "tech_engineering",
       roles: [
         { value: 'software_engineer', label: 'Software Engineer' },
         { value: 'data_scientist', label: 'Data Scientist' },
         { value: 'ux_designer', label: 'UX Designer' },
         { value: 'product_designer', label: 'Product Designer' },
         { value: 'devops_engineer', label: 'DevOps Engineer' },
-        { value: 'ai_engineer', label: 'AI Engineer' }
+        { value: 'ai_engineer', label: 'AI Engineer' },
+        { value: 'full_stack_developer', label: 'Full Stack Developer' },
+        { value: 'backend_developer', label: 'Backend Developer' },
+        { value: 'frontend_developer', label: 'Frontend Developer' },
+        { value: 'mobile_developer', label: 'Mobile Developer' },
+        { value: 'data_engineer', label: 'Data Engineer' },
+        { value: 'machine_learning_engineer', label: 'Machine Learning Engineer' },
+        { value: 'cloud_architect', label: 'Cloud Architect' },
+        { value: 'security_engineer', label: 'Security Engineer' }
       ]
     },
     {
       name: "Other",
+      value: "other",
       roles: [
         { value: 'other', label: 'Other (Specify)' }
       ]
     }
   ];
   
-  // Flatten all roles for easier validation
-  const allRoles = roleCategories.flatMap(category => category.roles);
+  // Update available roles when category changes
+  useEffect(() => {
+    if (selectedCategory) {
+      const category = roleCategories.find(cat => cat.value === selectedCategory);
+      if (category) {
+        setAvailableRoles(category.roles);
+        setSelectedRole('');
+      }
+    } else {
+      setAvailableRoles([]);
+      setSelectedRole('');
+    }
+  }, [selectedCategory]);
+  
+  // Job description validation
+  useEffect(() => {
+    // Reset validation when job description changes
+    if (jobDescription) {
+      setIsJobDescriptionValid(true);
+    }
+  }, [jobDescription]);
+  
+  // Validate job description content
+  const validateJobDescription = (text: string): boolean => {
+    if (!text || text.length < 50) return false;
+    
+    // Check for common non-job description content
+    const invalidPatterns = [
+      /log\s*in/i,
+      /sign\s*in/i,
+      /register/i,
+      /create\s*account/i,
+      /password/i,
+      /404/i,
+      /page\s*not\s*found/i,
+      /access\s*denied/i,
+      /subscription/i,
+    ];
+    
+    // If too many invalid patterns match, it's likely not a job description
+    const matchCount = invalidPatterns.filter(pattern => pattern.test(text)).length;
+    
+    // Check for job-related terms
+    const jobTerms = [
+      /responsibilities/i,
+      /requirements/i,
+      /qualifications/i,
+      /experience/i,
+      /skills/i,
+      /role/i,
+      /position/i,
+      /job\s*description/i
+    ];
+    
+    // Count how many job-related terms appear
+    const jobTermCount = jobTerms.filter(term => term.test(text)).length;
+    
+    // Valid if we have few invalid patterns and several job-related terms
+    return (matchCount < 3 && jobTermCount >= 2);
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!jobDescription.trim()) {
       toast.error('Please enter a job description');
+      return;
+    }
+    
+    // Validate job description
+    if (!validateJobDescription(jobDescription)) {
+      setIsJobDescriptionValid(false);
+      toast.warning('The job description appears to be invalid. Please check and update it manually.');
       return;
     }
     
@@ -164,7 +277,7 @@ const JobDescriptionPage: React.FC = () => {
         if (selectedRole === 'other') {
           roleLabel = customRole;
         } else {
-          const role = allRoles.find(r => r.value === selectedRole);
+          const role = availableRoles.find(r => r.value === selectedRole);
           roleLabel = role ? role.label : '';
         }
         
@@ -252,9 +365,15 @@ const JobDescriptionPage: React.FC = () => {
                   value={jobDescription}
                   onChange={(e) => setJobDescription(e.target.value)}
                   placeholder="Paste the job description here..."
-                  className="min-h-[200px]"
+                  className={cn("min-h-[200px]", !isJobDescriptionValid && "border-red-500")}
                   required
                 />
+                
+                {!isJobDescriptionValid && (
+                  <p className="text-red-500 text-sm mt-1">
+                    The job description appears to be invalid. Please check and update it.
+                  </p>
+                )}
                 
                 <div className="flex justify-end mt-2">
                   <Button 
@@ -285,31 +404,52 @@ const JobDescriptionPage: React.FC = () => {
               Search for descriptions of specific roles. This will help you understand typical requirements and responsibilities.
             </p>
             
-            <div className="mb-6">
-              <Label htmlFor="roleSelect" className="block text-consulting-charcoal font-medium mb-2">
-                Role Category <span className="text-red-500">*</span>
-              </Label>
-              <Select value={selectedRole} onValueChange={setSelectedRole}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a specific role" />
-                </SelectTrigger>
-                <SelectContent className="max-h-80">
-                  {roleCategories.map((category) => (
-                    <React.Fragment key={category.name}>
-                      <div className="px-2 py-1.5 text-sm font-medium text-gray-500 bg-gray-50">{category.name}</div>
-                      {category.roles.map((role) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="categorySelect" className="block text-consulting-charcoal font-medium mb-2">
+                  Role Category <span className="text-red-500">*</span>
+                </Label>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roleCategories.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="roleSelect" className="block text-consulting-charcoal font-medium mb-2">
+                  Specific Role <span className="text-red-500">*</span>
+                </Label>
+                <Select 
+                  value={selectedRole} 
+                  onValueChange={setSelectedRole}
+                  disabled={!selectedCategory}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={selectedCategory ? "Select a role" : "Select a category first"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="h-72">
+                      {availableRoles.map((role) => (
                         <SelectItem key={role.value} value={role.value}>
                           {role.label}
                         </SelectItem>
                       ))}
-                    </React.Fragment>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             {selectedRole === 'other' && (
-              <div className="mb-6">
+              <div className="mt-6">
                 <Label htmlFor="customRole" className="block text-consulting-charcoal font-medium mb-2">
                   Custom Role <span className="text-red-500">*</span>
                 </Label>
@@ -324,7 +464,7 @@ const JobDescriptionPage: React.FC = () => {
               </div>
             )}
             
-            <div className="mb-6">
+            <div className="mt-6">
               <Button 
                 type="button"
                 onClick={handleSearchRole}
@@ -356,5 +496,8 @@ const JobDescriptionPage: React.FC = () => {
     </PageContainer>
   );
 };
+
+// Need to import cn for classname conditionals
+const cn = (...args: any[]) => args.filter(Boolean).join(' ');
 
 export default JobDescriptionPage;
