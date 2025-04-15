@@ -9,6 +9,7 @@ import ResumeComparison from '@/components/ResumeComparison';
 import StarAnalysis from '@/components/StarAnalysis';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Check, X, ArrowRight } from "lucide-react";
+import Gauge from '@/components/Gauge';
 
 const ResultsPage: React.FC = () => {
   const { resetApplication, jobDescription, analysisResults, selectedCompany } = useAppContext();
@@ -112,23 +113,16 @@ const ResultsPage: React.FC = () => {
             </p>
           </div>
           
-          <div className="flex flex-col items-center justify-center bg-white p-4 rounded-lg shadow-md">
-            <div className="text-center mb-2">
+          <div className="flex flex-col items-center justify-center bg-white p-4 rounded-lg shadow-md w-full md:w-auto md:min-w-[250px]">
+            <div className="text-center mb-2 w-full">
               <p className="text-sm text-consulting-gray font-medium">Final Verdict</p>
               <h2 className={`text-2xl font-bold ${verdict ? 'text-green-600' : 'text-red-600'}`}>
                 {verdict ? 'Would Likely Be Hired' : 'Unlikely to Be Hired'}
               </h2>
+              <div className="my-4 px-2 w-full">
+                <Gauge value={alignmentScore} size="md" />
+              </div>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1">
-              <div 
-                className={`h-2.5 rounded-full ${
-                  alignmentScore >= 80 ? 'bg-green-600' : 
-                  alignmentScore >= 60 ? 'bg-yellow-500' : 'bg-red-600'
-                }`}
-                style={{ width: `${alignmentScore}%` }}
-              ></div>
-            </div>
-            <p className="text-xs text-consulting-gray">Alignment Score: {alignmentScore}%</p>
           </div>
         </div>
         
