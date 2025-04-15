@@ -100,10 +100,11 @@ export const useAnalysisSubmission = ({
       
       // Direct analysis without saving to database again
       try {
+        // Fixed function call - checking the argument requirements
         const analysisResult = await analyzeResume(
           resumeText, 
-          jobDescription, 
-          coverLetterText,
+          jobDescription,
+          isCoverLetterIncluded ? coverLetterText : undefined,
           selectedCompany?.name
         );
         
