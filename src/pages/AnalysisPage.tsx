@@ -57,12 +57,12 @@ const AnalysisPage: React.FC = () => {
       }
     }, 2000);
     
-    // Set a timeout to show retry option if analysis takes too long
+    // Set a timeout to show retry option after 5 minutes instead of 3 minutes
     const timeout = setTimeout(() => {
       if (!analysisResults) {
         setAnalysisTimeout(true);
       }
-    }, 180000); // 3 minutes timeout instead of 1 minute
+    }, 300000); // 5 minutes timeout
     
     return () => {
       clearInterval(interval);
