@@ -33,7 +33,6 @@ const ResumeUploadForm: React.FC<ResumeUploadFormProps> = ({
     <form onSubmit={onSubmit}>
       <FileUpload
         label="Resume"
-        accept=".pdf,.txt,.docx"
         onChange={setResumeFile}
         value={resumeFile}
         required
@@ -45,7 +44,7 @@ const ResumeUploadForm: React.FC<ResumeUploadFormProps> = ({
           <p className="text-sm text-yellow-800">{extractionWarning}</p>
           <p className="text-xs text-gray-600 mt-1">
             If you're having issues with PDF files, try uploading your resume as a Word document (.docx) 
-            or plain text (.txt) file for better results.
+            for better results.
           </p>
         </div>
       )}
@@ -69,7 +68,6 @@ const ResumeUploadForm: React.FC<ResumeUploadFormProps> = ({
       {isCoverLetterIncluded && (
         <FileUpload
           label="Cover Letter"
-          accept=".pdf,.txt,.docx"
           onChange={setCoverLetterFile}
           value={coverLetterFile}
           maxSizeMB={5}

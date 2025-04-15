@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { X, File } from 'lucide-react';
@@ -9,6 +10,7 @@ interface FileUploadProps {
   value: File | null;
   required?: boolean;
   maxSizeMB?: number;
+  accept?: string;
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({ 
@@ -16,7 +18,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
   onChange, 
   value,
   required = false,
-  maxSizeMB = 10
+  maxSizeMB = 10,
+  accept = '.docx'
 }) => {
   const [dragActive, setDragActive] = useState<boolean>(false);
   
@@ -97,7 +100,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
             id={`file-${label}`}
             type="file"
             className="hidden"
-            accept=".docx"
+            accept={accept}
             onChange={handleChange}
           />
           <div className="flex flex-col items-center justify-center">
