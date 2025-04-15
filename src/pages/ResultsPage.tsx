@@ -27,16 +27,11 @@ const ResultsPage: React.FC = () => {
     const savedRole = localStorage.getItem('jobRoleTitle');
     if (savedRole) {
       setSelectedRole(savedRole);
-      return;
-    }
-    
-    if (jobDescription) {
+    } else if (jobDescription) {
       const jobTitle = extractJobTitle(jobDescription);
       if (jobTitle) {
         setSelectedRole(jobTitle);
-      } else {
-        setShowRoleDialog(true);
-        setInputRole('');
+        localStorage.setItem('jobRoleTitle', jobTitle);
       }
     }
   }, [jobDescription, analysisResults]);
@@ -62,12 +57,13 @@ const ResultsPage: React.FC = () => {
       return firstLine;
     }
     
-    return '';
+    return 'Job Position';
   };
   
   const handleRoleSubmit = () => {
     setSelectedRole(inputRole);
     setShowRoleDialog(false);
+    localStorage.setItem('jobRoleTitle', inputRole);
   };
   
   const handleExpandToggle = () => {
@@ -105,43 +101,55 @@ const ResultsPage: React.FC = () => {
   
   const generateStrengthExplanation = (strength: string): string => {
     if (strength.toLowerCase().includes("experience")) {
-      return "Employers value proven experience as it reduces training time and risk. This strength positions you as someone who can contribute immediately to the team.";
+      return "Your demonstrated experience in this area provides concrete proof of your capabilities. Consider quantifying this experience with specific metrics or highlighting a particular project where this strength made a significant impact.";
     } else if (strength.toLowerCase().includes("skill") || strength.toLowerCase().includes("proficiency")) {
-      return "This technical skill is specifically mentioned in the job requirements. Candidates with this expertise are typically prioritized during initial screening rounds.";
+      return "This technical proficiency is a key differentiator for you. Try mentioning how you've applied this skill in non-standard ways or to solve complex problems that others couldn't address.";
     } else if (strength.toLowerCase().includes("leader") || strength.toLowerCase().includes("manage")) {
-      return "Leadership abilities demonstrate your capacity to take initiative and drive results. This trait is highly valued for roles with growth potential.";
+      return "Your leadership abilities suggest you can take on greater responsibilities. In your interviews, prepare stories about how you've developed team members or navigated difficult decisions that showcased this quality.";
     } else if (strength.toLowerCase().includes("communicat") || strength.toLowerCase().includes("collaborat")) {
-      return "Strong communication skills are essential for team cohesion and project success. This strength indicates your ability to work effectively in the company's environment.";
+      return "This soft skill is increasingly valued in cross-functional teams. Consider preparing examples of how you've bridged communication gaps or facilitated collaboration between different departments or stakeholders.";
+    } else if (strength.toLowerCase().includes("analy") || strength.toLowerCase().includes("data")) {
+      return "Your analytical capabilities set you apart in a data-driven workplace. Prepare to discuss how you translate raw data into actionable insights that drive business outcomes.";
+    } else if (strength.toLowerCase().includes("project") || strength.toLowerCase().includes("deliver")) {
+      return "Your track record of successful delivery demonstrates reliability. Focus on describing your methodology for ensuring projects stay on track even when facing unexpected obstacles.";
     } else {
-      return "This strength directly aligns with the job requirements. Employers are specifically looking for candidates who demonstrate this capability in the role.";
+      return "This strength directly aligns with core requirements for the role. During interviews, connect this ability to specific business challenges the company faces based on your research about their current market position.";
     }
   };
   
   const generateWeaknessExplanation = (weakness: string): string => {
     if (weakness.toLowerCase().includes("experience") || weakness.toLowerCase().includes("background")) {
-      return "This experience gap could limit your effectiveness in key responsibilities. Consider highlighting transferable skills or pursuing relevant projects to build credibility in this area.";
+      return "Consider taking on freelance projects or volunteer opportunities that will build this experience quickly. Even a small self-directed project can provide talking points to address this gap in interviews.";
     } else if (weakness.toLowerCase().includes("technical") || weakness.toLowerCase().includes("skill")) {
-      return "This technical skill appears multiple times in the job description, indicating its importance. Consider upskilling through online courses or certification programs to address this gap.";
+      return "Employers often value learning capacity over existing knowledge. Create a learning plan with specific milestones to develop this skill, and mention in interviews that you're actively upskilling in this area.";
     } else if (weakness.toLowerCase().includes("certif") || weakness.toLowerCase().includes("qualif")) {
-      return "This qualification is likely used as a filtering criterion during resume screening. Pursuing this credential would significantly strengthen your application.";
+      return "Research which certification programs are most respected in this field. Even beginning the certification process before interviews can demonstrate your commitment to professional development.";
     } else if (weakness.toLowerCase().includes("tool") || weakness.toLowerCase().includes("software")) {
-      return "Proficiency with this tool/software appears to be an everyday requirement for this role. Even basic familiarity would strengthen your candidacy.";
+      return "Consider reaching out to professionals who use this tool daily for a short informational interview. This will help you understand whether investing time in learning this tool will truly provide value for your career path.";
+    } else if (weakness.toLowerCase().includes("industr") || weakness.toLowerCase().includes("sector")) {
+      return "Industry knowledge can be gained through targeted networking. Join relevant professional groups and attend webinars to quickly build contextual understanding that can compensate for limited direct experience.";
+    } else if (weakness.toLowerCase().includes("lead") || weakness.toLowerCase().includes("manage")) {
+      return "Leadership skills can be developed outside traditional management roles. Look for opportunities to lead initiatives or mentor colleagues, then document these experiences for your interviews.";
     } else {
-      return "Addressing this gap would significantly increase your chances of success. Hiring managers typically look for candidates who demonstrate competency in this area for this role.";
+      return "This gap might be addressed through targeted self-development. Research online courses from platforms like Coursera or LinkedIn Learning that specifically address this area, and begin building demonstrable skills you can discuss in interviews.";
     }
   };
   
   const generateRecommendationExplanation = (recommendation: string): string => {
     if (recommendation.toLowerCase().includes("highlight")) {
-      return "Making this adjustment to your resume would more clearly demonstrate your alignment with the core requirements, potentially moving your application past initial screening filters.";
+      return "When implementing this change, focus on using industry-specific terminology that demonstrates insider knowledge. Recruiters often scan for these terms as signals that you understand the field's context and challenges.";
     } else if (recommendation.toLowerCase().includes("add") || recommendation.toLowerCase().includes("include")) {
-      return "Including this information would address a key qualification gap that might otherwise cause your application to be overlooked during the screening process.";
+      return "As you add this information, consider creating a 'success story' format that follows the STAR method (Situation, Task, Action, Result) to make this addition more memorable and impactful to hiring managers.";
     } else if (recommendation.toLowerCase().includes("focus") || recommendation.toLowerCase().includes("emphasize")) {
-      return "Shifting emphasis to this area would better position your experience in relation to what the hiring manager is likely prioritizing based on the job description.";
+      return "When emphasizing this area, consider creating a separate skills section that visually prioritizes these capabilities. This formatting change can direct the reader's attention to your most relevant qualifications.";
     } else if (recommendation.toLowerCase().includes("training") || recommendation.toLowerCase().includes("course") || recommendation.toLowerCase().includes("learn")) {
-      return "Investing time in this skill development would address a critical gap that appears central to the role's responsibilities and day-to-day functions.";
+      return "After completing relevant learning, update your LinkedIn profile and resume simultaneously. Many employers cross-check these platforms for consistency and to verify your commitment to professional development.";
+    } else if (recommendation.toLowerCase().includes("quantif") || recommendation.toLowerCase().includes("metric")) {
+      return "When adding numbers to your resume, ensure they're precisely accurate as they may be verified. Consider creating a separate document with more detailed context around these metrics to reference during interviews.";
+    } else if (recommendation.toLowerCase().includes("project") || recommendation.toLowerCase().includes("portfolio")) {
+      return "As you develop your portfolio, focus on quality over quantity. A single well-documented project that clearly demonstrates the relevant skills will be more valuable than multiple superficial examples.";
     } else {
-      return "Implementing this recommendation can significantly enhance your application's competitiveness. It addresses key requirements that employers look for when evaluating candidates for this position.";
+      return "Consider how this change might affect your personal brand consistency across all job search platforms. Ensure that your LinkedIn, portfolio website, and GitHub profiles reflect this same strategic emphasis.";
     }
   };
   
@@ -274,8 +282,8 @@ const ResultsPage: React.FC = () => {
                               )}
                             </CollapsibleTrigger>
                             <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
-                              <div className="mt-2 pt-2 border-t border-gray-200">
-                                <h4 className="font-semibold text-xs text-gray-700">Why this matters:</h4>
+                              <div className="pt-2">
+                                <h4 className="font-semibold text-xs text-gray-700">How to leverage this strength:</h4>
                                 <p className="text-xs mt-1">{generateStrengthExplanation(strength)}</p>
                               </div>
                             </CollapsibleContent>
@@ -321,8 +329,8 @@ const ResultsPage: React.FC = () => {
                               )}
                             </CollapsibleTrigger>
                             <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
-                              <div className="mt-2 pt-2 border-t border-gray-200">
-                                <h4 className="font-semibold text-xs text-gray-700">Why this matters:</h4>
+                              <div className="pt-2">
+                                <h4 className="font-semibold text-xs text-gray-700">How to address this gap:</h4>
                                 <p className="text-xs mt-1">{generateWeaknessExplanation(weakness)}</p>
                               </div>
                             </CollapsibleContent>
@@ -368,8 +376,8 @@ const ResultsPage: React.FC = () => {
                               )}
                             </CollapsibleTrigger>
                             <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
-                              <div className="mt-2 pt-2 border-t border-gray-200">
-                                <h4 className="font-semibold text-xs text-gray-700">Why this matters:</h4>
+                              <div className="pt-2">
+                                <h4 className="font-semibold text-xs text-gray-700">Implementation strategy:</h4>
                                 <p className="text-xs mt-1">{generateRecommendationExplanation(recommendation)}</p>
                               </div>
                             </CollapsibleContent>
@@ -411,8 +419,7 @@ const ResultsPage: React.FC = () => {
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-gray-500 mb-4">
-              We couldn't automatically detect the job role from the job description. 
-              Please enter it manually to continue.
+              Please enter the job role title.
             </p>
             <Input 
               placeholder="e.g. Data Analyst, Software Engineer" 
