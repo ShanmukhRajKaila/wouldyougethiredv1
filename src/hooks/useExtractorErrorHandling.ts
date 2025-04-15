@@ -24,8 +24,9 @@ export const useExtractorErrorHandling = ({
     setIsSubmitting(false);
   };
   
-  const validateExtractedText = (text: string | null, type: 'resume' | 'coverLetter' | 'jobDescription'): boolean => {
-    if (!text || text.length === 0) {
+  const validateExtractedText = (text: string | null | undefined, type: 'resume' | 'coverLetter' | 'jobDescription'): boolean => {
+    // Ensure text is a non-empty string
+    if (!text || typeof text !== 'string' || text.length === 0) {
       handleExtractionError(type);
       return false;
     }

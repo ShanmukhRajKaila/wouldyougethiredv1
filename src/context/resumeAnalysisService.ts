@@ -236,15 +236,22 @@ function extractSkills(text: string): string[] {
   });
   
   // Extract skills from bullet points
-  const bulletPoints = text.split(/[\n\r]/).filter(line => line.trim().startsWith('•') || line.trim().startsWith('-') || line.trim().startsWith('*'));
+  const bulletPoints = text.split(/[\n\r]/).filter(line => 
+    line && typeof line === 'string' && 
+    (line.trim().startsWith('•') || line.trim().startsWith('-') || line.trim().startsWith('*'))
+  );
   bulletPoints.forEach(point => {
-    const words = point.split(/\s+/);
-    words.forEach(word => {
-      const cleaned = word.replace(/[.,;:()\[\]]/g, '');
-      if (cleaned.length > 2 && cleaned.match(/^[A-Z][a-zA-Z0-9]*$/) && !cleaned.match(/^(I|We|They|He|She|It|You)$/)) {
-        skills.add(cleaned);
-      }
-    });
+    if (typeof point === 'string') {
+      const words = point.split(/\s+/);
+      words.forEach(word => {
+        if (typeof word === 'string') {
+          const cleaned = word.replace(/[.,;:()\[\]]/g, '');
+          if (cleaned.length > 2 && cleaned.match(/^[A-Z][a-zA-Z0-9]*$/) && !cleaned.match(/^(I|We|They|He|She|It|You)$/)) {
+            skills.add(cleaned);
+          }
+        }
+      });
+    }
   });
   
   return Array.from(skills).slice(0, 25);
@@ -252,10 +259,15 @@ function extractSkills(text: string): string[] {
 
 // Extract bullet points with improved detection algorithm
 function extractBulletPoints(text: string): string[] {
+  if (!text || typeof text !== 'string') {
+    return [];
+  }
+  
   const lines = text.split(/[\n\r]/);
   
   // Get all lines that look like bullet points
   const bulletPoints = lines.filter(line => {
+    if (typeof line !== 'string') return false;
     const trimmed = line.trim();
     return trimmed.startsWith('•') || 
            trimmed.startsWith('-') || 
@@ -271,6 +283,7 @@ function extractBulletPoints(text: string): string[] {
       const sentences = experienceSection.match(/[^.!?]+[.!?]+/g) || [];
       // Get sentences that start with action verbs (common in resumes)
       const actionSentences = sentences.filter(s => {
+        if (typeof s !== 'string') return false;
         const firstWord = s.trim().split(/\s+/)[0].toLowerCase();
         return ['developed', 'created', 'managed', 'led', 'implemented', 'designed', 
                 'increased', 'decreased', 'improved', 'built', 'delivered', 'achieved', 
@@ -279,29 +292,34 @@ function extractBulletPoints(text: string): string[] {
       }).slice(0, 5);
       
       if (actionSentences.length > 0) {
-        return actionSentences.map(s => s.trim());
+        return actionSentences.map(s => typeof s === 'string' ? s.trim() : '');
       }
     }
   }
   
   // Clean the bullet points and return top 5
   return bulletPoints
+    .filter(b => typeof b === 'string')
     .map(b => b.trim().replace(/^[\-\•\*\✓\✔\→\♦\◆\o\◦\■\▪\▫\+\d\.]\s*/, ''))
-    .filter(b => b.length > 10 && b.split(/\s+/).length > 3)
+    .filter(b => typeof b === 'string' && b.length > 10 && b.split(/\s+/).length > 3)
     .slice(0, 5);
 }
 
 // Extract experience section from resume text
 function extractExperienceSection(text: string): string | null {
+  if (!text || typeof text !== 'string') {
+    return null;
+  }
+  
   const sections = text.split(/\n\s*\n/);
   
   // Look for experience section by common headers
   for (let i = 0; i < sections.length; i++) {
     const section = sections[i];
-    if (section.match(/^EXPERIENCE|^WORK EXPERIENCE|^PROFESSIONAL EXPERIENCE|^EMPLOYMENT HISTORY/i)) {
+    if (typeof section === 'string' && section.match(/^EXPERIENCE|^WORK EXPERIENCE|^PROFESSIONAL EXPERIENCE|^EMPLOYMENT HISTORY/i)) {
       // Return this section and possibly the next one if it doesn't have a header
       let experienceText = section;
-      if (i < sections.length - 1 && !sections[i+1].match(/^[A-Z\s]{5,30}$/m)) {
+      if (i < sections.length - 1 && typeof sections[i+1] === 'string' && !sections[i+1].match(/^[A-Z\s]{5,30}$/m)) {
         experienceText += "\n\n" + sections[i+1];
       }
       return experienceText;
@@ -323,6 +341,14 @@ function extractExperienceSection(text: string): string | null {
 
 // Generate improved STAR analysis for a bullet point
 function generateSTARAnalysis(bullet: string, jobDescription: string) {
+  if (!bullet || typeof bullet !== 'string') {
+    return {
+      original: '',
+      improved: 'No valid bullet point provided',
+      feedback: 'Please provide a valid bullet point for analysis'
+    };
+  }
+  
   const lowerBullet = bullet.toLowerCase();
   const lowerJobDesc = jobDescription.toLowerCase();
   
@@ -384,6 +410,10 @@ function generateSTARAnalysis(bullet: string, jobDescription: string) {
 
 // Extract keywords by frequency from text
 function extractKeywordsByFrequency(text: string): string[] {
+  if (!text || typeof text !== 'string') {
+    return [];
+  }
+  
   const words = text.toLowerCase().split(/\W+/).filter(w => 
     w.length > 3 && 
     !['with', 'that', 'have', 'this', 'from', 'they', 'will', 'would', 'about', 'their', 'there', 'what', 'which'].includes(w)
@@ -402,6 +432,10 @@ function extractKeywordsByFrequency(text: string): string[] {
 
 // Get a relevant action verb for the bullet point based on job description
 function getRelevantActionVerb(bullet: string, jobDescription: string): string {
+  if (!bullet || typeof bullet !== 'string') {
+    return 'Achieved';
+  }
+  
   const lowerBullet = bullet.toLowerCase();
   const lowerJobDesc = jobDescription.toLowerCase();
   
