@@ -197,7 +197,7 @@ serve(async (req) => {
     const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 seconds max
     
     try {
-      // Enhanced system prompt with ATS-focused analysis capabilities
+      // Enhanced system prompt with ATS-focused analysis capabilities and more bullet points
       const systemPrompt = `You are an expert ATS (Applicant Tracking System) analyst specializing in resume optimization.
 Your task is to thoroughly analyze a resume against a job description like an actual ATS would.
 ${companyName ? `The candidate is applying to ${companyName}. Research this company's values and culture from the job description.` : ''}
@@ -240,7 +240,7 @@ Return a JSON object with:
     "keyRequirements": Array of strings with the most important skills/experiences for this role (max 3),
     "suggestedPhrases": Array of strings with 3-5 tailored phrases to include in the cover letter
   },` : ''}
-  "starAnalysis": Array of max 3 objects:
+  "starAnalysis": Array of max 8 objects:
     {
       "original": String with original bullet point,
       "improved": String with optimized version that would score higher in ATS systems,

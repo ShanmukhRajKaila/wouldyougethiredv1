@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 
 interface StarAnalysisItem {
   original: string;
@@ -14,6 +14,7 @@ interface StarAnalysisProps {
 const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
   // Ensure starAnalysis is properly initialized
   const validStarAnalysis = Array.isArray(starAnalysis) ? starAnalysis : [];
+  const [displayLimit, setDisplayLimit] = useState<number>(4);
   
   if (validStarAnalysis.length === 0) {
     return (
@@ -114,6 +115,13 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
     return "ATS systems prioritize specific, concrete language over general descriptions. Adding industry terminology and metrics substantially increases match scores.";
   };
   
+  const handleShowMore = () => {
+    setDisplayLimit(prevLimit => prevLimit + 4);
+  };
+
+  const displayedAnalysis = validStarAnalysis.slice(0, displayLimit);
+  const hasMoreToShow = displayLimit < validStarAnalysis.length;
+  
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow mb-6">
@@ -136,7 +144,11 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
         </div>
       </div>
       
-      {validStarAnalysis.map((item, index) => (
+      <p className="text-sm text-consulting-navy font-medium">
+        Showing {displayedAnalysis.length} of {validStarAnalysis.length} enhanced bullet points
+      </p>
+      
+      {displayedAnalysis.map((item, index) => (
         <div key={index} className="p-6 bg-white rounded-lg shadow mb-4">
           <div className="space-y-4">
             <div>
@@ -191,6 +203,17 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
           </div>
         </div>
       ))}
+      
+      {hasMoreToShow && (
+        <div className="flex justify-center">
+          <button 
+            onClick={handleShowMore}
+            className="px-4 py-2 bg-consulting-navy text-white rounded-md hover:bg-consulting-blue transition-colors"
+          >
+            Show More Bullet Points
+          </button>
+        </div>
+      )}
     </div>
   );
 };

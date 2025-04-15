@@ -139,8 +139,8 @@ function generateFallbackAnalysis(resumeText: string, jobDescription: string): A
   // Extract bullet points from resume with improved detection
   const bulletPoints = extractBulletPoints(resumeText);
   
-  // Create improved STAR analysis for bullet points
-  const starAnalysis = bulletPoints.map(bullet => generateSTARAnalysis(bullet, jobDescription));
+  // Create improved STAR analysis for bullet points - analyze up to 8 bullets
+  const starAnalysis = bulletPoints.slice(0, 8).map(bullet => generateSTARAnalysis(bullet, jobDescription));
   
   return {
     alignmentScore,
@@ -209,6 +209,11 @@ function extractSkills(text: string): string[] {
   ];
   
   const skills = new Set<string>();
+  
+  if (!text || typeof text !== 'string') {
+    return Array.from(skills);
+  }
+  
   const lowerText = text.toLowerCase();
   
   // Find common skills in text
@@ -276,8 +281,8 @@ function extractBulletPoints(text: string): string[] {
            trimmed.match(/^[\s]*[\-\•\*\✓\✔\→\♦\◆\o\◦\■\▪\▫\+][\s]/);
   });
   
-  // If we don't find bullet points with markers, try to identify bullet-like sentences
-  if (bulletPoints.length < 3) {
+  // If we don't find enough bullet points with markers, try to identify bullet-like sentences
+  if (bulletPoints.length < 8) {
     const experienceSection = extractExperienceSection(text);
     if (experienceSection) {
       const sentences = experienceSection.match(/[^.!?]+[.!?]+/g) || [];
@@ -289,7 +294,7 @@ function extractBulletPoints(text: string): string[] {
                 'increased', 'decreased', 'improved', 'built', 'delivered', 'achieved', 
                 'coordinated', 'established', 'executed', 'generated', 'launched', 
                 'maintained', 'performed', 'reduced', 'resolved', 'streamlined'].includes(firstWord);
-      }).slice(0, 5);
+      }).slice(0, 8);
       
       if (actionSentences.length > 0) {
         return actionSentences.map(s => typeof s === 'string' ? s.trim() : '');
@@ -297,12 +302,12 @@ function extractBulletPoints(text: string): string[] {
     }
   }
   
-  // Clean the bullet points and return top 5
+  // Clean the bullet points and return top 8 (increased from 5)
   return bulletPoints
     .filter(b => typeof b === 'string')
     .map(b => b.trim().replace(/^[\-\•\*\✓\✔\→\♦\◆\o\◦\■\▪\▫\+\d\.]\s*/, ''))
     .filter(b => typeof b === 'string' && b.length > 10 && b.split(/\s+/).length > 3)
-    .slice(0, 5);
+    .slice(0, 8);
 }
 
 // Extract experience section from resume text
