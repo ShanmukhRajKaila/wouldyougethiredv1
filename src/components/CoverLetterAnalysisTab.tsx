@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAppContext } from '@/context/AppContext';
@@ -315,9 +314,8 @@ const CoverLetterAnalysisTab: React.FC = () => {
             <div className="bg-blue-50 p-4 rounded-md mb-4 text-blue-800 text-sm">
               <p className="font-medium">How to use the enhanced letter:</p>
               <ol className="list-decimal pl-5 mt-2">
-                <li>Review your original letter below</li>
-                <li>Check the suggested enhancements at the bottom</li>
-                <li>Incorporate those suggestions into your letter in the appropriate places</li>
+                <li>Review the suggestions at the bottom of this section</li>
+                <li>Incorporate the suggestions into the appropriate sections of your cover letter</li>
                 <li>Do not copy the entire enhanced section with the brackets</li>
               </ol>
             </div>
