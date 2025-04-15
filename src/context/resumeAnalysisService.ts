@@ -1,7 +1,9 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { AnalysisResult } from './types';
 
+// Helper function to extract keywords from text
 function extractKeywords(text: string): string[] {
   if (!text || typeof text !== 'string') {
     return [];
@@ -632,47 +634,44 @@ function getRelevantActionVerb(bullet: string, jobDescription: string): string {
   }
 }
 
+// Generate recommendations based on the analysis
 function generateRecommendations(resumeText: string, jobDescription: string, missingSkills: string[]): string[] {
-  const recommendations = [];
+  const recommendations: string[] = [];
   
-  // Check for missing skills
-  if (missingSkills.length > 0) {
-    recommendations.push(`Add these key skills to your resume: ${missingSkills.slice(0, 3).join(', ')}`);
-  }
+  // Basic recommendations that almost always apply
+  recommendations.push("Add missing keywords from the job description to improve ATS match score");
   
-  // Check for metrics
+  // Check if metrics are present
   const hasMetrics = /\d+%|\$\d+|\d+x|\d+\s(?:percent|dollars|users|customers|clients|hours|days)/.test(resumeText);
   if (!hasMetrics) {
-    recommendations.push('Quantify your achievements with specific metrics (e.g., "increased sales by 20%", "reduced costs by $50K")');
-  }
-  
-  // Check for formatting issues
-  if (!resumeText.includes('EXPERIENCE') && !resumeText.includes('EDUCATION') && !resumeText.includes('SKILLS')) {
-    recommendations.push('Use clear section headings (EXPERIENCE, EDUCATION, SKILLS) to help ATS systems parse your resume correctly');
+    recommendations.push("Quantify achievements with specific metrics (e.g., increased sales by 20%)");
   }
   
   // Check for action verbs
   const actionVerbs = ['led', 'managed', 'developed', 'created', 'implemented', 'designed', 'increased', 'decreased'];
-  const hasActionVerbs = actionVerbs.some(verb => resumeText.toLowerCase().includes(verb));
+  const bulletPoints = extractBulletPoints(resumeText);
+  const hasActionVerbs = bulletPoints.some(bullet => 
+    actionVerbs.some(verb => bullet.toLowerCase().includes(verb))
+  );
+  
   if (!hasActionVerbs) {
-    recommendations.push('Begin bullet points with strong action verbs (e.g., "Led", "Developed", "Achieved")');
+    recommendations.push("Begin bullet points with strong action verbs (Led, Developed, Created)");
   }
   
-  // Check job description keywords
-  const keyJobTerms = extractKeywordsByFrequency(jobDescription).slice(0, 5);
-  const missingJobTerms = keyJobTerms.filter(term => !resumeText.toLowerCase().includes(term.toLowerCase()));
-  if (missingJobTerms.length > 0) {
-    recommendations.push(`Include these key terms from the job description: ${missingJobTerms.join(', ')}`);
+  // Add recommendation about missing skills
+  if (missingSkills.length > 0) {
+    const topMissingSkills = missingSkills.slice(0, 3).join(', ');
+    recommendations.push(`Include missing key skills: ${topMissingSkills}`);
   }
   
-  // Always include these general best practices
-  if (recommendations.length < 5) {
-    recommendations.push('Customize your resume for each job application to maximize keyword matching');
-    recommendations.push('Use a clean, ATS-friendly format with standard section headings');
-    recommendations.push('Include a targeted professional summary at the top of your resume');
-    recommendations.push('Focus on achievements rather than responsibilities in your bullet points');
-    recommendations.push('Proofread carefully—ATS systems may reject resumes with spelling and grammar errors');
+  // Add tailoring recommendation
+  recommendations.push("Tailor your resume to emphasize experience relevant to this specific role");
+  
+  // Add skills section recommendation if we don't detect one
+  if (!resumeText.toLowerCase().includes("skills") && !resumeText.toLowerCase().includes("technologies") && 
+      !resumeText.toLowerCase().includes("technical") && !resumeText.toLowerCase().includes("proficiencies")) {
+    recommendations.push("Include a dedicated skills section that clearly lists your technical capabilities");
   }
   
-  return recommendations.slice(0, 5);
+  return recommendations.slice(0, 5); // Return top 5 recommendations
 }
