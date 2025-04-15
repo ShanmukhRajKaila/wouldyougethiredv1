@@ -4,7 +4,7 @@ import { CoverLetterAnalysis } from '@/context/types';
 import { useCoverLetterState, ImprovedCoverLetterData } from './useCoverLetterState';
 import { useCoverLetterRecommendations } from './useCoverLetterRecommendations';
 
-export { ImprovedCoverLetterData } from './useCoverLetterState';
+export type { ImprovedCoverLetterData } from './useCoverLetterState';
 
 export const useImprovedCoverLetter = (
   coverLetterText: string,
