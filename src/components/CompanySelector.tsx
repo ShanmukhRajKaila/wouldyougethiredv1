@@ -21,7 +21,7 @@ const CompanySelector = () => {
     setSelectedCompany(companyName ? { 
       id: 'custom', 
       name: companyName,
-      logo: '' 
+      logoUrl: '' 
     } : null);
   };
 
@@ -59,7 +59,7 @@ const CompanySelector = () => {
         setSelectedCompany({
           id: 'extracted',
           name: extractionResult.companyName,
-          logo: ''
+          logoUrl: ''
         });
         console.log('Company name extracted:', extractionResult.companyName);
       }

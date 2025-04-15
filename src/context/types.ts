@@ -1,3 +1,4 @@
+
 import { Dispatch, SetStateAction } from 'react';
 
 export type AppStage = 
@@ -8,6 +9,7 @@ export type AppStage =
   'results';
 
 export interface Company {
+  id?: string;
   name: string;
   logoUrl: string;
 }
