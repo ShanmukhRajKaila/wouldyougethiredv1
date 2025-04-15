@@ -77,9 +77,21 @@ serve(async (req) => {
       ];
     }
 
-    // Simulate search results with sample job posting URLs
-    // In a production environment, this would connect to a search API
-    const jobUrls = await simulateSearchResults(searchQueries);
+    // Get the API key and search engine ID from environment variables
+    const googleApiKey = Deno.env.get("GOOGLE_SEARCH_API_KEY");
+    const searchEngineId = Deno.env.get("GOOGLE_SEARCH_ENGINE_ID");
+
+    if (!googleApiKey || !searchEngineId) {
+      console.error("Missing Google Search API credentials");
+      return new Response(
+        JSON.stringify({ error: "Search service configuration is incomplete" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Search for job descriptions using Google Custom Search API
+    const jobUrls = await searchForJobUrls(searchQueries, googleApiKey, searchEngineId);
+    console.log(`Found ${jobUrls.length} job URLs from search`);
     
     // Extract job descriptions from the URLs
     const jobDescriptions = await extractJobDescriptions(jobUrls);
@@ -107,29 +119,82 @@ serve(async (req) => {
 });
 
 /**
- * Simulate search results for job descriptions
- * In production, this would use a search API like Google/Bing
+ * Search for job description URLs using Google Custom Search API
  */
-async function simulateSearchResults(queries: string[]): Promise<string[]> {
-  // Example job posting URLs for demonstration
-  // In production, these would come from real search results
-  const sampleJobUrls = [
-    "https://www.linkedin.com/jobs/view/product-manager-at-amazon",
-    "https://www.indeed.com/job/senior-product-manager-technology",
-    "https://www.glassdoor.com/job-listing/product-manager-google",
-    "https://www.monster.com/jobs/product-management-director",
-    "https://careers.microsoft.com/job/product-manager",
-    // Add more sample URLs
+async function searchForJobUrls(queries: string[], apiKey: string, searchEngineId: string): Promise<string[]> {
+  const allJobUrls: string[] = [];
+  const urlSet = new Set<string>(); // To avoid duplicate URLs
+  
+  // Process each query to find job postings
+  for (const query of queries) {
+    if (allJobUrls.length >= MAX_JOBS_PER_ROLE) break; // Stop if we have enough URLs
+    
+    try {
+      console.log(`Searching for: ${query}`);
+      
+      // Build Google Custom Search API URL
+      const searchUrl = new URL('https://www.googleapis.com/customsearch/v1');
+      searchUrl.searchParams.append('key', apiKey);
+      searchUrl.searchParams.append('cx', searchEngineId);
+      searchUrl.searchParams.append('q', query);
+      searchUrl.searchParams.append('safe', 'active'); // Enable SafeSearch
+      
+      // Execute the search
+      const response = await fetch(searchUrl.toString());
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Google Search API error (${response.status}):`, errorText);
+        continue;
+      }
+      
+      const data = await response.json();
+      
+      if (!data.items || data.items.length === 0) {
+        console.log(`No search results for query: ${query}`);
+        continue;
+      }
+      
+      // Extract URLs from search results
+      for (const item of data.items) {
+        if (allJobUrls.length >= MAX_JOBS_PER_ROLE) break;
+        
+        // Skip if we've already added this URL
+        if (urlSet.has(item.link)) continue;
+        
+        // Check if URL is likely a job posting (heuristic)
+        if (isLikelyJobPostingUrl(item.link)) {
+          urlSet.add(item.link);
+          allJobUrls.push(item.link);
+          console.log(`Found job URL: ${item.link}`);
+        }
+      }
+    } catch (error) {
+      console.error(`Error searching for "${query}":`, error);
+    }
+  }
+  
+  return allJobUrls;
+}
+
+/**
+ * Check if a URL is likely to be a job posting
+ */
+function isLikelyJobPostingUrl(url: string): boolean {
+  // Check for common job posting URL patterns
+  const jobSitePatterns = [
+    /linkedin\.com\/jobs/i,
+    /indeed\.com\/job/i,
+    /glassdoor\.com\/job/i,
+    /monster\.com\/jobs/i,
+    /\/jobs?\//i,
+    /\/career/i,
+    /\/position/i,
+    /\/vacancy/i,
+    /\/opening/i,
   ];
   
-  // In a real implementation, we would:
-  // 1. Connect to a search API like Google Custom Search, Bing, etc.
-  // 2. Execute each query and extract job posting URLs from results
-  // 3. Filter for relevant job sites (LinkedIn, Indeed, company careers, etc.)
-  
-  console.log(`Generated ${sampleJobUrls.length} job URLs from search queries`);
-  
-  return sampleJobUrls;
+  return jobSitePatterns.some(pattern => pattern.test(url));
 }
 
 // Implementation of URL extractor functionality inline
