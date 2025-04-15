@@ -8,6 +8,7 @@ import ImprovedResume from '@/components/resume/ImprovedResume';
 import { useSkillsAnalysis } from '@/hooks/useSkillsAnalysis';
 import { useImprovedResumeAnalysis } from '@/hooks/useImprovedResumeAnalysis';
 import ProcessingErrorDisplay from './resume/ProcessingErrorDisplay';
+import { useAnalysisSubmission } from '@/hooks/useAnalysisSubmission';
 
 interface StarAnalysisItem {
   original: string;
@@ -26,11 +27,20 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [resumeBullets, setResumeBullets] = useState<string[]>([]);
   const [improvedBullets, setImprovedBullets] = useState<Record<string, StarAnalysisItem>>({});
+  const [processingError, setProcessingError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   
   const validStarAnalysis = Array.isArray(starAnalysis) ? starAnalysis : [];
   
   const { missingSkills } = useSkillsAnalysis(resumeText, jobDescription, analysisResults);
   const { improvedText, updatedAlignmentScore } = useImprovedResumeAnalysis(resumeText, validStarAnalysis);
+  
+  // Initialize analysis submission hooks for retry functionality
+  const { handleAnalysisRetry } = useAnalysisSubmission({
+    setIsSubmitting,
+    setProcessingError,
+    setCurrentStage: () => {} // We don't need to change stages on retry
+  });
   
   useEffect(() => {
     const improvedMap: Record<string, StarAnalysisItem> = {};
@@ -55,12 +65,31 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
   const handleExtractionError = (error: string | null) => {
     setExtractionError(error);
   };
+  
+  const handleRetryAnalysis = () => {
+    handleAnalysisRetry();
+  };
 
   return (
     <div className="mt-6">
       {extractionError && (
         <div className="mb-4">
           <ProcessingErrorDisplay processingError={extractionError} />
+        </div>
+      )}
+      
+      {processingError && (
+        <div className="mb-4">
+          <ProcessingErrorDisplay 
+            processingError={processingError} 
+            onRetry={handleRetryAnalysis}
+          />
+        </div>
+      )}
+      
+      {isSubmitting && (
+        <div className="mb-4 p-4 text-center bg-blue-50 border border-blue-200 rounded-md">
+          <p className="text-blue-800">Reanalyzing your resume... Please wait.</p>
         </div>
       )}
       

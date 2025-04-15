@@ -48,7 +48,7 @@ const ImprovedBulletPoint: React.FC<ImprovedBulletPointProps> = ({
           <div className="mt-2 space-y-1">
             <div className="flex items-start">
               <Check className="h-4 w-4 text-green-600 mt-0.5 mr-1.5 flex-shrink-0" />
-              <p className="text-sm text-green-700">{improvedBullet.feedback}</p>
+              <p className="text-sm text-green-700">{improvedBullet.feedback || "Enhanced for better ATS performance."}</p>
             </div>
           </div>
         </div>

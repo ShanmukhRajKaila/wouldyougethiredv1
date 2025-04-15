@@ -35,6 +35,42 @@ function extractKeywords(text: string): string[] {
     .slice(0, 20);
 }
 
+// Improved fetch with retry logic for API calls
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
+  let retries = 0;
+  
+  while (retries < maxRetries) {
+    try {
+      if (retries > 0) {
+        // Add exponential backoff with some jitter
+        const delay = Math.pow(2, retries - 1) * 1000 + Math.random() * 500;
+        console.log(`Retry attempt ${retries}/${maxRetries}, waiting ${delay}ms`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
+      const response = await fetch(url, options);
+      
+      // If we get rate limited, wait and retry
+      if (response.status === 429) {
+        retries++;
+        continue;
+      }
+      
+      return response;
+    } catch (error) {
+      console.error(`Fetch error (attempt ${retries + 1}/${maxRetries}):`, error);
+      retries++;
+      
+      // If we've used all our retries, throw the error
+      if (retries >= maxRetries) {
+        throw error;
+      }
+    }
+  }
+  
+  throw new Error('Maximum retries exceeded');
+}
+
 export const analyzeResume = async (
   resumeText: string, 
   jobDescription: string,
@@ -63,12 +99,13 @@ export const analyzeResume = async (
     
     const { data: sessionData } = await supabase.auth.getSession();
     
-    // Use a longer timeout for the fetch request (60 seconds)
+    // Use a longer timeout for the fetch request (45 seconds)
     const controller = new AbortController();
-    const timeoutSignal = setTimeout(() => controller.abort(), 60000);
+    const timeoutSignal = setTimeout(() => controller.abort(), 45000);
     
     try {
-      const response = await fetch('https://mqvstzxrxrmgdseepwzh.supabase.co/functions/v1/analyze-resume', {
+      // Use our improved fetch with retry
+      const response = await fetchWithRetry('https://mqvstzxrxrmgdseepwzh.supabase.co/functions/v1/analyze-resume', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -88,16 +125,19 @@ export const analyzeResume = async (
           }
         }),
         signal: controller.signal
-      });
+      }, 2); // Allow 2 retries
       
       clearTimeout(timeoutSignal);
 
       if (!response.ok) {
         console.error('Error response from analyze-resume:', response.status, response.statusText);
         
-        if (response.status === 408 || response.status >= 500) {
+        // For recoverable errors (timeouts, server errors), use fallback
+        if (response.status === 408 || response.status === 504 || response.status >= 500) {
           console.log('Generating fallback analysis due to timeout or server error');
-          return generateFallbackAnalysis(trimmedResume, trimmedJobDesc, trimmedCoverLetter);
+          const fallbackResults = generateFallbackAnalysis(trimmedResume, trimmedJobDesc, trimmedCoverLetter);
+          toast.warning('Using built-in analysis due to high service load.');
+          return fallbackResults;
         }
         
         let errorMessage = 'Failed to analyze resume';
@@ -120,14 +160,18 @@ export const analyzeResume = async (
     } catch (fetchError) {
       clearTimeout(timeoutSignal);
       if (fetchError.name === 'AbortError') {
-        toast.error('Analysis took too long. Using simplified analysis instead.');
+        toast.warning('Analysis took too long. Using our built-in analyzer instead.');
         return generateFallbackAnalysis(trimmedResume, trimmedJobDesc, trimmedCoverLetter);
       }
-      throw fetchError;
+      
+      // For network errors or other issues, use fallback
+      console.error('Network error during analysis:', fetchError);
+      toast.warning('Network issue detected. Using our built-in analyzer instead.');
+      return generateFallbackAnalysis(trimmedResume, trimmedJobDesc, trimmedCoverLetter);
     }
   } catch (error) {
     console.error('Error analyzing resume:', error);
-    toast.error('Our analysis service is currently experiencing high volume. Using simplified analysis instead.');
+    toast.warning('Our analysis service is experiencing high volume. Using built-in analysis instead.');
     
     // Create a fallback that includes cover letter analysis too
     return generateFallbackAnalysis(resumeText, jobDescription, coverLetterText);

@@ -147,6 +147,51 @@ function extractKeywords(text: string): string[] {
   return Array.from(keywords).filter(k => k.length > 2).slice(0, 40);
 }
 
+// Improved retry mechanism for OpenAI API calls with exponential backoff
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
+  let retries = 0;
+  let lastError: Error | null = null;
+  
+  while (retries < maxRetries) {
+    try {
+      // Add jitter to prevent all retries happening simultaneously
+      const jitter = Math.random() * 500;
+      if (retries > 0) {
+        const delay = Math.pow(2, retries - 1) * 1000 + jitter;
+        console.log(`Retry attempt ${retries}/${maxRetries}, waiting ${delay}ms`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
+      const response = await fetch(url, options);
+      
+      // Handle rate limiting explicitly
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 2000 * Math.pow(2, retries) + jitter;
+        console.log(`Rate limited. Waiting ${waitTime}ms before retry`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        retries++;
+        continue;
+      }
+      
+      return response;
+    } catch (error) {
+      lastError = error as Error;
+      retries++;
+      
+      // If this is a network error or timeout, continue with retry
+      if (error instanceof TypeError || error.name === 'AbortError') {
+        continue;
+      }
+      
+      // For other errors, throw immediately
+      throw error;
+    }
+  }
+  
+  throw lastError || new Error('Maximum retries exceeded');
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -156,6 +201,14 @@ serve(async (req) => {
   console.log("Starting resume analysis with enhanced ATS optimization...");
 
   try {
+    if (!openAIApiKey) {
+      console.error('OpenAI API key is missing');
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key is not configured', statusCode: 500 }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const { resumeText, jobDescription, coverLetterText, options = {}, companyName } = await req.json() as AnalysisRequest;
 
     if (!resumeText || !jobDescription) {
@@ -174,8 +227,8 @@ serve(async (req) => {
     const model = 'gpt-4o-mini';
     
     // More aggressive truncation to prevent timeouts
-    const maxResumeTokens = options.prioritizeSpeed ? 1500 : 2500;
-    const maxJobTokens = options.prioritizeSpeed ? 500 : 750;
+    const maxResumeTokens = options.prioritizeSpeed ? 1500 : 2000;
+    const maxJobTokens = options.prioritizeSpeed ? 500 : 700;
     const maxCoverLetterTokens = options.prioritizeSpeed ? 1000 : 1500;
     
     const truncatedResume = truncateText(cleanupText(resumeText), maxResumeTokens);
@@ -192,9 +245,13 @@ serve(async (req) => {
     const jobKeywords = extractKeywords(jobDescription);
     console.log(`Extracted ${jobKeywords.length} keywords for ATS optimization`);
     
-    // Use a shorter timeout to ensure response within the edge function's limits
+    // Use a more generous timeout to ensure response without edge function timing out
+    // But make sure to cancel if taking too long
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 seconds max
+    const timeoutId = setTimeout(() => {
+      console.log("Request taking too long, aborting");
+      controller.abort();
+    }, 22000); // 22 seconds max (edge function timeout is typically 30s)
     
     try {
       // Enhanced system prompt with ATS-focused analysis capabilities
@@ -252,7 +309,8 @@ Return a JSON object with:
         `Job description:\n\n${truncatedJobDesc}\n\nResume:\n\n${truncatedResume}\n\nCover Letter:\n\n${truncatedCoverLetter}${companyName ? `\n\nCompany name: ${companyName}` : ''}` :
         `Job description:\n\n${truncatedJobDesc}\n\nResume:\n\n${truncatedResume}${companyName ? `\n\nCompany name: ${companyName}` : ''}`;
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      // Use our improved fetch with retry
+      const response = await fetchWithRetry('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${openAIApiKey}`,
@@ -275,16 +333,37 @@ Return a JSON object with:
           response_format: { type: "json_object" } // Force JSON response format
         }),
         signal: controller.signal
-      });
+      }, 2);  // Allow 2 retries
 
       clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('OpenAI API error status:', response.status, response.statusText);
+        console.error('Error response:', errorText);
+        
+        let errorMessage = `OpenAI API error: ${response.status} ${response.statusText}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error?.message || errorMessage;
+        } catch (e) {
+          // If the error isn't JSON, use the status text
+        }
+        
+        return new Response(
+          JSON.stringify({ error: errorMessage }),
+          { status: response.status >= 500 ? 502 : response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       const data = await response.json();
       
+      // Check for specific errors in the response
       if (data.error) {
         console.error('OpenAI API error:', data.error);
         return new Response(
           JSON.stringify({ error: `AI analysis error: ${data.error.message || 'Unknown error'}` }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
@@ -351,8 +430,51 @@ Return a JSON object with:
           analysisResult.coverLetterAnalysis.keyRequirements = 
             analysisResult.coverLetterAnalysis.keyRequirements || [];
           
+          // Ensure at least 3 key requirements if possible
+          if (analysisResult.coverLetterAnalysis.keyRequirements.length < 3) {
+            // Extract key requirements from the job description if missing
+            const extractedRequirements = jobDescription
+              .split(/[\n\r]/)
+              .filter(line => /require|qualif|skill|must have/i.test(line))
+              .slice(0, 3)
+              .map(line => line.trim());
+              
+            // Add missing requirements
+            const missingCount = 3 - analysisResult.coverLetterAnalysis.keyRequirements.length;
+            for (let i = 0; i < missingCount && i < extractedRequirements.length; i++) {
+              analysisResult.coverLetterAnalysis.keyRequirements.push(
+                extractedRequirements[i] || `Strong ${jobKeywords[i] || 'professional'} skills`
+              );
+            }
+          }
+          
           analysisResult.coverLetterAnalysis.suggestedPhrases = 
             analysisResult.coverLetterAnalysis.suggestedPhrases || [];
+          
+          // Ensure reasonable relevance score (not too low)
+          if (analysisResult.coverLetterAnalysis.relevance < 30) {
+            analysisResult.coverLetterAnalysis.relevance = 
+              Math.max(analysisResult.coverLetterAnalysis.relevance, 30);
+          }
+        }
+        
+        // Ensure there are at least some STAR analysis items
+        if (!analysisResult.starAnalysis || analysisResult.starAnalysis.length === 0) {
+          // Create basic STAR analysis from resume bullet points
+          const bulletRegex = /(?:^|\n)(?:\s*[-•*]\s*|\s*\d+\.\s*)([^\n]+)/g;
+          const bullets = [];
+          let match;
+          while ((match = bulletRegex.exec(resumeText)) !== null && bullets.length < 3) {
+            if (match[1] && match[1].length > 20 && match[1].length < 200) {
+              bullets.push(match[1].trim());
+            }
+          }
+          
+          analysisResult.starAnalysis = bullets.map(bullet => ({
+            original: bullet,
+            improved: `${bullet} (add specific metrics and outcomes)`,
+            feedback: "Add quantifiable achievements and results to make your experience more impactful."
+          }));
         }
         
       } catch (error) {
@@ -362,7 +484,7 @@ Return a JSON object with:
             error: 'Failed to parse analysis results',
             details: error.message
           }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -375,16 +497,20 @@ Return a JSON object with:
       if (fetchError.name === 'AbortError') {
         console.error('OpenAI request timed out');
         return new Response(
-          JSON.stringify({ error: 'Analysis took too long to complete. Simplified analysis will be provided.' }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Analysis took too long to complete. Try again or use a simplified analysis.' }),
+          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      throw fetchError;
+      console.error('Fetch error:', fetchError);
+      return new Response(
+        JSON.stringify({ error: `API request failed: ${fetchError.message}` }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
   } catch (error) {
     console.error('Error in analyze-resume function:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'An unknown error occurred' }),
+      JSON.stringify({ error: error.message || 'An unknown error occurred', statusCode: 500 }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

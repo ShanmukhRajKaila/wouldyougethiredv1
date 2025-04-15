@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import ResumeExtractor from './ResumeExtractor';
 import { extractBulletPoints } from '@/utils/UrlExtractor';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 interface OriginalResumeProps {
   resumeFile: File | null;
@@ -20,6 +21,7 @@ const OriginalResume: React.FC<OriginalResumeProps> = ({
   // Add state to track if extraction has been done
   const [hasExtracted, setHasExtracted] = useState<boolean>(false);
   const [extractionAttempts, setExtractionAttempts] = useState<number>(0);
+  const [processingError, setProcessingError] = useState<string | null>(null);
   const maxExtractionAttempts = 2;
   
   // Reset extraction flag when resumeFile changes
@@ -27,6 +29,7 @@ const OriginalResume: React.FC<OriginalResumeProps> = ({
     if (resumeFile) {
       setHasExtracted(false);
       setExtractionAttempts(0);
+      setProcessingError(null);
     }
   }, [resumeFile]);
   
@@ -41,6 +44,7 @@ const OriginalResume: React.FC<OriginalResumeProps> = ({
         onBulletsExtracted(bullets || []);
       } catch (error) {
         console.error('Error processing extracted text:', error);
+        setProcessingError('There was an issue processing your resume. Some features may be limited.');
         
         // If there was an error in processing, but we have text, still try to use it
         if (extractionAttempts < maxExtractionAttempts) {
@@ -61,14 +65,40 @@ const OriginalResume: React.FC<OriginalResumeProps> = ({
       }
     }
   };
+
+  const handleRetry = () => {
+    if (!resumeFile) return;
+    
+    setHasExtracted(false);
+    setExtractionAttempts(0);
+    setProcessingError(null);
+    // ResumeExtractor will handle the retry when it gets re-rendered
+    toast.info("Retrying resume processing...");
+  };
   
   return (
-    <ResumeExtractor 
-      resumeFile={resumeFile}
-      onTextExtracted={handleTextExtracted}
-      onBulletsExtracted={onBulletsExtracted}
-      onExtractionError={onExtractionError}
-    />
+    <>
+      {processingError && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-300 rounded-md">
+          <p className="text-amber-800 text-sm mb-2">{processingError}</p>
+          <Button 
+            onClick={handleRetry} 
+            variant="outline" 
+            size="sm"
+            className="bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100"
+          >
+            Retry Processing
+          </Button>
+        </div>
+      )}
+      
+      <ResumeExtractor 
+        resumeFile={resumeFile}
+        onTextExtracted={handleTextExtracted}
+        onBulletsExtracted={onBulletsExtracted}
+        onExtractionError={onExtractionError}
+      />
+    </>
   );
 };
 

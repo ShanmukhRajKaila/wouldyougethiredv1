@@ -30,7 +30,8 @@ export const useAnalysisSubmission = ({
     setProgress,
     jobDescription,
     analyzeResume,
-    setAnalysisResults
+    setAnalysisResults,
+    selectedCompany
   } = useAppContext();
 
   const {
@@ -56,6 +57,75 @@ export const useAnalysisSubmission = ({
     retryCount,
     reducedMode
   });
+
+  const handleAnalysisRetry = async () => {
+    if (!resumeFile || !jobDescription || !currentLeadId) {
+      toast.error('Missing required data for analysis');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setProcessingError(null);
+    
+    try {
+      let resumeText = '';
+      try {
+        resumeText = await PDFExtractor.extractText(resumeFile);
+        if (!validateExtractedText(resumeText, 'resume')) {
+          setIsSubmitting(false);
+          return;
+        }
+      } catch (error) {
+        console.error('Error extracting resume text during retry:', error);
+        toast.error('Could not extract resume text. Please try uploading again.');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Extract cover letter text if included
+      let coverLetterText = '';
+      if (isCoverLetterIncluded && coverLetterFile) {
+        try {
+          coverLetterText = await PDFExtractor.extractText(coverLetterFile);
+          if (!validateExtractedText(coverLetterText, 'coverLetter')) {
+            setIsSubmitting(false);
+            return;
+          }
+          setCoverLetterText(coverLetterText);
+        } catch (error) {
+          console.error('Error extracting cover letter text during retry:', error);
+          toast.warning('Having trouble reading your cover letter. Analysis will focus on your resume.');
+        }
+      }
+      
+      // Direct analysis without saving to database again
+      try {
+        const analysisResult = await analyzeResume(
+          resumeText, 
+          jobDescription, 
+          coverLetterText,
+          selectedCompany?.name
+        );
+        
+        if (analysisResult) {
+          setAnalysisResults(analysisResult);
+          setProcessingError(null);
+          toast.success('Analysis completed successfully');
+        } else {
+          throw new Error('Analysis returned no results');
+        }
+      } catch (error) {
+        console.error('Analysis retry error:', error);
+        setProcessingError('Our advanced analysis service is still experiencing high volume. Using our built-in analysis instead.');
+      } finally {
+        setIsSubmitting(false);
+      }
+    } catch (error: any) {
+      console.error('Error during analysis retry:', error);
+      setProcessingError(error.message || 'An unknown error occurred');
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSubmission = async () => {
     if (!resumeFile) {
@@ -183,5 +253,5 @@ export const useAnalysisSubmission = ({
     }
   };
 
-  return { handleSubmission };
+  return { handleSubmission, handleAnalysisRetry };
 };

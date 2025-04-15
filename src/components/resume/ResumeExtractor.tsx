@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import PDFExtractor from '@/utils/PDFExtractor';
 import { AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 interface ResumeExtractorProps {
   resumeFile: File | null;
@@ -24,6 +25,54 @@ const ResumeExtractor: React.FC<ResumeExtractorProps> = ({
   const maxRetries = 2;
   const [retryCount, setRetryCount] = useState(0);
   
+  const extractText = async (file: File) => {
+    try {
+      setIsLoading(true);
+      const text = await PDFExtractor.extractText(file);
+      
+      if (text) {
+        if (text.includes('scanned document') || 
+            text.includes('image-based PDF') || 
+            text.includes('Error extracting') ||
+            text.includes('binary file')) {
+          setExtractionError(text);
+          setResumeText('');
+          onExtractionError(text);
+        } else {
+          setResumeText(text);
+          setExtractionError(null);
+          onExtractionError(null);
+          onTextExtracted(text);
+        }
+      } else {
+        throw new Error("Could not extract text from the uploaded file.");
+      }
+    } catch (err: any) {
+      console.error("Error extracting text:", err);
+      
+      // Retry logic for transient errors
+      if (retryCount < maxRetries) {
+        console.log(`Retrying extraction (${retryCount + 1}/${maxRetries})...`);
+        setRetryCount(prev => prev + 1);
+        setTimeout(() => extractText(file), 1000); // Retry after 1 second
+        return;
+      }
+      
+      const errorMsg = `Error extracting text: ${err.message}`;
+      setExtractionError(errorMsg);
+      onExtractionError(errorMsg);
+      
+      // Even on error, try to extract any text that might be available
+      if (err.partialText && typeof err.partialText === 'string' && err.partialText.length > 100) {
+        setResumeText(err.partialText);
+        onTextExtracted(err.partialText);
+        toast.warning("Partial resume content extracted. Some information might be missing.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   useEffect(() => {
     if (!resumeFile || (processedFileRef.current && 
         processedFileRef.current.name === resumeFile.name && 
@@ -37,56 +86,17 @@ const ResumeExtractor: React.FC<ResumeExtractorProps> = ({
     setRetryCount(0);
     
     processedFileRef.current = resumeFile;
+    extractText(resumeFile);
+  }, [resumeFile, onTextExtracted, onExtractionError, onBulletsExtracted]);
+
+  const handleRetry = () => {
+    if (!resumeFile) return;
     
-    const extractText = async () => {
-      try {
-        const text = await PDFExtractor.extractText(resumeFile);
-        
-        if (text) {
-          if (text.includes('scanned document') || 
-              text.includes('image-based PDF') || 
-              text.includes('Error extracting') ||
-              text.includes('binary file')) {
-            setExtractionError(text);
-            setResumeText('');
-            onExtractionError(text);
-          } else {
-            setResumeText(text);
-            setExtractionError(null);
-            onExtractionError(null);
-            onTextExtracted(text);
-          }
-        } else {
-          throw new Error("Could not extract text from the uploaded file.");
-        }
-      } catch (err: any) {
-        console.error("Error extracting text:", err);
-        
-        // Retry logic for transient errors
-        if (retryCount < maxRetries) {
-          console.log(`Retrying extraction (${retryCount + 1}/${maxRetries})...`);
-          setRetryCount(prev => prev + 1);
-          setTimeout(extractText, 1000); // Retry after 1 second
-          return;
-        }
-        
-        const errorMsg = `Error extracting text: ${err.message}`;
-        setExtractionError(errorMsg);
-        onExtractionError(errorMsg);
-        
-        // Even on error, try to extract any text that might be available
-        if (err.partialText && typeof err.partialText === 'string' && err.partialText.length > 100) {
-          setResumeText(err.partialText);
-          onTextExtracted(err.partialText);
-          toast.warning("Partial resume content extracted. Some information might be missing.");
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    extractText();
-  }, [resumeFile, onTextExtracted, onExtractionError, onBulletsExtracted, retryCount, maxRetries]);
+    setExtractionError(null);
+    setRetryCount(0);
+    toast.info("Retrying text extraction...");
+    extractText(resumeFile);
+  };
 
   if (isLoading) {
     return <div className="p-4 text-center">Extracting resume content...</div>;
@@ -107,6 +117,16 @@ const ResumeExtractor: React.FC<ResumeExtractorProps> = ({
                 <li>Or save your resume as plain text (.txt)</li>
               </ul>
             </p>
+            <div className="mt-3">
+              <Button 
+                onClick={handleRetry} 
+                variant="outline" 
+                size="sm"
+                className="bg-red-50 text-red-800 border-red-300 hover:bg-red-100"
+              >
+                Try Again
+              </Button>
+            </div>
           </div>
         </div>
       </div>

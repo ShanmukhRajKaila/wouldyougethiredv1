@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 
 interface ProcessingErrorDisplayProps {
@@ -13,6 +14,13 @@ const ProcessingErrorDisplay: React.FC<ProcessingErrorDisplayProps> = ({
   onRetry 
 }) => {
   if (!processingError) return null;
+  
+  const handleRetryClick = () => {
+    if (onRetry) {
+      toast.info("Retrying analysis...");
+      onRetry();
+    }
+  };
   
   return (
     <div className="mb-8 p-4 border border-amber-300 bg-amber-50 rounded-md">
@@ -38,7 +46,7 @@ const ProcessingErrorDisplay: React.FC<ProcessingErrorDisplayProps> = ({
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={onRetry}
+                onClick={handleRetryClick}
                 className="text-amber-700 border-amber-500 hover:bg-amber-100"
               >
                 Retry Analysis
