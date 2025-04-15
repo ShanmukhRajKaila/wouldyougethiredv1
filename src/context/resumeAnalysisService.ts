@@ -19,12 +19,13 @@ export const analyzeResume = async (
     
     // Call the Supabase edge function to analyze the resume
     const response = await fetch(
-      `https://grdaahcrqflibpjryved.supabase.co/functions/v1/analyze-resume`,
+      `https://mqvstzxrxrmgdseepwzh.supabase.co/functions/v1/analyze-resume`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY || ''}`,
+          // Don't use process.env in browser code
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xdnN0enhyeHJtZ2RzZWVwd3poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyOTAwNjcsImV4cCI6MjA1OTg2NjA2N30.APvORBlZNkWFQLt_gNgCQJkubf3CZ6AWqEDf7QCY5zc`,
         },
         body: JSON.stringify({
           resumeText,
