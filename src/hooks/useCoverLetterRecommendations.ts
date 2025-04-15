@@ -1,4 +1,3 @@
-
 import { CoverLetterAnalysis } from '@/context/types';
 
 export const useCoverLetterRecommendations = () => {
@@ -7,111 +6,92 @@ export const useCoverLetterRecommendations = () => {
       return coverLetterText;
     }
     
-    let updatedText = coverLetterText;
+    let paragraphs = coverLetterText.split(/\n{2,}/);
     
     // Check if we have company insights to incorporate
     const hasCompanyInsights = analysis.companyInsights && analysis.companyInsights.length > 0;
     const hasKeyRequirements = analysis.keyRequirements && analysis.keyRequirements.length > 0;
     const hasSuggestedPhrases = analysis.suggestedPhrases && analysis.suggestedPhrases.length > 0;
     
+    // Extract company name from insights if available
+    const companyName = analysis.companyInsights && analysis.companyInsights[0] ? 
+      extractCompanyName(analysis.companyInsights[0]) : 
+      "the company";
+    
     // Find the greeting/salutation to preserve it at the top
-    const salutationRegex = /(dear\s+[\w\s\.]+,|to\s+whom\s+it\s+may\s+concern:?|hello\s+[\w\s\.]+,)/i;
-    const salutationMatch = updatedText.match(salutationRegex);
-    let salutation = '';
+    const firstParagraph = paragraphs[0] || "";
+    const hasSalutation = /^(dear|to whom|hello)/i.test(firstParagraph.trim());
     
-    if (salutationMatch && salutationMatch[0]) {
-      salutation = salutationMatch[0];
-      // Add the salutation and a line break to the beginning
-      updatedText = updatedText.replace(salutationRegex, '').trim();
+    // Keep track of the sections we've modified to avoid duplicate enhancements
+    const modifiedSections = new Set();
+    
+    // Preserve salutation if it exists
+    const result = [];
+    if (paragraphs.length > 0) {
+      // Always keep the first paragraph (salutation) unchanged
+      result.push(paragraphs[0]);
+      modifiedSections.add(0);
     }
     
-    // If we have company insights, add a paragraph about the company
-    // but preserve the salutation at the top
-    if (hasCompanyInsights) {
-      // Insert after salutation
-      const companyPara = "I'm particularly drawn to " + 
-        analysis.companyInsights.slice(0, 2).join(" and ") + 
-        ". " + (analysis.companyInsights[2] || "");
+    // Enhance introduction paragraph with company insights (after salutation)
+    if (hasCompanyInsights && paragraphs.length > 1) {
+      let introductionIndex = hasSalutation ? 1 : 0;
+      
+      if (!modifiedSections.has(introductionIndex)) {
+        const introduction = paragraphs[introductionIndex];
         
-      // Build the improved letter with proper structure
-      updatedText = 
-        (salutation ? salutation + "\n\n" : "") +
-        companyPara + "\n\n" + 
-        updatedText;
-    } else {
-      // If no company insights, just make sure salutation is at the top
-      updatedText = (salutation ? salutation + "\n\n" : "") + updatedText;
+        // Create enhanced introduction with company insights
+        const companyInsight = analysis.companyInsights.slice(0, 2).join(" and ");
+        const enhancedIntro = `I am particularly drawn to ${companyName} because of its ${companyInsight}. ${paragraphs[introductionIndex]}`;
+        
+        result.push(enhancedIntro);
+        modifiedSections.add(introductionIndex);
+      }
     }
     
-    // Add key requirements to the middle paragraphs
+    // Add key requirements to a middle paragraph
     if (hasKeyRequirements && hasSuggestedPhrases) {
       // Find a good spot to insert requirements-focused content (around middle of letter)
-      const enhancedPara = "\n\nMy experience aligns well with the " + 
-        analysis.keyRequirements?.join(", ") + 
-        " that you're looking for. " + 
-        analysis.suggestedPhrases?.slice(0, 2).join(" ");
-        
-      // Insert roughly in the middle of the letter
-      const paragraphs = updatedText.split("\n\n");
+      const middleIndex = Math.floor(paragraphs.length / 2);
       
-      if (paragraphs.length > 2) {
-        const middleIndex = Math.floor(paragraphs.length / 2);
+      if (middleIndex > 0 && middleIndex < paragraphs.length && !modifiedSections.has(middleIndex)) {
+        const middleParagraph = paragraphs[middleIndex];
         
-        // Insert the enhanced paragraph in the middle
-        paragraphs.splice(middleIndex, 0, enhancedPara.trim());
-        updatedText = paragraphs.join("\n\n");
-      } else {
-        // If not enough paragraphs, add to the end of existing content
-        updatedText += enhancedPara;
+        // Create enhanced paragraph with requirements
+        const enhancedPara = `${middleParagraph} My experience aligns well with the ${
+          analysis.keyRequirements?.join(", ")
+        } that ${companyName} is looking for. ${
+          analysis.suggestedPhrases?.slice(0, 1).join(" ")
+        }`;
+        
+        result.push(enhancedPara);
+        modifiedSections.add(middleIndex);
       }
     }
     
-    // Apply recommendations to improve the text based on weaknesses
-    if (analysis.weaknesses && analysis.weaknesses.length > 0) {
-      let improvementsParagraph = "\n\n";
-      
-      analysis.weaknesses.forEach((weakness, index) => {
-        // Find a recommendation that addresses this weakness
-        const improvement = analysis.recommendations.find(rec => 
-          rec.toLowerCase().includes(weakness.toLowerCase())
-        );
-        
-        if (improvement) {
-          improvementsParagraph += improvement + " ";
-        }
-      });
-      
-      // Only add if we found relevant improvements
-      if (improvementsParagraph.trim().length > 0) {
-        updatedText += improvementsParagraph;
+    // Add remaining paragraphs that haven't been modified yet
+    for (let i = 0; i < paragraphs.length; i++) {
+      if (!modifiedSections.has(i)) {
+        result.push(paragraphs[i]);
       }
     }
     
-    // Add an enhanced closing if we have more suggested phrases
-    if (hasSuggestedPhrases && analysis.suggestedPhrases.length > 2) {
+    // Enhance the closing paragraph (second to last) if we haven't already
+    const lastContentIndex = result.length - 2;
+    if (lastContentIndex >= 0 && hasSuggestedPhrases && analysis.suggestedPhrases.length > 1) {
+      const lastContentPara = result[lastContentIndex];
       const closingPhrase = analysis.suggestedPhrases[analysis.suggestedPhrases.length - 1];
       
-      if (closingPhrase) {
-        // Find if there's already a closing paragraph
-        const closingMatches = updatedText.match(/(sincerely|thank you|regards|respectfully|yours)/i);
-        
-        if (closingMatches) {
-          // Replace existing closing
-          const closingIndex = updatedText.lastIndexOf(closingMatches[0]);
-          if (closingIndex !== -1) {
-            updatedText = updatedText.substring(0, closingIndex) + 
-              "\n\nI am confident that " + closingPhrase + " Thank you for considering my application.\n\n" + 
-              "Sincerely,\n[Your Name]";
-          }
-        } else {
-          // Add new closing
-          updatedText += "\n\nI am confident that " + closingPhrase + " Thank you for considering my application.\n\n" + 
-            "Sincerely,\n[Your Name]";
-        }
-      }
+      result[lastContentIndex] = `${lastContentPara} I am confident that ${closingPhrase}`;
     }
     
-    return updatedText;
+    return result.join("\n\n");
+  };
+  
+  // Helper function to extract company name from insights
+  const extractCompanyName = (insight: string): string => {
+    const companyMatches = insight.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b/);
+    return companyMatches && companyMatches[0] ? companyMatches[0] : "the company";
   };
   
   const calculateUpdatedRelevance = (analysis: CoverLetterAnalysis): number => {
