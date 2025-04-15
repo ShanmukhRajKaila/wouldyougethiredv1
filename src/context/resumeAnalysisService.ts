@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { AnalysisResult } from './types';
@@ -32,69 +31,89 @@ export const analyzeResume = async (
     const { data: sessionData } = await supabase.auth.getSession();
     
     // Use a longer timeout for the fetch request (60 seconds)
-    const response = await fetch('https://mqvstzxrxrmgdseepwzh.supabase.co/functions/v1/analyze-resume', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionData?.session?.access_token || ''}`,
-      },
-      body: JSON.stringify({
-        resumeText: trimmedResume,
-        jobDescription: trimmedJobDesc,
-        coverLetterText: trimmedCoverLetter,
-        companyName: companyName,
-        options: {
-          useFastModel: true,
-          prioritizeSpeed: true,
-          enhancedAtsAnalysis: true, // Enable enhanced ATS analysis
-          keywordOptimization: true, // Enable intelligent keyword optimization
-          atsCompatibilityCheck: true // Enable ATS compatibility checking
+    const controller = new AbortController();
+    const timeoutSignal = setTimeout(() => controller.abort(), 60000);
+    
+    try {
+      const response = await fetch('https://mqvstzxrxrmgdseepwzh.supabase.co/functions/v1/analyze-resume', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData?.session?.access_token || ''}`,
+        },
+        body: JSON.stringify({
+          resumeText: trimmedResume,
+          jobDescription: trimmedJobDesc,
+          coverLetterText: trimmedCoverLetter,
+          companyName: companyName,
+          options: {
+            useFastModel: true,
+            prioritizeSpeed: true,
+            enhancedAtsAnalysis: true,
+            keywordOptimization: true,
+            atsCompatibilityCheck: true
+          }
+        }),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutSignal);
+
+      if (!response.ok) {
+        console.error('Error response from analyze-resume:', response.status, response.statusText);
+        
+        if (response.status === 408 || response.status >= 500) {
+          console.log('Generating fallback analysis due to timeout or server error');
+          return generateFallbackAnalysis(trimmedResume, trimmedJobDesc, trimmedCoverLetter);
         }
-      }),
-      signal: AbortSignal.timeout(60000) // 60 second timeout
-    });
+        
+        let errorMessage = 'Failed to analyze resume';
+        
+        try {
+          const errorData = await response.json();
+          console.error('Error details:', errorData);
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          console.error('Could not parse error response:', parseError);
+        }
+        
+        throw new Error(errorMessage);
+      }
 
-    if (!response.ok) {
-      console.error('Error response from analyze-resume:', response.status, response.statusText);
+      const analysisResult = await response.json();
+      console.log('Analysis result received');
+      return analysisResult as AnalysisResult;
       
-      if (response.status === 408 || response.status >= 500) {
-        console.log('Generating fallback analysis due to timeout or server error');
-        return generateFallbackAnalysis(trimmedResume, trimmedJobDesc);
+    } catch (fetchError) {
+      clearTimeout(timeoutSignal);
+      if (fetchError.name === 'AbortError') {
+        toast.error('Analysis took too long. Using simplified analysis instead.');
+        return generateFallbackAnalysis(trimmedResume, trimmedJobDesc, trimmedCoverLetter);
       }
-      
-      let errorMessage = 'Failed to analyze resume';
-      
-      try {
-        const errorData = await response.json();
-        console.error('Error details:', errorData);
-        errorMessage = errorData.error || errorMessage;
-      } catch (parseError) {
-        console.error('Could not parse error response:', parseError);
-      }
-      
-      throw new Error(errorMessage);
+      throw fetchError;
     }
-
-    const analysisResult = await response.json();
-    console.log('Analysis result received');
-    return analysisResult as AnalysisResult;
   } catch (error) {
     console.error('Error analyzing resume:', error);
     toast.error('Our analysis service is currently experiencing high volume. Using simplified analysis instead.');
     
-    return generateFallbackAnalysis(resumeText, jobDescription);
+    // Create a fallback that includes cover letter analysis too
+    return generateFallbackAnalysis(resumeText, jobDescription, coverLetterText);
   }
 };
 
-// Improved fallback analysis with better ATS optimization suggestions
-function generateFallbackAnalysis(resumeText: string, jobDescription: string): AnalysisResult {
-  // Extract skills from job description (enhanced)
+// Enhanced fallback analysis to include cover letter too
+function generateFallbackAnalysis(
+  resumeText: string, 
+  jobDescription: string,
+  coverLetterText?: string
+): AnalysisResult {
+  // Extract skills from job description
   const jobSkills = extractSkills(jobDescription);
   
-  // Extract skills from resume (enhanced)
+  // Extract skills from resume
   const resumeSkills = extractSkills(resumeText);
   
-  // Find matching skills with improved matching algorithm
+  // Find matching skills
   const matchingSkills = jobSkills.filter(skill => 
     resumeSkills.some(resumeSkill => 
       resumeSkill.toLowerCase().includes(skill.toLowerCase()) || 
@@ -112,19 +131,18 @@ function generateFallbackAnalysis(resumeText: string, jobDescription: string): A
     )
   );
   
-  // Calculate a more sophisticated alignment score
-  // Considers keyword matching, keyword positioning, and formatting factors
+  // Calculate alignment score
   const keywordScore = Math.min(
     Math.round((matchingSkills.length / Math.max(jobSkills.length, 1)) * 100),
-    70 // Cap keyword score at 70% of total
+    70
   );
   
-  // Check for proper formatting (estimate)
+  // Check for proper formatting
   const formattingScore = resumeText.includes('RESUME') || 
                          resumeText.includes('EXPERIENCE') || 
                          resumeText.includes('EDUCATION') ? 15 : 5;
   
-  // Check for contact information (estimate)
+  // Check for contact information
   const contactScore = (resumeText.includes('@') && 
                        (resumeText.includes('phone') || 
                         resumeText.includes('tel') || 
@@ -133,14 +151,19 @@ function generateFallbackAnalysis(resumeText: string, jobDescription: string): A
   // Final alignment score
   const alignmentScore = Math.min(keywordScore + formattingScore + contactScore, 100);
   
-  // Create dynamic recommendations based on analysis
+  // Create recommendations
   const recommendations = generateRecommendations(resumeText, jobDescription, missingSkills);
   
-  // Extract bullet points from resume with improved detection
+  // Extract bullet points from resume
   const bulletPoints = extractBulletPoints(resumeText);
   
   // Create improved STAR analysis for bullet points
   const starAnalysis = bulletPoints.map(bullet => generateSTARAnalysis(bullet, jobDescription));
+  
+  // Generate cover letter analysis if cover letter is provided
+  const coverLetterAnalysis = coverLetterText ? generateCoverLetterAnalysis(
+    coverLetterText, jobDescription
+  ) : undefined;
   
   return {
     alignmentScore,
@@ -148,11 +171,124 @@ function generateFallbackAnalysis(resumeText: string, jobDescription: string): A
     strengths: matchingSkills.slice(0, 5),
     weaknesses: missingSkills.slice(0, 5),
     recommendations,
-    starAnalysis
+    starAnalysis,
+    coverLetterAnalysis
   };
 }
 
-// Check if two skills are related (synonyms or related concepts)
+// Generate cover letter analysis for fallback mode
+function generateCoverLetterAnalysis(
+  coverLetterText: string, 
+  jobDescription: string
+) {
+  // Simple tone analysis
+  let tone = "Professional";
+  if (coverLetterText.includes("passion") || coverLetterText.includes("excited")) {
+    tone = "Enthusiastic and Professional";
+  } else if (coverLetterText.includes("team") && coverLetterText.includes("collaborate")) {
+    tone = "Collaborative and Professional";
+  }
+  
+  // Extract job requirements
+  const jobLines = jobDescription.split('\n');
+  const requirementLines = jobLines.filter(line => 
+    line.toLowerCase().includes("require") || 
+    line.toLowerCase().includes("qualification") ||
+    line.toLowerCase().includes("skill")
+  );
+  
+  const keyRequirements = requirementLines
+    .slice(0, 3)
+    .map(line => line.trim());
+  
+  // Calculate basic relevance score
+  const jobKeywords = extractKeywords(jobDescription);
+  const coverLetterKeywords = extractKeywords(coverLetterText);
+  
+  const matchingKeywords = jobKeywords.filter(keyword => 
+    coverLetterKeywords.some(coverKeyword => 
+      coverKeyword.toLowerCase().includes(keyword.toLowerCase()) || 
+      keyword.toLowerCase().includes(coverKeyword.toLowerCase())
+    )
+  );
+  
+  const relevanceScore = Math.min(
+    Math.round((matchingKeywords.length / Math.max(jobKeywords.length, 1)) * 100),
+    90
+  );
+  
+  // Generate strengths
+  const strengths = [
+    "Clearly expresses interest in the position",
+    "Includes relevant professional background",
+    "Uses appropriate formal tone"
+  ];
+  
+  // Generate weaknesses
+  const weaknesses = [
+    "Could better align with specific job requirements",
+    "Could include more quantifiable achievements",
+    "Could personalize more for the specific company"
+  ];
+  
+  // Generate recommendations
+  const recommendations = [
+    "Address specific job requirements mentioned in the posting",
+    "Quantify 1-2 key achievements relevant to this role",
+    "Research and mention something specific about the company culture"
+  ];
+  
+  // Generate company insights
+  const companyName = extractCompanyName(jobDescription);
+  const companyInsights = [
+    `${companyName || "The company"} values innovation and creative problem-solving`,
+    `${companyName || "The organization"} emphasizes team collaboration and communication`,
+    `${companyName || "They"} are looking for candidates who demonstrate ownership and accountability`,
+    `${companyName || "The employer"} has a strong focus on customer-centric solutions`,
+    `${companyName || "This company"} appreciates candidates who show continuous learning and adaptability`
+  ];
+  
+  // Generate suggested phrases
+  const suggestedPhrases = [
+    "I'm particularly drawn to your company's commitment to innovation",
+    "My experience aligns perfectly with your requirements for this role",
+    "I've consistently demonstrated the ability to deliver results in similar contexts",
+    "I'm excited about the opportunity to contribute to your team's success"
+  ];
+  
+  return {
+    tone,
+    relevance: relevanceScore,
+    strengths,
+    weaknesses,
+    recommendations,
+    companyInsights,
+    keyRequirements,
+    suggestedPhrases
+  };
+}
+
+// Extract company name from job description
+function extractCompanyName(text: string): string {
+  // Common patterns for company names in job descriptions
+  const patterns = [
+    /at\s+([A-Z][A-Za-z0-9\s&,]+)(?:,|\sis|\swe|\sour)/i,
+    /join\s+([A-Z][A-Za-z0-9\s&,]+)(?:'s team|'s|,|\sas)/i,
+    /about\s+([A-Z][A-Za-z0-9\s&,]+)(?:\n|\r|:|\.)/i,
+    /([A-Z][A-Za-z0-9\s&,]+)(?:\sis looking for|\sis hiring)/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match && match[1] && match[1].length < 30) {
+      return match[1].trim();
+    }
+  }
+  
+  return "the company";
+}
+
+// Helper functions needed for the fallback analysis
 function areRelatedSkills(skill1: string, skill2: string): boolean {
   // Map of related skills
   const relatedSkillsMap: Record<string, string[]> = {
@@ -166,6 +302,10 @@ function areRelatedSkills(skill1: string, skill2: string): boolean {
     'leadership': ['management', 'team lead', 'supervision'],
     'communication': ['interpersonal skills', 'presentation', 'writing'],
     'analysis': ['analytics', 'data analysis', 'research', 'insights'],
+    'product management': ['product owner', 'product development', 'roadmap'],
+    'data science': ['analytics', 'machine learning', 'statistics', 'data mining'],
+    'marketing': ['digital marketing', 'brand development', 'campaigns', 'social media'],
+    'project management': ['program management', 'agile', 'scrum', 'coordination']
   };
   
   const s1 = skill1.toLowerCase();
@@ -183,7 +323,6 @@ function areRelatedSkills(skill1: string, skill2: string): boolean {
   return false;
 }
 
-// More comprehensive skill extraction
 function extractSkills(text: string): string[] {
   const commonSkills = [
     // Technical skills
@@ -257,7 +396,6 @@ function extractSkills(text: string): string[] {
   return Array.from(skills).slice(0, 25);
 }
 
-// Extract bullet points with improved detection algorithm
 function extractBulletPoints(text: string): string[] {
   if (!text || typeof text !== 'string') {
     return [];
@@ -305,7 +443,6 @@ function extractBulletPoints(text: string): string[] {
     .slice(0, 5);
 }
 
-// Extract experience section from resume text
 function extractExperienceSection(text: string): string | null {
   if (!text || typeof text !== 'string') {
     return null;
@@ -339,7 +476,6 @@ function extractExperienceSection(text: string): string | null {
   return null;
 }
 
-// Generate improved STAR analysis for a bullet point
 function generateSTARAnalysis(bullet: string, jobDescription: string) {
   if (!bullet || typeof bullet !== 'string') {
     return {
@@ -408,7 +544,6 @@ function generateSTARAnalysis(bullet: string, jobDescription: string) {
   };
 }
 
-// Extract keywords by frequency from text
 function extractKeywordsByFrequency(text: string): string[] {
   if (!text || typeof text !== 'string') {
     return [];
@@ -430,7 +565,6 @@ function extractKeywordsByFrequency(text: string): string[] {
     .slice(0, 10);
 }
 
-// Get a relevant action verb for the bullet point based on job description
 function getRelevantActionVerb(bullet: string, jobDescription: string): string {
   if (!bullet || typeof bullet !== 'string') {
     return 'Achieved';
@@ -467,7 +601,6 @@ function getRelevantActionVerb(bullet: string, jobDescription: string): string {
   }
 }
 
-// Generate dynamic recommendations based on analysis
 function generateRecommendations(resumeText: string, jobDescription: string, missingSkills: string[]): string[] {
   const recommendations = [];
   

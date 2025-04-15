@@ -1,5 +1,7 @@
 
-import React from 'react';
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Check, ArrowRight } from 'lucide-react';
 
 interface StarAnalysisItem {
   original: string;
@@ -9,43 +11,48 @@ interface StarAnalysisItem {
 
 interface ImprovedBulletPointProps {
   originalBullet: string;
-  improvedBullet?: StarAnalysisItem;
+  improvedBullet: StarAnalysisItem | undefined;
 }
 
 const ImprovedBulletPoint: React.FC<ImprovedBulletPointProps> = ({ 
   originalBullet, 
   improvedBullet 
 }) => {
-  const cleanBullet = originalBullet.trim();
+  const [showImproved, setShowImproved] = useState(false);
+  
+  // If no improved version available
+  if (!improvedBullet) {
+    return (
+      <div className="border-l-4 border-consulting-gray pl-4 py-1 mb-4">
+        <p className="text-consulting-gray">{originalBullet}</p>
+      </div>
+    );
+  }
   
   return (
-    <div className="p-4 bg-gray-50 rounded-lg">
-      <div className="text-consulting-charcoal mb-2">
-        <h3 className="text-sm text-gray-500">Original:</h3>
-        <p className="text-sm italic text-gray-600 mb-3">"{cleanBullet}"</p>
-        
-        <h3 className="text-sm text-consulting-blue">Enhanced:</h3>
-        {improvedBullet ? (
-          <>
-            <p className="font-medium text-consulting-navy">{improvedBullet.improved}</p>
-            
-            <div className="mt-3 pt-3 border-t border-gray-200">
-              <h4 className="text-xs font-semibold text-gray-500">Why this improves alignment:</h4>
-              <p className="text-xs text-gray-600 mt-1">{improvedBullet.feedback}</p>
-            </div>
-          </>
-        ) : (
-          <div className="p-3 bg-gray-100 border border-gray-200 rounded text-gray-600">
-            <p className="font-medium text-gray-700">This bullet point is already well-written for this role.</p>
-            <p className="mt-2 text-sm">
-              <span className="font-semibold">Justification:</span> This experience demonstrates relevant skills and 
-              uses appropriate terminology for the position. It effectively highlights your capabilities in a 
-              way that aligns with the job requirements. For maximum impact, consider adding specific metrics 
-              or quantifiable results if available.
-            </p>
-          </div>
-        )}
+    <div className="mb-6">
+      <div className={`border-l-4 ${showImproved ? 'border-consulting-gray' : 'border-consulting-navy'} pl-4 py-1 mb-2`}>
+        <p className={`${showImproved ? 'text-consulting-gray' : 'font-medium'}`}>
+          {originalBullet}
+        </p>
       </div>
+      
+      {showImproved ? (
+        <div className="border-l-4 border-green-500 pl-4 py-1 bg-green-50 rounded-r">
+          <p className="font-medium text-green-800">{improvedBullet.improved}</p>
+          <p className="mt-2 text-sm text-green-700">{improvedBullet.feedback}</p>
+        </div>
+      ) : (
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => setShowImproved(true)}
+          className="flex items-center text-xs ml-4"
+        >
+          <ArrowRight className="mr-1 h-3 w-3" /> 
+          View ATS-Optimized Version
+        </Button>
+      )}
     </div>
   );
 };
