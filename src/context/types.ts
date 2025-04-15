@@ -20,6 +20,8 @@ export interface CoverLetterAnalysis {
   strengths: string[];
   weaknesses: string[];
   recommendations: string[];
+  improvedText?: string;
+  updatedRelevance?: number;
 }
 
 export interface AnalysisResult {

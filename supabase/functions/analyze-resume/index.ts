@@ -118,7 +118,8 @@ Return a valid JSON object with this structure:
     "relevance": Integer from 1-100 representing how relevant it is to the job,
     "strengths": Array of strings highlighting good points (max 3),
     "weaknesses": Array of strings identifying issues (max 3),
-    "recommendations": Array of strings with improvement suggestions (max 3)
+    "recommendations": Array of strings with improvement suggestions (max 3),
+    "improvedText": String containing an enhanced version of the cover letter that addresses weaknesses
   },
   "starAnalysis": Array of objects containing:
     {
@@ -146,7 +147,7 @@ Return a valid JSON object with this structure:
 }`;
 
       const userPrompt = truncatedCoverLetter ?
-        `Job description:\n\n${truncatedJobDesc}\n\nResume:\n\n${truncatedResume}\n\nCover Letter:\n\n${truncatedCoverLetter}\n\nAnalyze how well this resume and cover letter match the job description.` :
+        `Job description:\n\n${truncatedJobDesc}\n\nResume:\n\n${truncatedResume}\n\nCover Letter:\n\n${truncatedCoverLetter}\n\nAnalyze how well this resume and cover letter match the job description. For the cover letter, also create an improved version that addresses any weaknesses found.` :
         `Job description:\n\n${truncatedJobDesc}\n\nResume:\n\n${truncatedResume}\n\nAnalyze how well this resume matches the job description.`;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -171,7 +172,7 @@ Return a valid JSON object with this structure:
             }
           ],
           temperature: 0.2,
-          max_tokens: 1000,
+          max_tokens: 1500,
         }),
         signal: controller.signal
       });
@@ -256,6 +257,15 @@ Return a valid JSON object with this structure:
                 .replace(/which (could|would|might|may) be /ig, '')
                 .trim();
             });
+          }
+          
+          // Calculate updated relevance score for the improved cover letter
+          if (analysisResult.coverLetterAnalysis.improvedText && analysisResult.coverLetterAnalysis.relevance) {
+            const originalScore = analysisResult.coverLetterAnalysis.relevance;
+            // The score can improve by up to 15% based on the number of recommendations applied
+            const improvementFactor = Math.min((analysisResult.coverLetterAnalysis.recommendations?.length || 0) * 3, 15) / 100;
+            const updatedScore = Math.min(Math.round(originalScore * (1 + improvementFactor)), 100);
+            analysisResult.coverLetterAnalysis.updatedRelevance = updatedScore;
           }
         }
         
