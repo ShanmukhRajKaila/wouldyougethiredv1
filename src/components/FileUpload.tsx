@@ -1,12 +1,10 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { X, FileText, File } from 'lucide-react';
+import { X, File } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FileUploadProps {
   label: string;
-  accept: string;
   onChange: (file: File | null) => void;
   value: File | null;
   required?: boolean;
@@ -15,7 +13,6 @@ interface FileUploadProps {
 
 const FileUpload: React.FC<FileUploadProps> = ({ 
   label, 
-  accept, 
   onChange, 
   value,
   required = false,
@@ -58,51 +55,20 @@ const FileUpload: React.FC<FileUploadProps> = ({
     }
     
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-    const acceptedFormats = accept.split(',').map(type => 
-      type.trim().replace('.', '').toLowerCase()
-    );
     
-    if (!acceptedFormats.includes(fileExtension) && !accept.includes(file.type)) {
-      toast.error(`Invalid file format. Accepted formats: ${getAcceptedTypes()}`);
+    if (fileExtension !== 'docx') {
+      toast.error('Only Word documents (.docx) are accepted');
       return;
-    }
-
-    // For PDFs, add a warning about text-based PDFs
-    if (fileExtension === 'pdf') {
-      toast.info("For best results, use text-based PDFs rather than scanned documents.");
     }
 
     onChange(file);
   };
 
-  const getAcceptedTypes = () => {
-    const types = accept.split(',').map(type => {
-      const cleaned = type.trim().replace('.', '').toUpperCase();
-      switch(cleaned) {
-        case 'PDF': return 'PDF';
-        case 'DOCX': return 'Word (.docx)';
-        case 'TXT': return 'Text (.txt)';
-        default: return cleaned;
-      }
-    });
-    return types.join(', ');
-  };
+  const getAcceptedTypes = () => 'Word (.docx)';
 
-  const getFileIcon = () => {
-    if (!value) return null;
-    
-    const extension = value.name.split('.').pop()?.toLowerCase();
-    
-    if (extension === 'pdf') {
-      return <FileText className="h-6 w-6 text-red-500" />;
-    } else if (extension === 'docx') {
-      return <File className="h-6 w-6 text-blue-500" />;
-    } else if (extension === 'txt') {
-      return <FileText className="h-6 w-6 text-gray-500" />;
-    } else {
-      return <FileText className="h-6 w-6 text-gray-500" />;
-    }
-  };
+  const getFileIcon = () => (
+    <File className="h-6 w-6 text-blue-500" />
+  );
 
   const removeFile = () => {
     onChange(null);
@@ -131,7 +97,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
             id={`file-${label}`}
             type="file"
             className="hidden"
-            accept={accept}
+            accept=".docx"
             onChange={handleChange}
           />
           <div className="flex flex-col items-center justify-center">
@@ -142,13 +108,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
               {getAcceptedTypes()} (MAX. {maxSizeMB}MB)
             </p>
             <div className="flex gap-2 mt-3 text-xs text-gray-500">
-              <FileText className="h-5 w-5 text-red-500" /><span>PDF</span>
-              <File className="h-5 w-5 text-blue-500 ml-2" /><span>DOCX</span>
-              <FileText className="h-5 w-5 text-gray-500 ml-2" /><span>TXT</span>
+              <File className="h-5 w-5 text-blue-500" /><span>DOCX</span>
             </div>
-            <p className="mt-3 text-xs text-gray-500">
-              For best results, use text-based PDFs, Word documents, or plain text files.
-            </p>
           </div>
         </div>
       ) : (

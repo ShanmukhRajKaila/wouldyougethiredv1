@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { Input } from '@/components/ui/input';
@@ -122,17 +121,16 @@ const CompanySelector = () => {
             )}
           </div>
           
-          {/* Company name field - always empty after extraction */}
           <div>
             <Label htmlFor="company-url" className="block text-gray-700 font-medium mb-2">
-              Company Name <span className="text-gray-500">(please enter manually)</span>
+              Company Name
             </Label>
             <Input
               id="company-url"
               type="text"
               value={selectedCompany?.name || ''}
               onChange={handleCompanyChange}
-              placeholder="Enter company name manually"
+              placeholder="Enter company name"
               className="w-full"
             />
           </div>
@@ -141,14 +139,14 @@ const CompanySelector = () => {
         <TabsContent value="manual" className="space-y-4 pt-4">
           <div>
             <Label htmlFor="company-manual" className="block text-gray-700 font-medium mb-2">
-              Company Name <span className="text-gray-500">(optional)</span>
+              Company Name
             </Label>
             <Input
               id="company-manual"
               type="text"
               value={selectedCompany?.name || ''}
               onChange={handleCompanyChange}
-              placeholder="Enter the company name (optional)"
+              placeholder="Enter company name"
               className="w-full"
             />
           </div>
