@@ -51,32 +51,71 @@ export const useCoverLetterRecommendations = () => {
       }
     }
     
-    // Generate company insight enhancement
-    if (hasCompanyInsights && analysis.companyInsights.length > 0) {
-      analysis.companyInsights.forEach((insight) => {
+    // Generate company insight enhancement - ensure we have at least 5 insights
+    if (hasCompanyInsights) {
+      // Take up to 5 insights from analysis
+      const insightsToShow = analysis.companyInsights.slice(0, 5);
+      insightsToShow.forEach((insight) => {
         enhancementSections.companyInsights.push(`• ${insight}`);
       });
+    } else {
+      // Generic placeholders if no insights were found
+      enhancementSections.companyInsights = [
+        `• Research ${companyName}'s mission statement and reference it specifically`,
+        `• Mention a recent company achievement or news item`,
+        `• Reference the company's core values or culture`,
+        `• Mention specific products or services the company offers`,
+        `• Discuss how your values align with the company's vision`
+      ];
     }
     
-    // Generate key requirements enhancement
-    if (hasKeyRequirements && analysis.keyRequirements.length > 0) {
-      analysis.keyRequirements.forEach((requirement) => {
+    // Generate key requirements enhancement - ensure we have at least 5 requirements
+    if (hasKeyRequirements) {
+      // Take up to 5 requirements from analysis
+      const requirementsToShow = analysis.keyRequirements.slice(0, 5);
+      requirementsToShow.forEach((requirement) => {
         enhancementSections.keyRequirements.push(`• Demonstrate how your skills match "${requirement}"`);
       });
+      
+      // Add generic requirements if we don't have enough
+      if (requirementsToShow.length < 5) {
+        const genericRequirements = [
+          "technical expertise relevant to the role",
+          "communication and collaboration skills",
+          "problem-solving abilities",
+          "leadership experience",
+          "industry knowledge"
+        ];
+        
+        for (let i = requirementsToShow.length; i < 5; i++) {
+          enhancementSections.keyRequirements.push(`• Address your ${genericRequirements[i % genericRequirements.length]}`);
+        }
+      }
+    } else {
+      // Generic placeholders if no requirements were found
+      enhancementSections.keyRequirements = [
+        `• Address your technical expertise directly relevant to the position`,
+        `• Highlight your experience with specific tools mentioned in the job posting`,
+        `• Demonstrate your problem-solving abilities with concrete examples`,
+        `• Emphasize your communication and collaboration skills`,
+        `• Showcase your adaptability and willingness to learn`
+      ];
     }
     
-    // Generate suggested phrases enhancement
-    if (hasSuggestedPhrases && analysis.suggestedPhrases.length > 0) {
-      analysis.suggestedPhrases.forEach((phrase) => {
+    // Generate suggested phrases enhancement - ensure all phrases start with action verbs
+    if (hasSuggestedPhrases) {
+      // Take the top phrases from analysis (up to 5)
+      analysis.suggestedPhrases.slice(0, 5).forEach((phrase) => {
         enhancementSections.suggestedPhrases.push(`• "${phrase}"`);
       });
     } else {
-      // Add some generic suggested phrases if none provided
+      // Use generic action-verb led phrases if none provided
       enhancementSections.suggestedPhrases = [
-        `• "I am particularly drawn to ${companyName}'s commitment to innovation and excellence"`,
-        `• "My experience in [relevant skill] aligns perfectly with your requirements"`,
-        `• "I am excited about the opportunity to contribute to ${companyName}'s continued success"`,
-        `• "I look forward to discussing how my background and skills would be an asset to your team"`
+        `• "I implemented solutions that resulted in [specific outcome relevant to the role]"`,
+        `• "Developed strategies that improved [relevant metric] by [percentage]"`,
+        `• "Led cross-functional teams to achieve [relevant accomplishment]"`,
+        `• "Analyzed complex data to identify opportunities for [relevant improvement]"`,
+        `• "Collaborated with stakeholders to deliver [relevant project outcome]"`
       ];
     }
     
@@ -91,28 +130,28 @@ export const useCoverLetterRecommendations = () => {
       enhancedText += "\n\n";
     }
     
-    if (enhancementSections.companyInsights.length > 0) {
-      enhancedText += "Company Insights (for first or second paragraph):\n";
-      enhancedText += enhancementSections.companyInsights.join("\n");
-      enhancedText += "\n\n";
-    }
+    enhancedText += "Company Insights (for first or second paragraph):\n";
+    enhancedText += enhancementSections.companyInsights.join("\n");
+    enhancedText += "\n\n";
     
-    if (enhancementSections.keyRequirements.length > 0) {
-      enhancedText += "Key Requirements (for body paragraphs):\n";
-      enhancedText += enhancementSections.keyRequirements.join("\n");
-      enhancedText += "\n\n";
-    }
+    enhancedText += "Key Requirements (for body paragraphs):\n";
+    enhancedText += enhancementSections.keyRequirements.join("\n");
+    enhancedText += "\n\n";
     
-    if (enhancementSections.suggestedPhrases.length > 0) {
-      enhancedText += "Suggested Phrases (integrate strategically):\n";
-      enhancedText += enhancementSections.suggestedPhrases.join("\n");
-      enhancedText += "\n\n";
-    }
+    enhancedText += "Suggested Phrases with Action Verbs (integrate strategically):\n";
+    enhancedText += enhancementSections.suggestedPhrases.join("\n");
+    enhancedText += "\n\n";
     
     // Add an implementation example for clarity
     enhancedText += "Sample Implementation:\n";
     enhancedText += `Consider revising your opening paragraph to something like:\n\n`;
-    enhancedText += `"Dear Hiring Manager,\n\nI am writing to express my strong interest in the [Position] role at ${companyName}. I'm particularly drawn to ${companyName}'s ${analysis.companyInsights?.[0]?.toLowerCase() || 'innovative approach and industry leadership'}, and I believe my background in ${analysis.keyRequirements?.[0] || 'the required skills'} would allow me to contribute effectively to your team."\n`;
+    
+    // Create a sample paragraph using company insights and action verbs
+    const sampleInsight = analysis.companyInsights?.[0]?.toLowerCase() || 'innovative approach and industry leadership';
+    const sampleRequirement = analysis.keyRequirements?.[0] || 'the required skills';
+    const sampleVerb = analysis.suggestedPhrases?.[0]?.split(' ')[0] || "Implemented";
+    
+    enhancedText += `"Dear Hiring Manager,\n\nI am writing to express my strong interest in the [Position] role at ${companyName}. I'm particularly drawn to ${companyName}'s ${sampleInsight}, and I believe my background in ${sampleRequirement} would allow me to contribute effectively to your team. Throughout my career, I have ${sampleVerb.toLowerCase()} solutions that align perfectly with your company's goals."\n`;
     
     return enhancedText;
   };
@@ -128,29 +167,35 @@ export const useCoverLetterRecommendations = () => {
     const originalScore = analysis.relevance || 0;
     
     // Base improvement factor from recommendations
-    let improvementFactor = Math.min(analysis.recommendations.length * 2, 10) / 100;
+    let improvementFactor = Math.min(analysis.recommendations?.length * 2 || 0, 10) / 100;
     
     // Additional boost if we have company insights
     if (analysis.companyInsights && analysis.companyInsights.length > 0) {
       // Scale the boost based on how many insights we have (up to 5)
       const insightCount = Math.min(analysis.companyInsights.length, 5);
-      improvementFactor += 0.02 * insightCount; // +2% per insight up to 10%
+      improvementFactor += 0.03 * insightCount; // +3% per insight up to 15%
     }
     
     // Additional boost if we have key requirements
     if (analysis.keyRequirements && analysis.keyRequirements.length > 0) {
       // Scale the boost based on number of requirements (up to 5)
       const requirementCount = Math.min(analysis.keyRequirements.length, 5);
-      improvementFactor += 0.02 * requirementCount; // +2% per requirement up to 10%
+      improvementFactor += 0.03 * requirementCount; // +3% per requirement up to 15%
     }
     
     // Additional boost if we have suggested phrases
     if (analysis.suggestedPhrases && analysis.suggestedPhrases.length > 0) {
-      improvementFactor += 0.05; // +5%
+      // Count how many phrases start with action verbs
+      const actionVerbCount = analysis.suggestedPhrases.filter(phrase => {
+        const firstWord = phrase.split(' ')[0];
+        return /^[A-Z][a-z]+ed$|^[A-Z][a-z]+s$|^[A-Z][a-z]+ing$/.test(firstWord);
+      }).length;
+      
+      improvementFactor += 0.02 * actionVerbCount; // +2% per action verb phrase
     }
     
-    // Cap the total improvement at 30%
-    improvementFactor = Math.min(improvementFactor, 0.30);
+    // Cap the total improvement at 35%
+    improvementFactor = Math.min(improvementFactor, 0.35);
     
     // Ensure the score never exceeds 100
     const updatedScore = Math.min(Math.round(originalScore * (1 + improvementFactor)), 100);

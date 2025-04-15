@@ -3,6 +3,8 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const googleSearchApiKey = Deno.env.get('GOOGLE_SEARCH_API_KEY');
+const googleSearchCx = Deno.env.get('GOOGLE_SEARCH_CX');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,6 +21,83 @@ interface AnalysisRequest {
     enhancedAtsAnalysis?: boolean;
     keywordOptimization?: boolean;
   };
+}
+
+// Function to fetch company insights from Google Search API
+async function fetchCompanyInsights(companyName: string): Promise<string[]> {
+  if (!googleSearchApiKey || !googleSearchCx) {
+    console.log("Google Search API keys not configured, skipping external company research");
+    return [];
+  }
+  
+  try {
+    console.log(`Fetching company insights for ${companyName}...`);
+    
+    // Create search queries for company culture and values
+    const queries = [
+      `${companyName} company culture values mission`,
+      `${companyName} corporate social responsibility`,
+      `${companyName} recent achievements news`,
+      `${companyName} work environment employee reviews`,
+      `${companyName} industry leadership innovation`
+    ];
+    
+    let allInsights: string[] = [];
+    
+    // Only process first two queries to avoid rate limits
+    for (const query of queries.slice(0, 2)) {
+      const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${googleSearchApiKey}&cx=${googleSearchCx}&q=${encodeURIComponent(query)}`;
+      
+      const response = await fetch(searchUrl);
+      
+      if (!response.ok) {
+        console.error(`Google Search API error: ${response.status}`);
+        continue;
+      }
+      
+      const data = await response.json();
+      
+      // Extract snippets and titles from search results
+      if (data.items && data.items.length > 0) {
+        const insights = data.items.slice(0, 3).map((item: any) => {
+          return item.snippet || item.title || "";
+        }).filter((text: string) => text.length > 0);
+        
+        allInsights = [...allInsights, ...insights];
+      }
+    }
+    
+    // Deduplicate and limit results
+    const uniqueInsights = [...new Set(allInsights)].slice(0, 8);
+    console.log(`Retrieved ${uniqueInsights.length} company insights`);
+    
+    return uniqueInsights;
+  } catch (error) {
+    console.error("Error fetching company insights:", error);
+    return [];
+  }
+}
+
+// Function to extract key requirements from job description
+function extractKeyRequirements(jobDescription: string): string[] {
+  // Simple regex-based extraction of potential requirements
+  const reqSections = jobDescription.match(/requirements|qualifications|skills|what you['']ll need|what we['']re looking for/gi);
+  
+  if (!reqSections) {
+    // Split by bullet points or numbered lists if no section titles found
+    const bulletPoints = jobDescription.match(/[•\-\*]\s*(.*?)(?=\n|$)/g) || [];
+    const numberedPoints = jobDescription.match(/\d+\.\s*(.*?)(?=\n|$)/g) || [];
+    
+    const combined = [...bulletPoints, ...numberedPoints]
+      .map(point => point.replace(/^[•\-\*\d+\.\s]+/, '').trim())
+      .filter(point => point.length > 10 && point.length < 100);
+      
+    return combined.slice(0, 8);
+  }
+  
+  // TODO: More sophisticated extraction based on sections
+  // For now, return empty array if better extraction isn't possible
+  return [];
 }
 
 serve(async (req) => {
@@ -69,9 +148,19 @@ serve(async (req) => {
       console.log(`Cover Letter (${coverLetterContent.length} chars)`);
     }
 
-    // Set a reasonable timeout (60 seconds)
+    // Fetch company insights if company name is provided
+    let companyInsights: string[] = [];
+    if (companyName) {
+      companyInsights = await fetchCompanyInsights(companyName);
+      console.log(`Retrieved ${companyInsights.length} company insights for ${companyName}`);
+    }
+    
+    // Extract key requirements from job description
+    const extractedRequirements = extractKeyRequirements(fullJobDesc);
+    
+    // Set a reasonable timeout (90 seconds)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
     
     // Prepare the analysis prompt with enhanced instructions
     const systemPrompt = `You are an expert ATS (Applicant Tracking System) analyst and career coach.
@@ -85,7 +174,16 @@ Analyze the resume against the job description in detailed depth, focusing on:
 
 ${companyName ? `The candidate is applying to ${companyName}. Consider company culture, values and expectations in your analysis.` : ''}
 
-${coverLetterContent ? `Also analyze the cover letter for tone, relevance, and provide suggested improvements.` : ''}
+${coverLetterContent ? `
+For the cover letter analysis:
+1. Evaluate tone, relevance, and alignment with the job requirements and company culture
+2. Analyze how effectively the cover letter complements the resume
+3. Identify 5+ specific company insights that should be addressed (using provided company insights where available)
+4. Identify 5+ key requirements from the job description that should be emphasized
+5. Suggest 5+ specific phrases that would improve alignment with the job and company
+6. For any bullet points, ensure they start with strong ACTION VERBS
+7. Optimize the overall structure for ATS scanning
+` : ''}
 
 MANDATORY: YOU MUST RETURN A VALID JSON OBJECT in this exact format:
 {
@@ -103,11 +201,14 @@ MANDATORY: YOU MUST RETURN A VALID JSON OBJECT in this exact format:
     ... (exactly 3 items)
   ]${coverLetterContent ? `,
   "coverLetterAnalysis": {
-    "tone": string,
+    "tone": string describing the overall tone (e.g., "professional", "enthusiastic"),
     "relevance": number from 1-100,
     "strengths": [array of strings],
     "weaknesses": [array of strings],
-    "recommendations": [array of strings]
+    "recommendations": [array of strings],
+    "companyInsights": [array of 5+ strings with insights about the company that should be included],
+    "keyRequirements": [array of 5+ strings identifying key job requirements to address],
+    "suggestedPhrases": [array of 5+ strings with ATS-optimized phrases starting with action verbs]
   }` : ''}
 }
 
@@ -115,6 +216,41 @@ You MUST provide complete analysis with all required fields. This is critical fo
 
     try {
       console.log("Sending full content request to OpenAI GPT-4o...");
+      
+      // Prepare messages including company insights when available
+      const messages = [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: `Job description:
+${fullJobDesc}
+
+Resume:
+${fullResume}
+${coverLetterContent ? `\nCover Letter:\n${coverLetterContent}` : ''}
+${companyName ? `\nCompany: ${companyName}` : ''}`
+        }
+      ];
+      
+      // Add company insights if available
+      if (companyInsights.length > 0) {
+        messages.push({
+          role: 'user', 
+          content: `Additional company research insights for ${companyName}:\n${companyInsights.join('\n\n')}`
+        });
+      }
+      
+      // Add extracted requirements if available
+      if (extractedRequirements.length > 0) {
+        messages.push({
+          role: 'user',
+          content: `Extracted key requirements from job description:\n${extractedRequirements.join('\n')}`
+        });
+      }
+      
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -123,22 +259,7 @@ You MUST provide complete analysis with all required fields. This is critical fo
         },
         body: JSON.stringify({
           model: model,
-          messages: [
-            {
-              role: 'system',
-              content: systemPrompt
-            },
-            {
-              role: 'user',
-              content: `Job description:
-${fullJobDesc}
-
-Resume:
-${fullResume}
-${coverLetterContent ? `\nCover Letter:\n${coverLetterContent}` : ''}
-${companyName ? `\nCompany: ${companyName}` : ''}`
-            }
-          ],
+          messages: messages,
           temperature: 0.3,
           max_tokens: 4000,
           response_format: { type: "json_object" }
@@ -167,6 +288,68 @@ ${companyName ? `\nCompany: ${companyName}` : ''}`
             !Array.isArray(analysisResult.weaknesses) || !Array.isArray(analysisResult.recommendations) ||
             !Array.isArray(analysisResult.starAnalysis)) {
           throw new Error("Invalid response structure from OpenAI");
+        }
+        
+        // Enhance cover letter analysis with our extracted insights if needed
+        if (coverLetterContent && analysisResult.coverLetterAnalysis) {
+          // Ensure we have enough company insights
+          if (companyInsights.length > 0 && 
+              (!analysisResult.coverLetterAnalysis.companyInsights || 
+               analysisResult.coverLetterAnalysis.companyInsights.length < 5)) {
+            
+            console.log("Enhancing company insights with Google Search results");
+            analysisResult.coverLetterAnalysis.companyInsights = 
+              [...(analysisResult.coverLetterAnalysis.companyInsights || []), ...companyInsights]
+                .filter((v, i, a) => a.indexOf(v) === i) // Deduplicate
+                .slice(0, 8); // Limit to 8 insights
+          }
+          
+          // Ensure all suggested phrases start with action verbs
+          if (analysisResult.coverLetterAnalysis.suggestedPhrases) {
+            const actionVerbs = ["Achieved", "Adapted", "Addressed", "Advanced", "Advised", "Advocated", 
+                               "Analyzed", "Applied", "Appointed", "Approved", "Arbitrated", "Arranged", 
+                               "Assembled", "Assessed", "Assigned", "Assisted", "Attained", "Audited", 
+                               "Authored", "Balanced", "Budgeted", "Built", "Cataloged", "Chaired", 
+                               "Championed", "Changed", "Clarified", "Coached", "Collaborated", "Communicated", 
+                               "Compiled", "Completed", "Computed", "Conceptualized", "Conducted", "Consolidated", 
+                               "Constructed", "Consulted", "Contracted", "Contributed", "Controlled", "Converted", 
+                               "Coordinated", "Created", "Cultivated", "Customized", "Decreased", "Delegated", 
+                               "Delivered", "Demonstrated", "Designed", "Determined", "Developed", "Devised", 
+                               "Diagnosed", "Directed", "Discovered", "Displayed", "Documented", "Drafted", 
+                               "Earned", "Edited", "Educated", "Eliminated", "Encouraged", "Engineered", 
+                               "Enhanced", "Established", "Evaluated", "Examined", "Executed", "Expanded", 
+                               "Expedited", "Explained", "Facilitated", "Finalized", "Formulated", "Founded", 
+                               "Generated", "Guided", "Hired", "Identified", "Implemented", "Improved", 
+                               "Increased", "Influenced", "Informed", "Initiated", "Innovated", "Installed", 
+                               "Instituted", "Instructed", "Integrated", "Interpreted", "Interviewed", "Introduced", 
+                               "Launched", "Led", "Leveraged", "Maintained", "Managed", "Marketed", "Mediated", 
+                               "Mentored", "Modeled", "Modified", "Monitored", "Motivated", "Navigated", 
+                               "Negotiated", "Obtained", "Officiated", "Operated", "Orchestrated", "Organized", 
+                               "Outpaced", "Oversaw", "Partnered", "Performed", "Persuaded", "Pioneered", 
+                               "Planned", "Prepared", "Presented", "Prioritized", "Processed", "Produced", 
+                               "Programmed", "Projected", "Promoted", "Proposed", "Provided", "Published", 
+                               "Purchased", "Recommended", "Reconciled", "Recorded", "Redesigned", "Reduced", 
+                               "Refined", "Regulated", "Rehabilitated", "Remodeled", "Reorganized", "Reported", 
+                               "Researched", "Resolved", "Restructured", "Revamped", "Reviewed", "Revised", 
+                               "Scheduled", "Secured", "Selected", "Served", "Shaped", "Shared", "Simplified", 
+                               "Simulated", "Solved", "Spearheaded", "Specialized", "Standardized", "Steered", 
+                               "Streamlined", "Strengthened", "Structured", "Studied", "Supervised", "Supported", 
+                               "Surpassed", "Synthesized", "Targeted", "Taught", "Tested", "Trained", 
+                               "Transformed", "Translated", "Troubleshot", "Unified", "Updated", "Upgraded", 
+                               "Utilized", "Validated", "Verified", "Visualized", "Won", "Wrote"];
+            
+            // Check if each phrase starts with an action verb, fix if not
+            analysisResult.coverLetterAnalysis.suggestedPhrases = 
+              analysisResult.coverLetterAnalysis.suggestedPhrases.map(phrase => {
+                const firstWord = phrase.split(' ')[0].replace(/[^\w]/g, '');
+                if (!actionVerbs.includes(firstWord)) {
+                  // Pick a random action verb that makes sense
+                  const verb = actionVerbs[Math.floor(Math.random() * actionVerbs.length)];
+                  return `${verb} ${phrase.charAt(0).toLowerCase()}${phrase.slice(1)}`;
+                }
+                return phrase;
+              });
+          }
         }
         
         console.log("Analysis completed successfully with full content");

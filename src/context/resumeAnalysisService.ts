@@ -52,7 +52,13 @@ export const analyzeResume = async (
       alignmentScore: result.alignmentScore,
       hasStarAnalysis: !!result.starAnalysis?.length,
       hasStrengths: !!result.strengths?.length,
-      hasWeaknesses: !!result.weaknesses?.length
+      hasWeaknesses: !!result.weaknesses?.length,
+      coverLetterAnalysisInfo: result.coverLetterAnalysis ? {
+        relevance: result.coverLetterAnalysis.relevance,
+        hasCompanyInsights: !!result.coverLetterAnalysis.companyInsights?.length,
+        hasKeyRequirements: !!result.coverLetterAnalysis.keyRequirements?.length,
+        hasSuggestedPhrases: !!result.coverLetterAnalysis.suggestedPhrases?.length
+      } : 'No cover letter analysis'
     });
     
     return result;
