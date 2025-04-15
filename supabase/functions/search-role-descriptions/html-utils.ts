@@ -66,3 +66,98 @@ export function detectContentPatterns(html: string) {
   
   return patterns;
 }
+
+/**
+ * Categorize text into sections like requirements, responsibilities, etc.
+ */
+export function categorizeSections(text: string) {
+  const sections: Record<string, string[]> = {
+    requirements: [],
+    responsibilities: [],
+    qualifications: [],
+    benefits: [],
+    about: [],
+    other: []
+  };
+  
+  // Split by common section headers
+  const lines = text.split('\n');
+  let currentSection = 'other';
+  
+  for (const line of lines) {
+    const lowerLine = line.toLowerCase();
+    
+    // Detect section headers
+    if (lowerLine.includes('requirement') || lowerLine.includes('what you need')) {
+      currentSection = 'requirements';
+      continue;
+    } else if (lowerLine.includes('responsibilit') || lowerLine.includes('what you will do')) {
+      currentSection = 'responsibilities';
+      continue;
+    } else if (lowerLine.includes('qualif') || lowerLine.includes('skills') || lowerLine.includes('experience')) {
+      currentSection = 'qualifications';
+      continue;
+    } else if (lowerLine.includes('benefit') || lowerLine.includes('perks') || lowerLine.includes('what we offer')) {
+      currentSection = 'benefits';
+      continue;
+    } else if (lowerLine.includes('about') && (lowerLine.includes('us') || lowerLine.includes('company'))) {
+      currentSection = 'about';
+      continue;
+    }
+    
+    // Add content to current section
+    if (line.trim()) {
+      sections[currentSection].push(line.trim());
+    }
+  }
+  
+  return sections;
+}
+
+/**
+ * Extract the most relevant sections from multiple job descriptions
+ */
+export function extractRelevantSections(descriptions: string[]): Record<string, string> {
+  const allSections: Record<string, string[]> = {
+    requirements: [],
+    responsibilities: [],
+    qualifications: [],
+    benefits: [],
+    about: [],
+    summary: []
+  };
+  
+  // Process each description and collect sections
+  for (const description of descriptions) {
+    const sections = categorizeSections(description);
+    
+    // Add sections to our collection
+    for (const [key, lines] of Object.entries(sections)) {
+      if (key in allSections && lines.length > 0) {
+        allSections[key].push(...lines);
+      }
+    }
+    
+    // Extract potential summary (first paragraph)
+    const firstParagraph = description.split('\n\n')[0];
+    if (firstParagraph && firstParagraph.length > 50 && firstParagraph.length < 500) {
+      allSections.summary.push(firstParagraph);
+    }
+  }
+  
+  // Deduplicate and select best content for each section
+  const result: Record<string, string> = {};
+  
+  for (const [key, lines] of Object.entries(allSections)) {
+    if (lines.length === 0) continue;
+    
+    // Remove duplicates and similar lines
+    const uniqueLines = [...new Set(lines)];
+    
+    // Limit section size
+    const selectedLines = uniqueLines.slice(0, 10);
+    result[key] = selectedLines.join('\n\n');
+  }
+  
+  return result;
+}
