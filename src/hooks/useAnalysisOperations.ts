@@ -271,6 +271,7 @@ function extractSkills(text: string): string[] {
 }
 
 function generateSTARAnalysis(bullet: string, jobDescription: string) {
+  // Ensure bullet is a string to prevent TypeScript errors
   if (!bullet || typeof bullet !== 'string') {
     return {
       original: '',
@@ -333,7 +334,7 @@ function generateSTARAnalysis(bullet: string, jobDescription: string) {
   };
 }
 
-function generateFallbackAnalysis(resumeText: string, jobDescription: string): any {
+function generateFallbackAnalysis(resumeText: string, jobDescription: string): AnalysisResult {
   // Extract skills from job description
   const jobSkills = extractSkills(jobDescription);
   

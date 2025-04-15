@@ -74,7 +74,12 @@ export interface AppContextType {
     jobDescriptionId: string;
     results: AnalysisResult;
   }) => Promise<void>;
-  analyzeResume: (resumeText: string, jobDescText: string) => Promise<AnalysisResult | null>;
+  analyzeResume: (
+    resumeText: string, 
+    jobDescText: string,
+    coverLetterText?: string,
+    companyName?: string
+  ) => Promise<AnalysisResult | null>;
   analysisResults: AnalysisResult | null;
   setAnalysisResults: (results: AnalysisResult | null) => void;
 }
