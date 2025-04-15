@@ -32,24 +32,24 @@ export const useCoverLetterRecommendations = () => {
     // Generate company insight enhancement
     if (hasCompanyInsights && analysis.companyInsights.length > 0) {
       const companyInsight = analysis.companyInsights.slice(0, 2).join(" and ");
-      enhancements.push(`[COMPANY INSIGHT: Consider adding: "I am particularly drawn to ${companyName} because of its ${companyInsight}."]`);
+      enhancements.push(`[COMPANY INSIGHT: Incorporate in the first or second paragraph - "I am particularly drawn to ${companyName} because of its ${companyInsight}."]`);
     }
     
     // Generate key requirements enhancement
     if (hasKeyRequirements && analysis.keyRequirements.length > 0) {
       const requirements = analysis.keyRequirements.join(", ");
-      enhancements.push(`[KEY REQUIREMENTS: Consider adding: "My experience aligns well with the ${requirements} that ${companyName} is looking for."]`);
+      enhancements.push(`[KEY REQUIREMENTS: Add to the body paragraphs - "My experience aligns well with the ${requirements} that ${companyName} is looking for."]`);
     }
     
     // Generate suggested phrases enhancement
     if (hasSuggestedPhrases && analysis.suggestedPhrases.length > 0) {
       analysis.suggestedPhrases.forEach((phrase, index) => {
-        enhancements.push(`[SUGGESTED PHRASE ${index + 1}: Consider incorporating: "${phrase}"]`);
+        enhancements.push(`[SUGGESTED PHRASE ${index + 1}: Incorporate in the APPROPRIATE sections - "${phrase}"]`);
       });
     }
     
     // Add the enhancements at the end with clear instructions
-    const enhancedText = `${originalText}\n\n\n==== SUGGESTED ENHANCEMENTS ====\n(INCORPORATE THESE INTO YOUR COVER LETTER - DO NOT COPY THIS ENTIRE SECTION)\n\n${enhancements.join("\n\n")}`;
+    const enhancedText = `${originalText}\n\n\n==== SUGGESTED ENHANCEMENTS ====\n(CAREFULLY READ AND INCORPORATE THESE SUGGESTIONS INTO THE APPROPRIATE SECTIONS OF YOUR COVER LETTER)\n\n${enhancements.join("\n\n")}`;
     
     return enhancedText;
   };
