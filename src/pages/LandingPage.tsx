@@ -48,17 +48,18 @@ const LandingPage: React.FC = () => {
       <div className="hero-gradient flex-1 flex flex-col justify-center items-center text-white px-4 py-20">
         <div className="max-w-4xl mx-auto text-center animate-fade-in">
           <h1 className="text-4xl md:text-6xl font-serif font-bold mb-6">
-            Would You Get Hired at McKinsey, BCG, or Google?
+            Transform Your Career with AI-Powered Resume Insights
           </h1>
           <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto">
-            Find out if your resume makes the cut at top consulting and tech firms with our AI-powered recruiter simulation.
+            Unlock your professional potential with our cutting-edge AI resume analysis. 
+            Get brutally honest, data-driven feedback to elevate your career opportunities.
           </p>
           
           <form 
             onSubmit={handleGetStarted}
             className="bg-white/10 backdrop-blur-sm p-6 rounded-lg max-w-md mx-auto mb-12"
           >
-            <h2 className="text-2xl font-serif font-bold mb-4">Get Started</h2>
+            <h2 className="text-2xl font-serif font-bold mb-4">Start Your Career Breakthrough</h2>
             <div className="space-y-4 mb-6">
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-white">Your Name</Label>
@@ -66,7 +67,7 @@ const LandingPage: React.FC = () => {
                   id="name"
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
-                  placeholder="Enter your name"
+                  placeholder="Enter your full name"
                   className="bg-white/20 border-white/30 text-white placeholder:text-white/50"
                   required
                 />
@@ -79,7 +80,7 @@ const LandingPage: React.FC = () => {
                   type="email"
                   value={userEmail}
                   onChange={(e) => setUserEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  placeholder="Enter your professional email"
                   className="bg-white/20 border-white/30 text-white placeholder:text-white/50"
                   required
                 />
@@ -91,27 +92,27 @@ const LandingPage: React.FC = () => {
               disabled={isSubmitting}
               className="w-full bg-white text-consulting-navy hover:bg-consulting-lightblue hover:text-consulting-blue transition-colors px-8 py-6 text-lg"
             >
-              {isSubmitting ? 'Starting...' : 'Start Your Simulation'}
+              {isSubmitting ? 'Analyzing...' : 'Unlock My Career Potential'}
             </Button>
           </form>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-              <h3 className="text-xl font-serif font-bold mb-3">Resume Analysis</h3>
+              <h3 className="text-xl font-serif font-bold mb-3">AI-Driven Analysis</h3>
               <p className="text-white/80">
-                Get your resume evaluated against real job descriptions using industry-standard criteria.
+                Get a comprehensive, unbiased evaluation of your resume using advanced AI technology.
               </p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-              <h3 className="text-xl font-serif font-bold mb-3">STAR Optimization</h3>
+              <h3 className="text-xl font-serif font-bold mb-3">Strategic Optimization</h3>
               <p className="text-white/80">
-                See how the STAR method transforms your experience into compelling achievements.
+                Transform your experiences into compelling narratives that capture recruiters' attention.
               </p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-              <h3 className="text-xl font-serif font-bold mb-3">Honest Feedback</h3>
+              <h3 className="text-xl font-serif font-bold mb-3">Career Acceleration</h3>
               <p className="text-white/80">
-                Get the truth about your application's strengths and weaknesses from an AI recruiter.
+                Gain actionable insights to elevate your professional profile and stand out in competitive markets.
               </p>
             </div>
           </div>
@@ -120,7 +121,7 @@ const LandingPage: React.FC = () => {
       
       <footer className="bg-consulting-charcoal text-white py-4 text-center">
         <p className="text-sm">
-          © 2025 WouldYouGetHired.com | AI-Powered Recruiting Simulation
+          © 2025 CareerLens AI | Intelligent Resume Optimization
         </p>
       </footer>
     </div>
@@ -128,3 +129,4 @@ const LandingPage: React.FC = () => {
 };
 
 export default LandingPage;
+
