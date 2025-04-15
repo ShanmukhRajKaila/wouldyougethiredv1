@@ -34,40 +34,22 @@ export const useExtractorErrorHandling = ({
     // Enhanced validation for any extracted text
     if (text.includes('Error extracting') || 
         text.includes('binary file') || 
-        text.includes('unable to parse') ||
-        text.includes('invalid format')) {
+        text.includes('unable to parse')) {
       handleExtractionError(type);
       return false;
     }
     
     // Length validation based on content type with improved thresholds
-    if ((type === 'resume' && text.length < 200) ||
-        (type === 'coverLetter' && text.length < 100)) {
+    if ((type === 'resume' && text.length < 100) ||
+        (type === 'coverLetter' && text.length < 50)) {
       handleExtractionError(type);
       return false;
     }
     
-    // Enhanced validation for job descriptions - MUCH LESS AGGRESSIVE
-    if (type === 'jobDescription') {
-      // Only check for obvious non-job description content
-      const invalidPatterns = [
-        /404 not found/i,
-        /page\s*not\s*found/i,
-        /access\s*denied/i
-      ];
-      
-      // Only fail if multiple invalid patterns match
-      const matchCount = invalidPatterns.filter(pattern => text.match(pattern)).length;
-      if (matchCount >= 2) {
-        handleExtractionError(type);
-        return false;
-      }
-      
-      // Only do minimal check for extremely short content
-      if (text.length < 50) {
-        handleExtractionError(type);
-        return false;
-      }
+    // Extremely minimal validation for job descriptions - almost never reject
+    if (type === 'jobDescription' && text.length < 20) {
+      handleExtractionError(type);
+      return false;
     }
     
     return true;

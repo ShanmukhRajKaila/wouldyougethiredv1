@@ -100,11 +100,18 @@ export const useAnalysisSubmission = ({
       
       // Direct analysis without saving to database again
       try {
-        // Pass the correct arguments according to the function signature
+        console.log("Retrying analysis with parameters:", {
+          resumeLength: resumeText.length,
+          jobDescriptionLength: jobDescription.length,
+          hasCoverLetter: !!coverLetterText,
+          coverLetterLength: coverLetterText?.length,
+          companyName: selectedCompany?.name
+        });
+        
         const analysisResult = await analyzeResume(
           resumeText, 
           jobDescription,
-          isCoverLetterIncluded && coverLetterText ? coverLetterText : undefined,
+          coverLetterText || undefined,
           selectedCompany?.name
         );
         
@@ -115,9 +122,17 @@ export const useAnalysisSubmission = ({
         } else {
           throw new Error('Analysis returned no results');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Analysis retry error:', error);
-        setProcessingError('Our advanced analysis service is still experiencing high volume. Using our built-in analysis instead.');
+        
+        // Check for specific OpenAI API limit messages
+        const errorMsg = error.message || '';
+        if (errorMsg.includes('rate limit') || errorMsg.includes('quota') || 
+            errorMsg.includes('capacity') || errorMsg.includes('token limit')) {
+          setProcessingError('OpenAI API rate limit or token limit reached. Please try again in a few minutes or use shorter documents.');
+        } else {
+          setProcessingError('Our advanced analysis service is experiencing high volume. Using our built-in analysis instead.');
+        }
       } finally {
         setIsSubmitting(false);
       }
@@ -220,6 +235,16 @@ export const useAnalysisSubmission = ({
             setCoverLetterText(coverLetterText);
           }
           
+          // Log analysis parameters for debugging
+          console.log("Sending analysis request for resume length:", resumeText.length, 
+                      ", job desc length:", jobDescription.length);
+          if (coverLetterText) {
+            console.log("Including cover letter of length:", coverLetterText.length);
+          }
+          if (selectedCompany?.name) {
+            console.log("Company name provided:", selectedCompany.name);
+          }
+          
           // Proceed with analysis, passing all necessary parameters
           try {
             await performAnalysis(
@@ -230,10 +255,19 @@ export const useAnalysisSubmission = ({
               isCoverLetterIncluded ? coverLetterText : undefined,
               selectedCompany?.name
             );
-          } catch (error) {
+          } catch (error: any) {
             console.error('Analysis error:', error);
-            // Show processing error but don't prevent user from seeing results
-            setProcessingError('Our advanced analysis service is experiencing high volume. Using our built-in analysis instead.');
+            
+            // Check for specific OpenAI API limit messages
+            const errorMsg = error.message || '';
+            if (errorMsg.includes('rate limit') || errorMsg.includes('quota') || 
+                errorMsg.includes('capacity') || errorMsg.includes('token limit')) {
+              setProcessingError('OpenAI API rate limit or token limit reached. Please try again in a few minutes or use shorter documents.');
+            } else {
+              // Show processing error but don't prevent user from seeing results
+              setProcessingError('Our advanced analysis service is experiencing high volume. Using our built-in analysis instead.');
+            }
+            
             // Continue to results page despite the error
             setCurrentStage('results');
           }

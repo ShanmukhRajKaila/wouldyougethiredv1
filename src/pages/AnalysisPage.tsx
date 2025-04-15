@@ -5,6 +5,7 @@ import { useAppContext } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { AlertTriangle } from 'lucide-react';
 
 const AnalysisPage: React.FC = () => {
   const { 
@@ -20,6 +21,7 @@ const AnalysisPage: React.FC = () => {
   } = useAppContext();
   const [loadingMessage, setLoadingMessage] = useState<string>("Extracting text from resume...");
   const [progressValue, setProgressLocal] = useState<number>(0);
+  const [analysisTimeoutWarning, setAnalysisTimeoutWarning] = useState<boolean>(false);
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -85,10 +87,22 @@ const AnalysisPage: React.FC = () => {
       }
     }, messageInterval);
     
+    // Set a timeout to show a warning if analysis takes too long
+    const warningTimeout = setTimeout(() => {
+      setAnalysisTimeoutWarning(true);
+    }, 45000); // 45 seconds
+    
     return () => {
       clearInterval(interval);
+      clearTimeout(warningTimeout);
     };
   }, [analysisResults, navigate, setCurrentStage, setProgress, selectedCompany]);
+  
+  const handleCancelAnalysis = () => {
+    toast.info("Analysis cancelled");
+    setCurrentStage('resumeUpload');
+    navigate('/');
+  };
   
   return (
     <PageContainer>
@@ -110,6 +124,27 @@ const AnalysisPage: React.FC = () => {
           <p className="text-consulting-gray text-lg animate-pulse">
             {loadingMessage}
           </p>
+          
+          {analysisTimeoutWarning && (
+            <div className="mt-8 p-4 bg-amber-50 border border-amber-300 rounded-md flex items-start">
+              <AlertTriangle className="text-amber-500 mr-2 mt-0.5" />
+              <div className="text-left">
+                <p className="font-semibold text-amber-700">Analysis is taking longer than expected</p>
+                <p className="text-sm text-amber-600 mt-1">
+                  This could be due to OpenAI API rate limits or your document size. 
+                  You can wait or cancel and try again with shorter documents.
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2 bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100"
+                  onClick={handleCancelAnalysis}
+                >
+                  Cancel and try again
+                </Button>
+              </div>
+            </div>
+          )}
           
           <div className="mt-8">
             <p className="text-sm text-consulting-gray">

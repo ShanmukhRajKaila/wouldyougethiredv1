@@ -31,8 +31,9 @@ const ResumeExtractor: React.FC<ResumeExtractorProps> = ({
       const text = await PDFExtractor.extractText(file);
       
       if (text) {
-        if (text.includes('scanned document') || 
-            text.includes('image-based PDF') || 
+        // Less strict validation to avoid false positives
+        if ((text.includes('scanned document') && text.length < 200) || 
+            (text.includes('image-based PDF') && text.length < 200) || 
             text.includes('Error extracting') ||
             text.includes('binary file')) {
           setExtractionError(text);

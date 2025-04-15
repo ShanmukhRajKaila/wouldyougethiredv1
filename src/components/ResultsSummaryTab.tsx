@@ -1,10 +1,11 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import StrengthsCard from './StrengthsCard';
-import WeaknessesCard from './WeaknessesCard';
-import RecommendationsCard from './RecommendationsCard';
 import { useAppContext } from '@/context/AppContext';
+import StrengthsCard from '@/components/StrengthsCard';
+import WeaknessesCard from '@/components/WeaknessesCard';
+import RecommendationsCard from '@/components/RecommendationsCard';
+import { AlertTriangle } from 'lucide-react';
 
 interface ResultsSummaryTabProps {
   strengths: string[];
@@ -13,64 +14,63 @@ interface ResultsSummaryTabProps {
   onReset: () => void;
 }
 
-const ResultsSummaryTab: React.FC<ResultsSummaryTabProps> = ({ 
-  strengths = [], 
-  weaknesses = [], 
-  recommendations = [], 
-  onReset 
+const ResultsSummaryTab: React.FC<ResultsSummaryTabProps> = ({
+  strengths,
+  weaknesses,
+  recommendations,
+  onReset
 }) => {
-  const { setCurrentStage, setJobDescription } = useAppContext();
+  const { analysisResults } = useAppContext();
   
-  // Ensure we always have arrays, even if undefined is passed
-  const validStrengths = Array.isArray(strengths) ? strengths : [];
-  const validWeaknesses = Array.isArray(weaknesses) ? weaknesses : [];
-  const validRecommendations = Array.isArray(recommendations) ? recommendations : [];
-  
-  // If we have no data, provide sensible defaults
-  const hasNoData = validStrengths.length === 0 && validWeaknesses.length === 0 && validRecommendations.length === 0;
-  
-  const defaultStrengths = hasNoData ? [
-    "Resume has good structure",
-    "Education section is well formatted",
-    "Contact information is clearly presented"
-  ] : [];
-  
-  const defaultWeaknesses = hasNoData ? [
-    "Could benefit from more specific keywords from the job description",
-    "Experience bullet points could be more achievement-focused",
-    "Consider adding metrics to quantify achievements"
-  ] : [];
-  
-  const defaultRecommendations = hasNoData ? [
-    "Customize your resume for each application",
-    "Use action verbs at the beginning of bullet points",
-    "Include relevant skills mentioned in the job description"
-  ] : [];
-  
-  const handleTryAnother = () => {
-    // Clear job description
-    setJobDescription('');
-    // Reset to job description page instead of full reset
-    setCurrentStage('jobDescription');
-  };
+  // Check if any key analysis sections are missing
+  const hasMissingData = !analysisResults || 
+                         !analysisResults.starAnalysis || 
+                         analysisResults.starAnalysis.length === 0 ||
+                         !recommendations || 
+                         recommendations.length === 0;
   
   return (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StrengthsCard strengths={validStrengths.length > 0 ? validStrengths : defaultStrengths} />
-        <WeaknessesCard weaknesses={validWeaknesses.length > 0 ? validWeaknesses : defaultWeaknesses} />
-        <RecommendationsCard recommendations={validRecommendations.length > 0 ? validRecommendations : defaultRecommendations} />
+    <div className="mt-6 space-y-8">
+      {hasMissingData && (
+        <div className="p-4 rounded-md bg-amber-50 border border-amber-200 mb-6">
+          <div className="flex items-start">
+            <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 mr-2" />
+            <div>
+              <p className="font-medium text-amber-800">Limited Analysis Results</p>
+              <p className="text-sm text-amber-700 mt-1">
+                Some analysis data appears to be missing. This may be due to OpenAI API limits or an issue with the analysis service.
+                Try again with shorter documents or wait and try again later.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <StrengthsCard 
+          strengths={strengths} 
+          className="lg:col-span-1"
+        />
+        
+        <WeaknessesCard 
+          weaknesses={weaknesses} 
+          className="lg:col-span-1"
+        />
       </div>
       
-      <div className="mt-8 flex justify-center">
-        <Button 
-          onClick={handleTryAnother}
+      <div className="mt-8">
+        <RecommendationsCard recommendations={recommendations} />
+      </div>
+      
+      <div className="mt-8 text-center">
+        <Button
+          onClick={onReset}
           className="bg-consulting-navy hover:bg-consulting-blue"
         >
-          Try Another Application
+          Start New Analysis
         </Button>
       </div>
-    </>
+    </div>
   );
 };
 
