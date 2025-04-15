@@ -25,18 +25,38 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
   
   // Generate a personalized suggestion based on the improved bullet point
   const generateSuggestion = (improved: string): string => {
-    if (improved.toLowerCase().includes("led") || improved.toLowerCase().includes("managed")) {
-      return "Emphasize leadership abilities by quantifying the team size and outcome achievements. Consider adding metrics like team growth or performance improvements under your guidance.";
-    } else if (improved.toLowerCase().includes("increase") || improved.toLowerCase().includes("improve") || improved.toLowerCase().includes("%")) {
-      return "Continue highlighting measurable results with specific metrics. Consider adding the timeframe in which these results were achieved to provide more context.";
-    } else if (improved.toLowerCase().includes("develop") || improved.toLowerCase().includes("implement") || improved.toLowerCase().includes("create")) {
-      return "Elaborate further on your technical contributions by mentioning specific technologies or methodologies used. Consider adding the business impact of your implementation.";
-    } else if (improved.toLowerCase().includes("customer") || improved.toLowerCase().includes("client")) {
-      return "When discussing client-facing work, quantify the client base and highlight your direct impact on client satisfaction or retention metrics.";
-    } else if (improved.toLowerCase().includes("analyze") || improved.toLowerCase().includes("research")) {
-      return "For analytical achievements, consider specifying the tools or methodologies used and how your insights directly impacted business decisions.";
+    if (improved.toLowerCase().includes("led")) {
+      return "When discussing leadership experience, prepare to articulate your specific leadership style and how it evolved in this context. Be ready to explain how you handled resistance or conflicts within the team, as these stories demonstrate emotional intelligence that complements your technical skills.";
+    } else if (improved.toLowerCase().includes("managed")) {
+      return "For management experiences, consider preparing examples that showcase different aspects of management: resource allocation, performance development, and strategic guidance. Highlight situations where you had to make difficult trade-off decisions with limited resources.";
+    } else if (improved.toLowerCase().includes("increase") || improved.toLowerCase().includes("%")) {
+      return "When discussing quantifiable improvements, be prepared to explain the methodology behind your measurements and any controls you implemented. Sophisticated employers value understanding the context behind metrics as much as the numbers themselves.";
+    } else if (improved.toLowerCase().includes("improve")) {
+      return "With improvement initiatives, consider discussing the diagnostic process that led to your approach. Explaining how you identified the root cause of issues demonstrates analytical thinking valuable across various organizational contexts.";
+    } else if (improved.toLowerCase().includes("develop")) {
+      return "For development work, prepare to discuss both the technical implementation and the business value proposition. Being able to connect your technical decisions to organizational outcomes demonstrates valuable strategic thinking beyond execution.";
+    } else if (improved.toLowerCase().includes("implement")) {
+      return "When discussing implementations, consider preparing a brief explanation of your approach to change management and stakeholder buy-in. The most technically perfect solution fails without effective implementation strategy.";
+    } else if (improved.toLowerCase().includes("create")) {
+      return "For creative initiatives, prepare to discuss your inspiration sources and how you validated that your creation would solve the intended problem. This demonstrates your ability to balance innovation with pragmatic business needs.";
+    } else if (improved.toLowerCase().includes("customer")) {
+      return "When highlighting customer-focused work, prepare specific examples of how you gathered and incorporated customer feedback into your approach. Stories that show your ability to translate customer needs into actionable insights are particularly valuable.";
+    } else if (improved.toLowerCase().includes("client")) {
+      return "For client work, consider preparing examples that demonstrate how you balanced client requests with business constraints or technical limitations. Navigating these tensions effectively is a sophisticated skill that many candidates struggle to articulate.";
+    } else if (improved.toLowerCase().includes("analyze")) {
+      return "When discussing analytical work, prepare to explain not just your methodology but also how you communicated complex findings to different audiences. The ability to translate technical analysis into actionable business insights is increasingly valuable in data-driven organizations.";
+    } else if (improved.toLowerCase().includes("research")) {
+      return "For research initiatives, consider discussing how you determined research priorities and balanced exploration with execution. This demonstrates strategic thinking that extends beyond pure analytical capabilities.";
+    } else if (improved.toLowerCase().includes("collaborate") || improved.toLowerCase().includes("partner")) {
+      return "When highlighting collaborative experiences, prepare examples that demonstrate how you navigated different working styles or priorities across teams. Stories that show you building consensus among diverse stakeholders showcase valuable organizational intelligence.";
+    } else if (improved.toLowerCase().includes("optimiz") || improved.toLowerCase().includes("efficien")) {
+      return "For optimization work, be ready to discuss the broader business context that prioritized this efficiency. Understanding and articulating the balance between optimization and other business considerations demonstrates valuable strategic thinking.";
+    } else if (improved.toLowerCase().includes("negotiat") || improved.toLowerCase().includes("contract")) {
+      return "When discussing negotiations, prepare to explain your preparation process and how you determined your position. The methodology behind negotiation often demonstrates more sophisticated thinking than the outcome itself.";
+    } else if (improved.toLowerCase().includes("present") || improved.toLowerCase().includes("communicat")) {
+      return "For communication experiences, consider discussing how you adapted your approach for different audiences or in response to feedback. This flexibility demonstrates emotional intelligence that complements your technical capabilities.";
     } else {
-      return "Consider adding specific industry terminology and quantifiable metrics to further enhance this bullet point and demonstrate your impact more clearly.";
+      return "As you refine this bullet point further, consider adding a brief narrative element that illustrates the before and after states. Storytelling elements make your experiences more memorable during interviews and demonstrate the contextual understanding employers value.";
     }
   };
   

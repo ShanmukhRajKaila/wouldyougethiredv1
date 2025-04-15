@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -100,57 +101,137 @@ const ResultsPage: React.FC = () => {
   };
   
   const generateStrengthExplanation = (strength: string): string => {
-    if (strength.toLowerCase().includes("experience")) {
-      return "Your demonstrated experience in this area provides concrete proof of your capabilities. Consider quantifying this experience with specific metrics or highlighting a particular project where this strength made a significant impact.";
-    } else if (strength.toLowerCase().includes("skill") || strength.toLowerCase().includes("proficiency")) {
-      return "This technical proficiency is a key differentiator for you. Try mentioning how you've applied this skill in non-standard ways or to solve complex problems that others couldn't address.";
-    } else if (strength.toLowerCase().includes("leader") || strength.toLowerCase().includes("manage")) {
-      return "Your leadership abilities suggest you can take on greater responsibilities. In your interviews, prepare stories about how you've developed team members or navigated difficult decisions that showcased this quality.";
-    } else if (strength.toLowerCase().includes("communicat") || strength.toLowerCase().includes("collaborat")) {
-      return "This soft skill is increasingly valued in cross-functional teams. Consider preparing examples of how you've bridged communication gaps or facilitated collaboration between different departments or stakeholders.";
-    } else if (strength.toLowerCase().includes("analy") || strength.toLowerCase().includes("data")) {
-      return "Your analytical capabilities set you apart in a data-driven workplace. Prepare to discuss how you translate raw data into actionable insights that drive business outcomes.";
-    } else if (strength.toLowerCase().includes("project") || strength.toLowerCase().includes("deliver")) {
-      return "Your track record of successful delivery demonstrates reliability. Focus on describing your methodology for ensuring projects stay on track even when facing unexpected obstacles.";
-    } else {
-      return "This strength directly aligns with core requirements for the role. During interviews, connect this ability to specific business challenges the company faces based on your research about their current market position.";
+    const lowerStrength = strength.toLowerCase();
+    
+    if (lowerStrength.includes("experience") && lowerStrength.includes("year")) {
+      return "Years of experience serve as a trust signal to employers that you've seen industry cycles and can navigate complex situations. This longevity demonstrates commitment and adaptability that many candidates lack. Consider preparing stories that highlight how your perspective has evolved over time.";
     }
+    
+    if (lowerStrength.includes("experience")) {
+      return "Domain expertise is especially valuable in this role because it reduces onboarding time and risk. Employers see this as evidence you can hit the ground running and bring valuable context to the team. Be prepared to discuss specific challenges unique to this field that you've already overcome.";
+    }
+    
+    if (lowerStrength.includes("skill") || lowerStrength.includes("proficien")) {
+      return "Technical proficiency in this area gives you a competitive edge because it solves a specific pain point for this employer. Many candidates claim similar skills without demonstrable results—be ready to explain how you developed this capability and the specific business outcomes it enabled.";
+    }
+    
+    if (lowerStrength.includes("leader") || lowerStrength.includes("manag")) {
+      return "Leadership capabilities address the hidden need for candidates who can both execute individually and scale their impact through others. This signals promotability and longevity with the company. Consider how you might articulate your leadership philosophy in ways that align with this company's culture.";
+    }
+    
+    if (lowerStrength.includes("communicat") || lowerStrength.includes("collaborat")) {
+      return "Strong communication skills are increasingly valued as work becomes more cross-functional and remote. This capability signals that you can influence without authority and navigate complex stakeholder landscapes. Consider preparing examples that demonstrate your ability to translate technical concepts to business stakeholders or vice versa.";
+    }
+    
+    if (lowerStrength.includes("analy") || lowerStrength.includes("data")) {
+      return "Analytical abilities indicate you can make evidence-based decisions rather than relying solely on intuition. This is particularly valuable in today's data-rich environment where companies need team members who can extract insights from complex information. Consider discussing a time when your analysis led to a non-obvious but successful decision.";
+    }
+    
+    if (lowerStrength.includes("project") || lowerStrength.includes("deliver")) {
+      return "Delivery track record is a strong predictor of future performance that addresses the employer's need for reliable execution. Many candidates talk about capabilities without showing results. Your history of successful delivery is a competitive differentiator that deserves emphasis in interviews.";
+    }
+    
+    if (lowerStrength.includes("problem") || lowerStrength.includes("solution")) {
+      return "Problem-solving abilities are increasingly valuable in a business environment characterized by complexity and ambiguity. Your demonstrated capacity to tackle undefined challenges makes you adaptable to changing requirements and valuable across multiple contexts within the organization.";
+    }
+    
+    if (lowerStrength.includes("innovat") || lowerStrength.includes("creativ")) {
+      return "Innovation capability addresses the company's need for continuous improvement and adaptation. Your ability to think beyond conventional approaches suggests you'll continue adding value as the role and industry evolve. Consider discussing how you balance creative thinking with practical implementation.";
+    }
+    
+    if (lowerStrength.includes("customer") || lowerStrength.includes("client")) {
+      return "Customer-centricity differentiates you in a market where many candidates focus solely on technical capabilities or internal processes. Your orientation toward customer needs signals an understanding of the business's ultimate purpose and suggests you'll prioritize work that delivers real value.";
+    }
+    
+    return "This strength directly addresses a core requirement for the position and demonstrates alignment between your background and the role's needs. In interviews, consider exploring how this capability has evolved throughout your career and how you might apply it to the specific challenges mentioned in the job description.";
   };
   
   const generateWeaknessExplanation = (weakness: string): string => {
-    if (weakness.toLowerCase().includes("experience") || weakness.toLowerCase().includes("background")) {
-      return "Consider taking on freelance projects or volunteer opportunities that will build this experience quickly. Even a small self-directed project can provide talking points to address this gap in interviews.";
-    } else if (weakness.toLowerCase().includes("technical") || weakness.toLowerCase().includes("skill")) {
-      return "Employers often value learning capacity over existing knowledge. Create a learning plan with specific milestones to develop this skill, and mention in interviews that you're actively upskilling in this area.";
-    } else if (weakness.toLowerCase().includes("certif") || weakness.toLowerCase().includes("qualif")) {
-      return "Research which certification programs are most respected in this field. Even beginning the certification process before interviews can demonstrate your commitment to professional development.";
-    } else if (weakness.toLowerCase().includes("tool") || weakness.toLowerCase().includes("software")) {
-      return "Consider reaching out to professionals who use this tool daily for a short informational interview. This will help you understand whether investing time in learning this tool will truly provide value for your career path.";
-    } else if (weakness.toLowerCase().includes("industr") || weakness.toLowerCase().includes("sector")) {
-      return "Industry knowledge can be gained through targeted networking. Join relevant professional groups and attend webinars to quickly build contextual understanding that can compensate for limited direct experience.";
-    } else if (weakness.toLowerCase().includes("lead") || weakness.toLowerCase().includes("manage")) {
-      return "Leadership skills can be developed outside traditional management roles. Look for opportunities to lead initiatives or mentor colleagues, then document these experiences for your interviews.";
-    } else {
-      return "This gap might be addressed through targeted self-development. Research online courses from platforms like Coursera or LinkedIn Learning that specifically address this area, and begin building demonstrable skills you can discuss in interviews.";
+    const lowerWeakness = weakness.toLowerCase();
+    
+    if (lowerWeakness.includes("experience") && (lowerWeakness.includes("lack") || lowerWeakness.includes("limited"))) {
+      return "Experience gaps are often overemphasized in job requirements. Research shows that performance correlation with experience plateaus after 2-3 years in similar roles. Focus instead on your learning velocity and transferable experiences that demonstrate you can quickly close this gap while bringing fresh perspectives that long-tenured candidates might lack.";
     }
+    
+    if (lowerWeakness.includes("technical") || lowerWeakness.includes("technolog")) {
+      return "Technical knowledge gaps are among the easiest to address because of widely available resources and your demonstrated ability to learn. This is primarily a short-term limitation rather than a fundamental obstacle. Your transferable problem-solving approach is likely more valuable than specific technical knowledge that could become obsolete.";
+    }
+    
+    if (lowerWeakness.includes("certif") || lowerWeakness.includes("qualif")) {
+      return "While certifications provide useful signals, they're often poor predictors of on-the-job success compared to demonstrated capabilities. Many employers value candidates who have learned through practical application rather than formal certification paths. Consider how you can reframe your hands-on experience as more valuable than credentials.";
+    }
+    
+    if (lowerWeakness.includes("tool") || lowerWeakness.includes("software")) {
+      return "Specific tool knowledge is typically the fastest skill gap to close. Most modern software tools are designed for intuitive adoption and have extensive documentation. Your demonstrated proficiency with related tools suggests you'll have a short learning curve while bringing valuable cross-tool insights that specialists might miss.";
+    }
+    
+    if (lowerWeakness.includes("industr") || lowerWeakness.includes("sector")) {
+      return "Industry-specific knowledge can create initial friction but often leads to more innovative approaches. Research shows that industry outsiders often drive transformative change because they're not constrained by 'how things have always been done.' Your fresh perspective could be more valuable than deep industry knowledge if properly contextualized.";
+    }
+    
+    if (lowerWeakness.includes("lead") || lowerWeakness.includes("manage")) {
+      return "Leadership experience is contextual and develops non-linearly. Many hiring managers overvalue formal leadership titles while undervaluing informal influence and cross-functional leadership. Consider how you've led initiatives, mentored colleagues, or influenced decisions without formal authority as alternative evidence of leadership capabilities.";
+    }
+    
+    if (lowerWeakness.includes("skill") && (lowerWeakness.includes("soft") || lowerWeakness.includes("interpersonal"))) {
+      return "Interpersonal skills are often judged subjectively and context-dependent. What appears as a limitation in one environment may be a strength in another. Consider how your communication and collaboration style might actually align better with this company's culture than with previous environments where different approaches were valued.";
+    }
+    
+    if (lowerWeakness.includes("language") || lowerWeakness.includes("programming")) {
+      return "Programming language knowledge is increasingly transferable as patterns standardize across languages. Research indicates that proficient developers can become productive in new languages within weeks rather than months. Your existing technical foundation provides the conceptual understanding needed to quickly adapt to new syntax and frameworks.";
+    }
+    
+    if (lowerWeakness.includes("remote") || lowerWeakness.includes("virtual")) {
+      return "Remote work capabilities are rapidly evolving with improving tools and practices. Many skills that seemed specialized to remote environments are becoming standard professional practices. Your adaptability and communication skills likely provide the foundation needed to excel in distributed teams with minimal transition time.";
+    }
+    
+    return "This potential gap represents an opportunity to demonstrate your adaptability and growth mindset. Research shows that candidates who acknowledge areas for development and demonstrate active learning often outperform those with static skill sets. Consider framing this as an area where you've already begun developing capability rather than a fixed limitation.";
   };
   
   const generateRecommendationExplanation = (recommendation: string): string => {
-    if (recommendation.toLowerCase().includes("highlight")) {
-      return "When implementing this change, focus on using industry-specific terminology that demonstrates insider knowledge. Recruiters often scan for these terms as signals that you understand the field's context and challenges.";
-    } else if (recommendation.toLowerCase().includes("add") || recommendation.toLowerCase().includes("include")) {
-      return "As you add this information, consider creating a 'success story' format that follows the STAR method (Situation, Task, Action, Result) to make this addition more memorable and impactful to hiring managers.";
-    } else if (recommendation.toLowerCase().includes("focus") || recommendation.toLowerCase().includes("emphasize")) {
-      return "When emphasizing this area, consider creating a separate skills section that visually prioritizes these capabilities. This formatting change can direct the reader's attention to your most relevant qualifications.";
-    } else if (recommendation.toLowerCase().includes("training") || recommendation.toLowerCase().includes("course") || recommendation.toLowerCase().includes("learn")) {
-      return "After completing relevant learning, update your LinkedIn profile and resume simultaneously. Many employers cross-check these platforms for consistency and to verify your commitment to professional development.";
-    } else if (recommendation.toLowerCase().includes("quantif") || recommendation.toLowerCase().includes("metric")) {
-      return "When adding numbers to your resume, ensure they're precisely accurate as they may be verified. Consider creating a separate document with more detailed context around these metrics to reference during interviews.";
-    } else if (recommendation.toLowerCase().includes("project") || recommendation.toLowerCase().includes("portfolio")) {
-      return "As you develop your portfolio, focus on quality over quantity. A single well-documented project that clearly demonstrates the relevant skills will be more valuable than multiple superficial examples.";
-    } else {
-      return "Consider how this change might affect your personal brand consistency across all job search platforms. Ensure that your LinkedIn, portfolio website, and GitHub profiles reflect this same strategic emphasis.";
+    const lowerRec = recommendation.toLowerCase();
+    
+    if (lowerRec.includes("highlight") || lowerRec.includes("emphasize")) {
+      return "Emphasizing this aspect of your background addresses a key hiring bias: most recruiters spend less than 10 seconds initially scanning resumes. Strategic emphasis ensures your most relevant experiences receive attention during this critical first impression. This isn't about changing your experience, but about ensuring your most relevant capabilities aren't overlooked.";
     }
+    
+    if (lowerRec.includes("add") || lowerRec.includes("include")) {
+      return "Including this information addresses a fundamental information asymmetry in the hiring process. Recruiters have specific unstated requirements that they're screening for—this addition helps bridge the gap between your actual capabilities and what might otherwise remain an invisible requirement. This creates a more complete picture of your fit for the role.";
+    }
+    
+    if (lowerRec.includes("focus") || lowerRec.includes("prioritize")) {
+      return "Refocusing your materials in this way aligns with research showing that applicants who tailor their messaging to specific roles receive interview invitations at 3-5x the rate of those using generic materials. This isn't about misrepresenting your background, but about emphasizing the aspects most relevant to this specific opportunity.";
+    }
+    
+    if (lowerRec.includes("training") || lowerRec.includes("course") || lowerRec.includes("learn")) {
+      return "Pursuing this learning demonstrates two valuable traits simultaneously: self-awareness about development areas and proactive growth mindset. Research shows that hiring managers value learning agility over existing knowledge in rapidly changing fields. This investment signals your commitment to continued relevance in an evolving landscape.";
+    }
+    
+    if (lowerRec.includes("quantif") || lowerRec.includes("metric")) {
+      return "Adding quantification addresses the evidence gap that weakens many resumes. Specific metrics transform abstract claims into credible achievements and provide concrete anchors for interviewers to explore further. This approach also signals business acumen—an understanding that your work ultimately connects to measurable business outcomes.";
+    }
+    
+    if (lowerRec.includes("project") || lowerRec.includes("portfolio")) {
+      return "Developing portfolio evidence creates tangible proof of capabilities that would otherwise remain theoretical to employers. This approach bypasses the common experience paradox (needing experience to get experience) by demonstrating practical capability regardless of formal role history. It also signals initiative and genuine interest in the field.";
+    }
+    
+    if (lowerRec.includes("network") || lowerRec.includes("connect")) {
+      return "Strategic networking addresses the reality that 50-70% of roles are filled through connections rather than applications. Even beyond direct referrals, insider perspectives provide crucial context about unstated priorities and culture that help you position your background more effectively. This isn't about circumventing processes but gaining the context needed to navigate them successfully.";
+    }
+    
+    if (lowerRec.includes("interview") || lowerRec.includes("prepare")) {
+      return "Focused interview preparation addresses the fundamental asymmetry of the hiring process: while you might interview for a handful of roles, interviewers evaluate dozens of candidates. Deliberate preparation helps you communicate your value proposition clearly despite the inherent pressure and time constraints of the interview format.";
+    }
+    
+    if (lowerRec.includes("tailor") || lowerRec.includes("customize")) {
+      return "Customizing your application materials acknowledges that hiring is fundamentally about solving specific problems for employers. This approach demonstrates both your understanding of their needs and your ability to communicate relevantly—a skill valuable in almost any professional context. It also signals genuine interest rather than a volume-based application strategy.";
+    }
+    
+    if (lowerRec.includes("skill") || lowerRec.includes("expertise")) {
+      return "Developing this capability addresses an evolving requirement in the role that may not yet be widespread among candidates. This creates opportunity to differentiate yourself in an otherwise competitive talent pool. Early investment in emerging skill areas often yields disproportionate returns as demand increases while supply remains limited.";
+    }
+    
+    return "Implementing this recommendation addresses misalignment between how you're currently presenting your background and how hiring decisions are made for this type of role. This adjustment isn't about fundamentally changing your approach, but about ensuring decision-makers recognize the relevant value you already bring to the position.";
   };
   
   if (!analysisResults) {
@@ -183,7 +264,7 @@ const ResultsPage: React.FC = () => {
     weaknesses = [],
     recommendations = [],
     starAnalysis = []
-  } = analysisResults;
+  } = analysisResults || {};
   
   return (
     <PageContainer>
@@ -195,14 +276,9 @@ const ResultsPage: React.FC = () => {
             </h1>
             <p className="text-consulting-gray">
               {selectedCompany?.name ? (
-                <><span className="font-medium">Company:</span> {selectedCompany.name} | <span className="font-medium">Role:</span> {selectedRole || "Click to add role"}</>
+                <><span className="font-medium">Company:</span> {selectedCompany.name} | <span className="font-medium">Role:</span> {selectedRole}</>
               ) : (
-                <><span className="font-medium">Role:</span> <span 
-                  onClick={() => setShowRoleDialog(true)} 
-                  className={`${!selectedRole ? "text-blue-500 underline cursor-pointer" : ""}`}
-                >
-                  {selectedRole || "Click to add role"}
-                </span></>
+                <><span className="font-medium">Role:</span> {selectedRole}</>
               )}
             </p>
           </div>
@@ -283,7 +359,7 @@ const ResultsPage: React.FC = () => {
                             </CollapsibleTrigger>
                             <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
                               <div className="pt-2">
-                                <h4 className="font-semibold text-xs text-gray-700">How to leverage this strength:</h4>
+                                <h4 className="font-semibold text-xs text-gray-700">Why this matters:</h4>
                                 <p className="text-xs mt-1">{generateStrengthExplanation(strength)}</p>
                               </div>
                             </CollapsibleContent>
@@ -330,7 +406,7 @@ const ResultsPage: React.FC = () => {
                             </CollapsibleTrigger>
                             <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
                               <div className="pt-2">
-                                <h4 className="font-semibold text-xs text-gray-700">How to address this gap:</h4>
+                                <h4 className="font-semibold text-xs text-gray-700">Why this matters:</h4>
                                 <p className="text-xs mt-1">{generateWeaknessExplanation(weakness)}</p>
                               </div>
                             </CollapsibleContent>
@@ -377,7 +453,7 @@ const ResultsPage: React.FC = () => {
                             </CollapsibleTrigger>
                             <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
                               <div className="pt-2">
-                                <h4 className="font-semibold text-xs text-gray-700">Implementation strategy:</h4>
+                                <h4 className="font-semibold text-xs text-gray-700">Why this matters:</h4>
                                 <p className="text-xs mt-1">{generateRecommendationExplanation(recommendation)}</p>
                               </div>
                             </CollapsibleContent>
