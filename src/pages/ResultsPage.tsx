@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,16 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ResumeComparison from '@/components/ResumeComparison';
 import StarAnalysis from '@/components/StarAnalysis';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronUp, Check, X, ArrowRight } from "lucide-react";
+import { Check, X, ArrowRight } from "lucide-react";
 
 const ResultsPage: React.FC = () => {
   const { resetApplication, jobDescription, analysisResults, selectedCompany } = useAppContext();
   const [selectedRole, setSelectedRole] = useState('');
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [inputRole, setInputRole] = useState('');
-  const [expandAll, setExpandAll] = useState(false);
-  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   
   useEffect(() => {
     if (!analysisResults) {
@@ -59,39 +55,6 @@ const ResultsPage: React.FC = () => {
     }
     
     return 'Job Position';
-  };
-  
-  const handleExpandToggle = () => {
-    const newExpandState = !expandAll;
-    setExpandAll(newExpandState);
-    
-    let updatedItems: Record<string, boolean> = {};
-    if (analysisResults) {
-      if (analysisResults.strengths) {
-        analysisResults.strengths.forEach((_, idx) => {
-          updatedItems[`strength-${idx}`] = newExpandState;
-        });
-      }
-      if (analysisResults.weaknesses) {
-        analysisResults.weaknesses.forEach((_, idx) => {
-          updatedItems[`weakness-${idx}`] = newExpandState;
-        });
-      }
-      if (analysisResults.recommendations) {
-        analysisResults.recommendations.forEach((_, idx) => {
-          updatedItems[`recommendation-${idx}`] = newExpandState;
-        });
-      }
-    }
-    
-    setExpandedItems(updatedItems);
-  };
-  
-  const toggleItemExpand = (key: string) => {
-    setExpandedItems(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
   };
   
   const handleRoleSubmit = () => {
@@ -177,20 +140,6 @@ const ResultsPage: React.FC = () => {
           </TabsList>
           
           <TabsContent value="summary">
-            <div className="mb-4 flex justify-end">
-              <Button 
-                variant="outline" 
-                onClick={handleExpandToggle}
-                className="text-sm"
-              >
-                {expandAll ? (
-                  <><ChevronUp className="mr-1 h-4 w-4" /> Collapse All</>
-                ) : (
-                  <><ChevronDown className="mr-1 h-4 w-4" /> Expand All</>
-                )}
-              </Button>
-            </div>
-            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card className="p-6">
                 <h2 className="text-xl font-serif font-bold text-green-600 mb-4 flex items-center">
@@ -198,40 +147,14 @@ const ResultsPage: React.FC = () => {
                 </h2>
                 <ul className="space-y-4">
                   {strengths && strengths.length > 0 ? (
-                    strengths.map((strength, index) => {
-                      const itemKey = `strength-${index}`;
-                      const isExpanded = expandedItems[itemKey] || expandAll;
-                      const strengthTitle = strength.split(':')[0] || strength;
-                      
-                      return (
-                        <li key={index}>
-                          <Collapsible 
-                            open={isExpanded} 
-                            onOpenChange={(open) => {
-                              toggleItemExpand(itemKey);
-                            }}
-                            className="border rounded-md"
-                          >
-                            <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-gray-50">
-                              <div className="flex items-start">
-                                <span className="text-green-600 mr-2 mt-1">✓</span>
-                                <span className="font-medium">{strengthTitle}</span>
-                              </div>
-                              {isExpanded ? (
-                                <ChevronUp className="h-4 w-4 text-gray-500" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4 text-gray-500" />
-                              )}
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
-                              <div className="pt-2">
-                                <p className="text-xs mt-1">{strength}</p>
-                              </div>
-                            </CollapsibleContent>
-                          </Collapsible>
-                        </li>
-                      );
-                    })
+                    strengths.map((strength, index) => (
+                      <li key={index} className="border rounded-md p-3">
+                        <div className="flex items-start">
+                          <span className="text-green-600 mr-2 mt-1">✓</span>
+                          <span>{strength}</span>
+                        </div>
+                      </li>
+                    ))
                   ) : (
                     <li>No strengths identified</li>
                   )}
@@ -244,40 +167,14 @@ const ResultsPage: React.FC = () => {
                 </h2>
                 <ul className="space-y-4">
                   {weaknesses && weaknesses.length > 0 ? (
-                    weaknesses.map((weakness, index) => {
-                      const itemKey = `weakness-${index}`;
-                      const isExpanded = expandedItems[itemKey] || expandAll;
-                      const weaknessTitle = weakness.split(':')[0] || weakness;
-                      
-                      return (
-                        <li key={index}>
-                          <Collapsible 
-                            open={isExpanded}
-                            onOpenChange={(open) => {
-                              toggleItemExpand(itemKey);
-                            }}
-                            className="border rounded-md"
-                          >
-                            <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-gray-50">
-                              <div className="flex items-start">
-                                <span className="text-red-600 mr-2 mt-1">✗</span>
-                                <span className="font-medium">{weaknessTitle}</span>
-                              </div>
-                              {isExpanded ? (
-                                <ChevronUp className="h-4 w-4 text-gray-500" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4 text-gray-500" />
-                              )}
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
-                              <div className="pt-2">
-                                <p className="text-xs mt-1">{weakness}</p>
-                              </div>
-                            </CollapsibleContent>
-                          </Collapsible>
-                        </li>
-                      );
-                    })
+                    weaknesses.map((weakness, index) => (
+                      <li key={index} className="border rounded-md p-3">
+                        <div className="flex items-start">
+                          <span className="text-red-600 mr-2 mt-1">✗</span>
+                          <span>{weakness}</span>
+                        </div>
+                      </li>
+                    ))
                   ) : (
                     <li>No areas for improvement identified</li>
                   )}
@@ -290,40 +187,14 @@ const ResultsPage: React.FC = () => {
                 </h2>
                 <ul className="space-y-4">
                   {recommendations && recommendations.length > 0 ? (
-                    recommendations.map((recommendation, index) => {
-                      const itemKey = `recommendation-${index}`;
-                      const isExpanded = expandedItems[itemKey] || expandAll;
-                      const recommendationTitle = recommendation.split(':')[0] || recommendation;
-                      
-                      return (
-                        <li key={index}>
-                          <Collapsible 
-                            open={isExpanded}
-                            onOpenChange={(open) => {
-                              toggleItemExpand(itemKey);
-                            }}
-                            className="border rounded-md"
-                          >
-                            <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-gray-50">
-                              <div className="flex items-start">
-                                <span className="text-consulting-accent mr-2 mt-1">→</span>
-                                <span className="font-medium">{recommendationTitle}</span>
-                              </div>
-                              {isExpanded ? (
-                                <ChevronUp className="h-4 w-4 text-gray-500" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4 text-gray-500" />
-                              )}
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
-                              <div className="pt-2">
-                                <p className="text-xs mt-1">{recommendation}</p>
-                              </div>
-                            </CollapsibleContent>
-                          </Collapsible>
-                        </li>
-                      );
-                    })
+                    recommendations.map((recommendation, index) => (
+                      <li key={index} className="border rounded-md p-3">
+                        <div className="flex items-start">
+                          <span className="text-consulting-accent mr-2 mt-1">→</span>
+                          <span>{recommendation}</span>
+                        </div>
+                      </li>
+                    ))
                   ) : (
                     <li>No recommendations available</li>
                   )}
