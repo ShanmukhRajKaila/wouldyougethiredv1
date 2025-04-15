@@ -24,29 +24,24 @@ const ResultsPage: React.FC = () => {
       console.error('No analysis results available');
     }
     
-    // Try to get role from localStorage first (saved from JobDescriptionPage)
     const savedRole = localStorage.getItem('jobRoleTitle');
     if (savedRole) {
       setSelectedRole(savedRole);
       return;
     }
     
-    // Otherwise extract role from job description
     if (jobDescription) {
       const jobTitle = extractJobTitle(jobDescription);
       if (jobTitle) {
         setSelectedRole(jobTitle);
       } else {
-        // If no job title detected, prompt user
         setShowRoleDialog(true);
         setInputRole('');
       }
     }
   }, [jobDescription, analysisResults]);
   
-  // Function to extract job title from job description
   const extractJobTitle = (description: string): string => {
-    // Common patterns for job titles in descriptions
     const patterns = [
       /position:\s*([^\.]+)/i,
       /job title:\s*([^\.]+)/i,
@@ -62,7 +57,6 @@ const ResultsPage: React.FC = () => {
       }
     }
     
-    // If no pattern matched, try to use the first line if it's not too long
     const firstLine = description.split('\n')[0].trim();
     if (firstLine && firstLine.length < 50) {
       return firstLine;
@@ -80,7 +74,6 @@ const ResultsPage: React.FC = () => {
     const newExpandState = !expandAll;
     setExpandAll(newExpandState);
     
-    // Update all items based on the new expand state
     let updatedItems: Record<string, boolean> = {};
     if (analysisResults) {
       if (analysisResults.strengths) {
@@ -110,7 +103,48 @@ const ResultsPage: React.FC = () => {
     }));
   };
   
-  // If no results are available, show an error message
+  const generateStrengthExplanation = (strength: string): string => {
+    if (strength.toLowerCase().includes("experience")) {
+      return "Employers value proven experience as it reduces training time and risk. This strength positions you as someone who can contribute immediately to the team.";
+    } else if (strength.toLowerCase().includes("skill") || strength.toLowerCase().includes("proficiency")) {
+      return "This technical skill is specifically mentioned in the job requirements. Candidates with this expertise are typically prioritized during initial screening rounds.";
+    } else if (strength.toLowerCase().includes("leader") || strength.toLowerCase().includes("manage")) {
+      return "Leadership abilities demonstrate your capacity to take initiative and drive results. This trait is highly valued for roles with growth potential.";
+    } else if (strength.toLowerCase().includes("communicat") || strength.toLowerCase().includes("collaborat")) {
+      return "Strong communication skills are essential for team cohesion and project success. This strength indicates your ability to work effectively in the company's environment.";
+    } else {
+      return "This strength directly aligns with the job requirements. Employers are specifically looking for candidates who demonstrate this capability in the role.";
+    }
+  };
+  
+  const generateWeaknessExplanation = (weakness: string): string => {
+    if (weakness.toLowerCase().includes("experience") || weakness.toLowerCase().includes("background")) {
+      return "This experience gap could limit your effectiveness in key responsibilities. Consider highlighting transferable skills or pursuing relevant projects to build credibility in this area.";
+    } else if (weakness.toLowerCase().includes("technical") || weakness.toLowerCase().includes("skill")) {
+      return "This technical skill appears multiple times in the job description, indicating its importance. Consider upskilling through online courses or certification programs to address this gap.";
+    } else if (weakness.toLowerCase().includes("certif") || weakness.toLowerCase().includes("qualif")) {
+      return "This qualification is likely used as a filtering criterion during resume screening. Pursuing this credential would significantly strengthen your application.";
+    } else if (weakness.toLowerCase().includes("tool") || weakness.toLowerCase().includes("software")) {
+      return "Proficiency with this tool/software appears to be an everyday requirement for this role. Even basic familiarity would strengthen your candidacy.";
+    } else {
+      return "Addressing this gap would significantly increase your chances of success. Hiring managers typically look for candidates who demonstrate competency in this area for this role.";
+    }
+  };
+  
+  const generateRecommendationExplanation = (recommendation: string): string => {
+    if (recommendation.toLowerCase().includes("highlight")) {
+      return "Making this adjustment to your resume would more clearly demonstrate your alignment with the core requirements, potentially moving your application past initial screening filters.";
+    } else if (recommendation.toLowerCase().includes("add") || recommendation.toLowerCase().includes("include")) {
+      return "Including this information would address a key qualification gap that might otherwise cause your application to be overlooked during the screening process.";
+    } else if (recommendation.toLowerCase().includes("focus") || recommendation.toLowerCase().includes("emphasize")) {
+      return "Shifting emphasis to this area would better position your experience in relation to what the hiring manager is likely prioritizing based on the job description.";
+    } else if (recommendation.toLowerCase().includes("training") || recommendation.toLowerCase().includes("course") || recommendation.toLowerCase().includes("learn")) {
+      return "Investing time in this skill development would address a critical gap that appears central to the role's responsibilities and day-to-day functions.";
+    } else {
+      return "Implementing this recommendation can significantly enhance your application's competitiveness. It addresses key requirements that employers look for when evaluating candidates for this position.";
+    }
+  };
+  
   if (!analysisResults) {
     return (
       <PageContainer>
@@ -134,7 +168,6 @@ const ResultsPage: React.FC = () => {
     );
   }
   
-  // Extract values from the analysisResults
   const {
     verdict = false,
     alignmentScore = 0,
@@ -218,6 +251,7 @@ const ResultsPage: React.FC = () => {
                     strengths.map((strength, index) => {
                       const itemKey = `strength-${index}`;
                       const isExpanded = expandedItems[itemKey] || expandAll;
+                      const strengthTitle = strength.split(':')[0] || strength;
                       
                       return (
                         <li key={index}>
@@ -231,7 +265,7 @@ const ResultsPage: React.FC = () => {
                             <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-gray-50">
                               <div className="flex items-start">
                                 <span className="text-green-600 mr-2 mt-1">✓</span>
-                                <span className="font-medium">{strength.split(':')[0] || strength}</span>
+                                <span className="font-medium">{strengthTitle}</span>
                               </div>
                               {isExpanded ? (
                                 <ChevronUp className="h-4 w-4 text-gray-500" />
@@ -242,7 +276,7 @@ const ResultsPage: React.FC = () => {
                             <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
                               <div className="mt-2 pt-2 border-t border-gray-200">
                                 <h4 className="font-semibold text-xs text-gray-700">Why this matters:</h4>
-                                <p className="text-xs mt-1">This strength directly aligns with the job requirements. Employers are specifically looking for candidates who demonstrate this capability in the role.</p>
+                                <p className="text-xs mt-1">{generateStrengthExplanation(strength)}</p>
                               </div>
                             </CollapsibleContent>
                           </Collapsible>
@@ -264,6 +298,7 @@ const ResultsPage: React.FC = () => {
                     weaknesses.map((weakness, index) => {
                       const itemKey = `weakness-${index}`;
                       const isExpanded = expandedItems[itemKey] || expandAll;
+                      const weaknessTitle = weakness.split(':')[0] || weakness;
                       
                       return (
                         <li key={index}>
@@ -277,7 +312,7 @@ const ResultsPage: React.FC = () => {
                             <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-gray-50">
                               <div className="flex items-start">
                                 <span className="text-red-600 mr-2 mt-1">✗</span>
-                                <span className="font-medium">{weakness.split(':')[0] || weakness}</span>
+                                <span className="font-medium">{weaknessTitle}</span>
                               </div>
                               {isExpanded ? (
                                 <ChevronUp className="h-4 w-4 text-gray-500" />
@@ -288,7 +323,7 @@ const ResultsPage: React.FC = () => {
                             <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
                               <div className="mt-2 pt-2 border-t border-gray-200">
                                 <h4 className="font-semibold text-xs text-gray-700">Why this matters:</h4>
-                                <p className="text-xs mt-1">Addressing this gap would significantly increase your chances of success. Hiring managers typically look for candidates who demonstrate competency in this area for this role.</p>
+                                <p className="text-xs mt-1">{generateWeaknessExplanation(weakness)}</p>
                               </div>
                             </CollapsibleContent>
                           </Collapsible>
@@ -310,6 +345,7 @@ const ResultsPage: React.FC = () => {
                     recommendations.map((recommendation, index) => {
                       const itemKey = `recommendation-${index}`;
                       const isExpanded = expandedItems[itemKey] || expandAll;
+                      const recommendationTitle = recommendation.split(':')[0] || recommendation;
                       
                       return (
                         <li key={index}>
@@ -323,7 +359,7 @@ const ResultsPage: React.FC = () => {
                             <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-gray-50">
                               <div className="flex items-start">
                                 <span className="text-consulting-accent mr-2 mt-1">→</span>
-                                <span className="font-medium">{recommendation.split(':')[0] || recommendation}</span>
+                                <span className="font-medium">{recommendationTitle}</span>
                               </div>
                               {isExpanded ? (
                                 <ChevronUp className="h-4 w-4 text-gray-500" />
@@ -334,7 +370,7 @@ const ResultsPage: React.FC = () => {
                             <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
                               <div className="mt-2 pt-2 border-t border-gray-200">
                                 <h4 className="font-semibold text-xs text-gray-700">Why this matters:</h4>
-                                <p className="text-xs mt-1">Implementing this recommendation can significantly enhance your application's competitiveness. It addresses key requirements that employers look for when evaluating candidates for this position.</p>
+                                <p className="text-xs mt-1">{generateRecommendationExplanation(recommendation)}</p>
                               </div>
                             </CollapsibleContent>
                           </Collapsible>
@@ -368,7 +404,6 @@ const ResultsPage: React.FC = () => {
         </Tabs>
       </div>
       
-      {/* Job Role Dialog */}
       <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

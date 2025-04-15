@@ -23,6 +23,23 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
     );
   }
   
+  // Generate a personalized suggestion based on the improved bullet point
+  const generateSuggestion = (improved: string): string => {
+    if (improved.toLowerCase().includes("led") || improved.toLowerCase().includes("managed")) {
+      return "Emphasize leadership abilities by quantifying the team size and outcome achievements. Consider adding metrics like team growth or performance improvements under your guidance.";
+    } else if (improved.toLowerCase().includes("increase") || improved.toLowerCase().includes("improve") || improved.toLowerCase().includes("%")) {
+      return "Continue highlighting measurable results with specific metrics. Consider adding the timeframe in which these results were achieved to provide more context.";
+    } else if (improved.toLowerCase().includes("develop") || improved.toLowerCase().includes("implement") || improved.toLowerCase().includes("create")) {
+      return "Elaborate further on your technical contributions by mentioning specific technologies or methodologies used. Consider adding the business impact of your implementation.";
+    } else if (improved.toLowerCase().includes("customer") || improved.toLowerCase().includes("client")) {
+      return "When discussing client-facing work, quantify the client base and highlight your direct impact on client satisfaction or retention metrics.";
+    } else if (improved.toLowerCase().includes("analyze") || improved.toLowerCase().includes("research")) {
+      return "For analytical achievements, consider specifying the tools or methodologies used and how your insights directly impacted business decisions.";
+    } else {
+      return "Consider adding specific industry terminology and quantifiable metrics to further enhance this bullet point and demonstrate your impact more clearly.";
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-serif font-bold text-consulting-navy">
@@ -53,7 +70,8 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
             </div>
             
             <div className="bg-gray-50 p-3 rounded mt-2">
-              <p className="text-xs text-consulting-charcoal font-medium">Pro tip: This enhanced version better aligns with the role requirements while incorporating industry terminology that helps pass ATS screening and demonstrates your relevant experience.</p>
+              <p className="text-xs text-consulting-charcoal font-medium">Next step suggestion:</p>
+              <p className="text-xs text-consulting-gray mt-1">{generateSuggestion(item.improved)}</p>
             </div>
           </div>
         </div>
