@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -241,7 +240,6 @@ const ResultsPage: React.FC = () => {
                               )}
                             </CollapsibleTrigger>
                             <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
-                              <p className="mb-2">{strength}</p>
                               <div className="mt-2 pt-2 border-t border-gray-200">
                                 <h4 className="font-semibold text-xs text-gray-700">Why this matters:</h4>
                                 <p className="text-xs mt-1">This strength directly aligns with the job requirements. Employers are specifically looking for candidates who demonstrate this capability in the role.</p>
@@ -288,7 +286,6 @@ const ResultsPage: React.FC = () => {
                               )}
                             </CollapsibleTrigger>
                             <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
-                              <p className="mb-2">{weakness}</p>
                               <div className="mt-2 pt-2 border-t border-gray-200">
                                 <h4 className="font-semibold text-xs text-gray-700">Why this matters:</h4>
                                 <p className="text-xs mt-1">Addressing this gap would significantly increase your chances of success. Hiring managers typically look for candidates who demonstrate competency in this area for this role.</p>
@@ -335,7 +332,6 @@ const ResultsPage: React.FC = () => {
                               )}
                             </CollapsibleTrigger>
                             <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
-                              <p className="mb-2">{recommendation}</p>
                               <div className="mt-2 pt-2 border-t border-gray-200">
                                 <h4 className="font-semibold text-xs text-gray-700">Why this matters:</h4>
                                 <p className="text-xs mt-1">Implementing this recommendation can significantly enhance your application's competitiveness. It addresses key requirements that employers look for when evaluating candidates for this position.</p>
