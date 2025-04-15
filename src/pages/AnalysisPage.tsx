@@ -19,8 +19,6 @@ const AnalysisPage: React.FC = () => {
   } = useAppContext();
   const [loadingMessage, setLoadingMessage] = useState<string>("Extracting text from resume...");
   const [progressValue, setProgressLocal] = useState<number>(0);
-  const [analysisTimeout, setAnalysisTimeout] = useState<boolean>(false);
-  const [isRetrying, setIsRetrying] = useState<boolean>(false);
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -40,18 +38,34 @@ const AnalysisPage: React.FC = () => {
       "Applying STAR methodology...",
       "Evaluating alignment...",
       "Generating recommendations...",
+      "Processing results...",
+      "This may take a few minutes for longer documents...",
+      "Still working on your analysis..."
     ];
     
+    // Use a slower interval to give the analysis more time to complete
+    const messageInterval = 3000; // 3 seconds between messages
     let currentIndex = 0;
+    
     const interval = setInterval(() => {
       if (currentIndex < messages.length - 1) {
         currentIndex++;
         setLoadingMessage(messages[currentIndex]);
-        setProgressLocal((currentIndex / (messages.length - 1)) * 100);
+        
+        // Calculate progress but don't go to 100%
+        const calculatedProgress = Math.min(
+          ((currentIndex / (messages.length - 1)) * 80),
+          80
+        );
+        setProgressLocal(calculatedProgress);
       } else {
-        clearInterval(interval);
+        // When we reach the end of the messages, cycle through the last few messages
+        const lastMessages = messages.slice(Math.max(messages.length - 3, 0));
+        const nextIndex = (currentIndex - (messages.length - lastMessages.length) + 1) % lastMessages.length;
+        setLoadingMessage(lastMessages[nextIndex]);
+        currentIndex++;
       }
-    }, 2000);
+    }, messageInterval);
     
     return () => {
       clearInterval(interval);
@@ -81,8 +95,9 @@ const AnalysisPage: React.FC = () => {
           
           <div className="mt-8">
             <p className="text-sm text-consulting-gray">
-              Our AI is using GPT-4o to analyze your resume against the job description, 
+              Our AI is analyzing your resume against the job description, 
               applying industry-standard evaluation criteria and the STAR method.
+              This may take several minutes for longer documents.
             </p>
           </div>
         </div>
@@ -92,4 +107,3 @@ const AnalysisPage: React.FC = () => {
 };
 
 export default AnalysisPage;
-
