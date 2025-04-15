@@ -113,14 +113,15 @@ const ResultsPage: React.FC = () => {
             </p>
           </div>
           
-          <div className="flex flex-col items-center justify-center bg-white p-4 rounded-lg shadow-md w-full md:w-auto md:min-w-[250px]">
-            <div className="text-center mb-2 w-full">
-              <p className="text-sm text-consulting-gray font-medium">Final Verdict</p>
-              <h2 className={`text-2xl font-bold ${verdict ? 'text-green-600' : 'text-red-600'}`}>
-                {verdict ? 'Would Likely Be Hired' : 'Unlikely to Be Hired'}
-              </h2>
-              <div className="my-4 px-2 w-full">
-                <Gauge value={alignmentScore} size="md" />
+          <div className="flex flex-col items-center justify-center bg-white p-4 rounded-lg shadow-md w-full md:w-auto md:min-w-[300px]">
+            <div className="text-center mb-1 w-full">
+              <p className="text-sm text-consulting-gray font-medium mb-2">Alignment Score</p>
+              <div className="my-2 px-2 w-full">
+                <Gauge 
+                  value={alignmentScore} 
+                  size="lg" 
+                  className="mb-1"
+                />
               </div>
             </div>
           </div>
