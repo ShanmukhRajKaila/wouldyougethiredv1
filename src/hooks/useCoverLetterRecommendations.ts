@@ -26,30 +26,60 @@ export const useCoverLetterRecommendations = () => {
     // The original text with proper paragraphs
     const originalText = paragraphs.join("\n\n");
     
-    // Store our enhancement suggestions
-    let enhancements = [];
+    // Store our enhancement suggestions in a more structured way
+    let enhancementSections = {
+      companyInsights: [],
+      keyRequirements: [],
+      suggestedPhrases: []
+    };
     
     // Generate company insight enhancement
     if (hasCompanyInsights && analysis.companyInsights.length > 0) {
-      const companyInsight = analysis.companyInsights.slice(0, 2).join(" and ");
-      enhancements.push(`[COMPANY INSIGHT: Weave this into the first or second paragraph - Highlight your connection to ${companyName}'s ${companyInsight}."]`);
+      analysis.companyInsights.forEach((insight, index) => {
+        enhancementSections.companyInsights.push(`• ${insight}`);
+      });
     }
     
     // Generate key requirements enhancement
     if (hasKeyRequirements && analysis.keyRequirements.length > 0) {
-      const requirements = analysis.keyRequirements.join(", ");
-      enhancements.push(`[KEY REQUIREMENTS: Align with body paragraphs - Demonstrate how your skills match the ${requirements} ${companyName} seeks."]`);
+      analysis.keyRequirements.forEach((requirement, index) => {
+        enhancementSections.keyRequirements.push(`• Demonstrate how your skills match "${requirement}"`);
+      });
     }
     
     // Generate suggested phrases enhancement
     if (hasSuggestedPhrases && analysis.suggestedPhrases.length > 0) {
       analysis.suggestedPhrases.forEach((phrase, index) => {
-        enhancements.push(`[SUGGESTED PHRASE ${index + 1}: Integrate strategically - "${phrase}"]`);
+        enhancementSections.suggestedPhrases.push(`• "${phrase}"`);
       });
     }
     
-    // Add the enhancements at the end with clear instructions
-    const enhancedText = `${originalText}\n\n\n==== SUGGESTED ENHANCEMENTS ====\n(CAREFULLY READ AND INCORPORATE THESE SUGGESTIONS INTO THE APPROPRIATE SECTIONS OF YOUR COVER LETTER)\n\n${enhancements.join("\n\n")}`;
+    // Add the enhancements at the end with clear instructions and better formatting
+    let enhancedText = `${originalText}\n\n\n`;
+    enhancedText += "─────── Suggested Enhancements ───────\n\n";
+    enhancedText += "Please incorporate these suggestions into your cover letter. This guidance is meant to help improve your application but should be adapted to maintain your authentic voice.\n\n";
+    
+    if (enhancementSections.companyInsights.length > 0) {
+      enhancedText += "Company Insights (for first or second paragraph):\n";
+      enhancedText += enhancementSections.companyInsights.join("\n");
+      enhancedText += "\n\n";
+    }
+    
+    if (enhancementSections.keyRequirements.length > 0) {
+      enhancedText += "Key Requirements (for body paragraphs):\n";
+      enhancedText += enhancementSections.keyRequirements.join("\n");
+      enhancedText += "\n\n";
+    }
+    
+    if (enhancementSections.suggestedPhrases.length > 0) {
+      enhancedText += "Suggested Phrases (integrate strategically):\n";
+      enhancedText += enhancementSections.suggestedPhrases.join("\n");
+      enhancedText += "\n\n";
+    }
+    
+    // Add an implementation example for clarity
+    enhancedText += "Sample Implementation:\n";
+    enhancedText += `Consider adding a sentence like: \"I'm particularly drawn to ${companyName}'s ${analysis.companyInsights?.[0] || 'company culture'}, and I believe my background in ${analysis.keyRequirements?.[0] || 'the required skills'} would allow me to contribute effectively to your team.\"\n`;
     
     return enhancedText;
   };
@@ -69,7 +99,9 @@ export const useCoverLetterRecommendations = () => {
     
     // Additional boost if we have company insights
     if (analysis.companyInsights && analysis.companyInsights.length > 0) {
-      improvementFactor += 0.05; // +5%
+      // Scale the boost based on how many insights we have (up to 5)
+      const insightCount = Math.min(analysis.companyInsights.length, 5);
+      improvementFactor += 0.01 * insightCount; // +1% per insight up to 5%
     }
     
     // Additional boost if we have key requirements
