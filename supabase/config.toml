@@ -9,3 +9,6 @@ timeout_seconds = 60
 verify_jwt = false
 timeout_seconds = 60
 
+[functions.search-role-descriptions]
+verify_jwt = false
+timeout_seconds = 120
