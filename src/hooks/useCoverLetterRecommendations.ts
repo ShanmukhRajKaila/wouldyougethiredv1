@@ -32,19 +32,19 @@ export const useCoverLetterRecommendations = () => {
     // Generate company insight enhancement
     if (hasCompanyInsights && analysis.companyInsights.length > 0) {
       const companyInsight = analysis.companyInsights.slice(0, 2).join(" and ");
-      enhancements.push(`[COMPANY INSIGHT: Incorporate in the first or second paragraph - "I am particularly drawn to ${companyName} because of its ${companyInsight}."]`);
+      enhancements.push(`[COMPANY INSIGHT: Weave this into the first or second paragraph - Highlight your connection to ${companyName}'s ${companyInsight}."]`);
     }
     
     // Generate key requirements enhancement
     if (hasKeyRequirements && analysis.keyRequirements.length > 0) {
       const requirements = analysis.keyRequirements.join(", ");
-      enhancements.push(`[KEY REQUIREMENTS: Add to the body paragraphs - "My experience aligns well with the ${requirements} that ${companyName} is looking for."]`);
+      enhancements.push(`[KEY REQUIREMENTS: Align with body paragraphs - Demonstrate how your skills match the ${requirements} ${companyName} seeks."]`);
     }
     
     // Generate suggested phrases enhancement
     if (hasSuggestedPhrases && analysis.suggestedPhrases.length > 0) {
       analysis.suggestedPhrases.forEach((phrase, index) => {
-        enhancements.push(`[SUGGESTED PHRASE ${index + 1}: Incorporate in the APPROPRIATE sections - "${phrase}"]`);
+        enhancements.push(`[SUGGESTED PHRASE ${index + 1}: Integrate strategically - "${phrase}"]`);
       });
     }
     
@@ -95,3 +95,4 @@ export const useCoverLetterRecommendations = () => {
     calculateUpdatedRelevance
   };
 };
+
