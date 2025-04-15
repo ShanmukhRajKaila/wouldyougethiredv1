@@ -62,7 +62,7 @@ const AnalysisPage: React.FC = () => {
       if (!analysisResults) {
         setAnalysisTimeout(true);
       }
-    }, 60000); // 1 minute timeout
+    }, 180000); // 3 minutes timeout instead of 1 minute
     
     return () => {
       clearInterval(interval);
@@ -84,13 +84,6 @@ const AnalysisPage: React.FC = () => {
     // Navigate back to resume upload to try again
     setCurrentStage('resumeUpload');
     setProgress(50);
-    navigate('/');
-  };
-
-  const handleSkip = () => {
-    // Skip to results page with mock data
-    setCurrentStage('results');
-    setProgress(100);
     navigate('/');
   };
   
@@ -123,13 +116,6 @@ const AnalysisPage: React.FC = () => {
                   disabled={isRetrying}
                 >
                   {isRetrying ? "Processing..." : "Try Again"}
-                </Button>
-                <Button 
-                  onClick={handleSkip} 
-                  variant="outline" 
-                  className="w-full"
-                >
-                  Skip Analysis
                 </Button>
               </div>
             </>
