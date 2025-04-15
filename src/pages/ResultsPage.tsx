@@ -9,12 +9,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ResumeComparison from '@/components/ResumeComparison';
 import StarAnalysis from '@/components/StarAnalysis';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown, ChevronUp, Check, X, ArrowRight } from "lucide-react";
 
 const ResultsPage: React.FC = () => {
   const { resetApplication, jobDescription, analysisResults, selectedCompany } = useAppContext();
   const [selectedRole, setSelectedRole] = useState('');
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [inputRole, setInputRole] = useState('');
+  const [expandAll, setExpandAll] = useState(false);
   
   useEffect(() => {
     if (!analysisResults) {
@@ -64,6 +67,10 @@ const ResultsPage: React.FC = () => {
   const handleRoleSubmit = () => {
     setSelectedRole(inputRole);
     setShowRoleDialog(false);
+  };
+  
+  const handleExpandToggle = () => {
+    setExpandAll(!expandAll);
   };
   
   // If no results are available, show an error message
@@ -150,17 +157,45 @@ const ResultsPage: React.FC = () => {
           </TabsList>
           
           <TabsContent value="summary">
+            <div className="mb-4 flex justify-end">
+              <Button 
+                variant="outline" 
+                onClick={handleExpandToggle}
+                className="text-sm"
+              >
+                {expandAll ? (
+                  <><ChevronUp className="mr-1 h-4 w-4" /> Collapse All</>
+                ) : (
+                  <><ChevronDown className="mr-1 h-4 w-4" /> Expand All</>
+                )}
+              </Button>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card className="p-6">
-                <h2 className="text-xl font-serif font-bold text-green-600 mb-4">
-                  Key Strengths
+                <h2 className="text-xl font-serif font-bold text-green-600 mb-4 flex items-center">
+                  <Check className="mr-2 h-5 w-5" /> Key Strengths
                 </h2>
-                <ul className="space-y-2">
+                <ul className="space-y-4">
                   {strengths && strengths.length > 0 ? (
                     strengths.map((strength, index) => (
-                      <li key={index} className="flex items-start">
-                        <span className="text-green-600 mr-2">✓</span>
-                        <span>{strength}</span>
+                      <li key={index}>
+                        <Collapsible open={expandAll} className="border rounded-md">
+                          <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-gray-50">
+                            <div className="flex items-start">
+                              <span className="text-green-600 mr-2 mt-1">✓</span>
+                              <span className="font-medium">{strength.split(':')[0] || strength}</span>
+                            </div>
+                            <ChevronDown className="h-4 w-4 text-gray-500 transition-transform" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
+                            <p className="mb-2">{strength}</p>
+                            <div className="mt-2 pt-2 border-t border-gray-200">
+                              <h4 className="font-semibold text-xs text-gray-700">Why this matters:</h4>
+                              <p className="text-xs mt-1">This strength directly aligns with the job requirements. Employers are specifically looking for candidates who demonstrate this capability in the role.</p>
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
                       </li>
                     ))
                   ) : (
@@ -170,15 +205,25 @@ const ResultsPage: React.FC = () => {
               </Card>
               
               <Card className="p-6">
-                <h2 className="text-xl font-serif font-bold text-red-600 mb-4">
-                  Areas for Improvement
+                <h2 className="text-xl font-serif font-bold text-red-600 mb-4 flex items-center">
+                  <X className="mr-2 h-5 w-5" /> Areas for Improvement
                 </h2>
-                <ul className="space-y-2">
+                <ul className="space-y-4">
                   {weaknesses && weaknesses.length > 0 ? (
                     weaknesses.map((weakness, index) => (
-                      <li key={index} className="flex items-start">
-                        <span className="text-red-600 mr-2">✗</span>
-                        <span>{weakness}</span>
+                      <li key={index}>
+                        <Collapsible open={expandAll} className="border rounded-md">
+                          <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-gray-50">
+                            <div className="flex items-start">
+                              <span className="text-red-600 mr-2 mt-1">✗</span>
+                              <span className="font-medium">{weakness.split(':')[0] || weakness}</span>
+                            </div>
+                            <ChevronDown className="h-4 w-4 text-gray-500 transition-transform" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
+                            <p>{weakness}</p>
+                          </CollapsibleContent>
+                        </Collapsible>
                       </li>
                     ))
                   ) : (
@@ -188,15 +233,25 @@ const ResultsPage: React.FC = () => {
               </Card>
               
               <Card className="p-6">
-                <h2 className="text-xl font-serif font-bold text-consulting-navy mb-4">
-                  Recommendations
+                <h2 className="text-xl font-serif font-bold text-consulting-navy mb-4 flex items-center">
+                  <ArrowRight className="mr-2 h-5 w-5" /> Recommendations
                 </h2>
-                <ul className="space-y-2">
+                <ul className="space-y-4">
                   {recommendations && recommendations.length > 0 ? (
                     recommendations.map((recommendation, index) => (
-                      <li key={index} className="flex items-start">
-                        <span className="text-consulting-accent mr-2">→</span>
-                        <span>{recommendation}</span>
+                      <li key={index}>
+                        <Collapsible open={expandAll} className="border rounded-md">
+                          <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-gray-50">
+                            <div className="flex items-start">
+                              <span className="text-consulting-accent mr-2 mt-1">→</span>
+                              <span className="font-medium">{recommendation.split(':')[0] || recommendation}</span>
+                            </div>
+                            <ChevronDown className="h-4 w-4 text-gray-500 transition-transform" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="px-4 py-2 text-sm text-gray-600 bg-gray-50 border-t">
+                            <p>{recommendation}</p>
+                          </CollapsibleContent>
+                        </Collapsible>
                       </li>
                     ))
                   ) : (
