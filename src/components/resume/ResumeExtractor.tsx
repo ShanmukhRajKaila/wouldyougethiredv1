@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PDFExtractor from '@/utils/PDFExtractor';
 import { AlertCircle } from 'lucide-react';
 
@@ -19,44 +18,52 @@ const ResumeExtractor: React.FC<ResumeExtractorProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [resumeText, setResumeText] = useState<string>('');
+  const processedFileRef = useRef<File | null>(null);
   
   useEffect(() => {
-    if (resumeFile) {
-      setIsLoading(true);
-      setExtractionError(null);
-      
-      PDFExtractor.extractText(resumeFile)
-        .then(text => {
-          if (text) {
-            if (text.includes('scanned document') || 
-                text.includes('image-based PDF') || 
-                text.includes('Error extracting') ||
-                text.includes('binary file')) {
-              setExtractionError(text);
-              setResumeText('');
-              onExtractionError(text);
-            } else {
-              setResumeText(text);
-              setExtractionError(null);
-              onExtractionError(null);
-              onTextExtracted(text);
-            }
+    if (!resumeFile || (processedFileRef.current && 
+        processedFileRef.current.name === resumeFile.name && 
+        processedFileRef.current.size === resumeFile.size &&
+        processedFileRef.current.lastModified === resumeFile.lastModified)) {
+      return;
+    }
+    
+    setIsLoading(true);
+    setExtractionError(null);
+    
+    processedFileRef.current = resumeFile;
+    
+    PDFExtractor.extractText(resumeFile)
+      .then(text => {
+        if (text) {
+          if (text.includes('scanned document') || 
+              text.includes('image-based PDF') || 
+              text.includes('Error extracting') ||
+              text.includes('binary file')) {
+            setExtractionError(text);
+            setResumeText('');
+            onExtractionError(text);
           } else {
-            const errorMsg = "Could not extract text from the uploaded file.";
-            setExtractionError(errorMsg);
-            onExtractionError(errorMsg);
+            setResumeText(text);
+            setExtractionError(null);
+            onExtractionError(null);
+            onTextExtracted(text);
           }
-        })
-        .catch(err => {
-          console.error("Error extracting text:", err);
-          const errorMsg = `Error extracting text: ${err.message}`;
+        } else {
+          const errorMsg = "Could not extract text from the uploaded file.";
           setExtractionError(errorMsg);
           onExtractionError(errorMsg);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    }
+        }
+      })
+      .catch(err => {
+        console.error("Error extracting text:", err);
+        const errorMsg = `Error extracting text: ${err.message}`;
+        setExtractionError(errorMsg);
+        onExtractionError(errorMsg);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, [resumeFile, onTextExtracted, onExtractionError, onBulletsExtracted]);
 
   if (isLoading) {

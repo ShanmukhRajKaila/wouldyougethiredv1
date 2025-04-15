@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ResumeExtractor from './ResumeExtractor';
 import { extractBulletPoints } from '@/utils/UrlExtractor';
 
@@ -14,10 +14,24 @@ const OriginalResume: React.FC<OriginalResumeProps> = ({
   onTextExtracted, 
   onBulletsExtracted 
 }) => {
+  // Add state to track if extraction has been done
+  const [hasExtracted, setHasExtracted] = useState<boolean>(false);
+  
+  // Reset extraction flag when resumeFile changes
+  useEffect(() => {
+    if (resumeFile) {
+      setHasExtracted(false);
+    }
+  }, [resumeFile]);
+  
   const handleTextExtracted = (text: string) => {
-    onTextExtracted(text);
-    const bullets = extractBulletPoints(text);
-    onBulletsExtracted(bullets);
+    // Only process if we haven't already done so
+    if (!hasExtracted && text) {
+      setHasExtracted(true);
+      onTextExtracted(text);
+      const bullets = extractBulletPoints(text);
+      onBulletsExtracted(bullets);
+    }
   };
   
   return (
