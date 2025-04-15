@@ -30,7 +30,7 @@ const ResumeUploadForm: React.FC<ResumeUploadFormProps> = ({
   const { isCoverLetterIncluded, setIsCoverLetterIncluded } = useAppContext();
 
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} className="space-y-6">
       <FileUpload
         label="Resume"
         onChange={setResumeFile}
@@ -51,27 +51,35 @@ const ResumeUploadForm: React.FC<ResumeUploadFormProps> = ({
       
       <div className="mb-6">
         <div className="flex items-center justify-between">
-          <Label htmlFor="cover-letter-toggle" className="text-consulting-charcoal font-medium">
-            Cover Letter Analysis
-          </Label>
+          <div>
+            <Label htmlFor="cover-letter-toggle" className="text-consulting-charcoal font-medium">
+              Cover Letter Analysis
+            </Label>
+            <p className="text-xs text-gray-600 mt-1">
+              Include your cover letter in the analysis for more comprehensive feedback.
+            </p>
+          </div>
           <Switch 
             id="cover-letter-toggle"
             checked={isCoverLetterIncluded}
             onCheckedChange={setIsCoverLetterIncluded}
           />
         </div>
-        <p className="text-xs text-gray-600 mt-1">
-          Include your cover letter in the analysis for more comprehensive feedback.
-        </p>
       </div>
       
       {isCoverLetterIncluded && (
-        <FileUpload
-          label="Cover Letter"
-          onChange={setCoverLetterFile}
-          value={coverLetterFile}
-          maxSizeMB={5}
-        />
+        <div className="bg-consulting-lightblue/10 p-4 rounded-md border border-consulting-lightblue">
+          <FileUpload
+            label="Cover Letter"
+            onChange={setCoverLetterFile}
+            value={coverLetterFile}
+            required={isCoverLetterIncluded}
+            maxSizeMB={5}
+          />
+          <p className="text-xs text-consulting-blue mt-2">
+            For best results, upload your cover letter as a PDF or Word document (.docx).
+          </p>
+        </div>
       )}
       
       <div className="flex justify-end">
