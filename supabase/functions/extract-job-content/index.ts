@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -79,6 +80,13 @@ serve(async (req) => {
       console.log(`First 500 characters of HTML: ${html.substring(0, 500)}...`);
     }
 
+    // Check if this is a LinkedIn login page
+    const requiresLogin = (html.includes('Please log in to continue') || 
+                         html.includes('Sign in') || 
+                         html.includes('join now') || 
+                         html.includes('Create an account')) && 
+                         html.includes('linkedin.com');
+    
     // More advanced extraction techniques
     const companyName = extractCompanyName(html, url);
     const jobTitle = extractJobTitle(html, url);
@@ -102,7 +110,8 @@ serve(async (req) => {
       debugInfo = {
         htmlLength: html.length,
         extractionDomainInfo: new URL(url).hostname,
-        detectedPatterns: detectContentPatterns(html)
+        detectedPatterns: detectContentPatterns(html),
+        requiresLogin
       };
     }
 
@@ -111,7 +120,8 @@ serve(async (req) => {
         companyName: companyName || null, 
         jobDescription: jobDescription || null,
         jobTitle: jobTitle || null,
-        debug: debug ? debugInfo : undefined
+        debug: debug ? debugInfo : undefined,
+        requiresLogin
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -137,7 +147,9 @@ function detectContentPatterns(html: string) {
     divCount: (html.match(/<div/g) || []).length,
     mainContentGuess: html.includes('main-content') ? 'main-content' : 
                       html.includes('content-main') ? 'content-main' : 
-                      html.includes('job-content') ? 'job-content' : 'unknown'
+                      html.includes('job-content') ? 'job-content' : 'unknown',
+    hasLoginForms: html.includes('login') || html.includes('signin') || html.includes('sign in'),
+    hasAccessRestriction: html.includes('access denied') || html.includes('access restricted')
   };
   
   return patterns;
@@ -552,6 +564,12 @@ function convertHtmlToText(html: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&rsquo;/g, "'")
+    .replace(/&lsquo;/g, "'")
+    .replace(/&rdquo;/g, '"')
+    .replace(/&ldquo;/g, '"')
+    .replace(/&ndash;/g, '-')
+    .replace(/&mdash;/g, '—')
     .replace(/\n{3,}/g, '\n\n')
     .replace(/\s{2,}/g, ' ')
     .trim();

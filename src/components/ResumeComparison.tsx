@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -88,14 +87,22 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
       );
       
       if (skillWeaknesses.length > 0) {
-        // Extract key terms from weaknesses
+        // Extract key terms from weaknesses while cleaning unnecessary phrases
         const extractedSkills = skillWeaknesses.flatMap(weakness => {
-          // Extract phrases that might be skills
-          const skillMatches = weakness.match(/\b([A-Z][a-z]+(?:\s[a-z]+){0,2}|[a-z]+(?:\s[a-z]+){0,2})\b/g) || [];
-          return skillMatches.filter(skill => 
-            skill.length > 3 && 
-            !['the', 'and', 'with', 'your', 'resume', 'lack', 'missing', 'more', 'need'].includes(skill.toLowerCase())
-          );
+          // Clean up the text to extract just the skill names
+          const cleaned = weakness
+            .replace(/lacks (specific )?(mention of |experience in |knowledge of )?/ig, '')
+            .replace(/which (could|would|might|may) be /ig, '')
+            .replace(/important for this role\.?/ig, '')
+            .replace(/beneficial for this position\.?/ig, '')
+            .replace(/according to the job description\.?/ig, '')
+            .replace(/as mentioned in the job requirements\.?/ig, '')
+            .replace(/is not mentioned in your resume\.?/ig, '')
+            .replace(/not highlighted in your experience\.?/ig, '')
+            .trim();
+          
+          // Split by commas or "and" to get individual skills
+          return cleaned.split(/(?:,|\sand\s)+/).map(s => s.trim()).filter(s => s.length > 2);
         });
         
         setMissingSkills(extractedSkills);

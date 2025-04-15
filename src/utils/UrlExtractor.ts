@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 interface ExtractionResult {
@@ -40,6 +39,16 @@ export class UrlExtractor {
 
       // Log the extraction results for debugging
       console.log('Extraction results (detailed):', data);
+      
+      // Check if the content requires login (especially for LinkedIn premium job posts)
+      if (data.requiresLogin) {
+        return {
+          companyName: data.companyName || null,
+          jobDescription: data.jobDescription || '[This job description requires login to view the full content. Please copy and paste the full job description text manually.]',
+          jobTitle: data.jobTitle || null,
+          error: 'This job posting requires login. Only partial content could be extracted.'
+        };
+      }
       
       // Return the extracted data, prioritizing job description
       return {
