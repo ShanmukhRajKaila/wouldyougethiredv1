@@ -457,45 +457,24 @@ export function extractMBAExchangeJobDescription(html: string, debug = false): s
 }
 
 /**
- * Validate if the extracted text looks like a job description
+ * Validate if the extracted text looks like a job description - LESS STRICT VERSION
  */
 export function validateJobDescription(text: string): boolean {
-  if (!text || text.length < 200) return false;
+  if (!text || text.length < 100) return false;
   
-  // Check for common non-job description content
+  // Check for obvious non-job description content only
   const invalidPatterns = [
-    /log\s*in/i,
-    /sign\s*in/i,
-    /register/i,
-    /create\s*account/i,
-    /password/i,
-    /404/i,
+    /404 not found/i,
     /page\s*not\s*found/i,
     /access\s*denied/i,
-    /subscription/i,
   ];
   
-  // If too many invalid patterns match, it's likely not a job description
+  // If more than one invalid pattern matches, it's likely not a job description
   const matchCount = invalidPatterns.filter(pattern => pattern.test(text)).length;
-  if (matchCount >= 3) return false;
+  if (matchCount >= 2) return false;
   
-  // Check for job-related terms
-  const jobTerms = [
-    /responsibilities/i,
-    /requirements/i,
-    /qualifications/i,
-    /experience/i,
-    /skills/i,
-    /role/i,
-    /position/i,
-    /job\s*description/i
-  ];
-  
-  // Count how many job-related terms appear
-  const jobTermCount = jobTerms.filter(term => term.test(text)).length;
-  
-  // Valid if we have job-related terms
-  return jobTermCount >= 2;
+  // Most content longer than 100 chars that's not an error page is probably valid
+  return true;
 }
 
 /**

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -35,13 +34,11 @@ const JobDescriptionPage: React.FC = () => {
   const [availableRoles, setAvailableRoles] = useState<{value: string, label: string}[]>([]);
   const [isJobDescriptionValid, setIsJobDescriptionValid] = useState(true);
   
-  // Use the enhanced extractor error handling hook
   const { validateExtractedText } = useExtractorErrorHandling({
     setCurrentStage,
     setIsSubmitting
   });
   
-  // Define role categories and their specific roles
   const roleCategories = [
     {
       name: "Tech Management",
@@ -162,7 +159,6 @@ const JobDescriptionPage: React.FC = () => {
     }
   ];
   
-  // Update available roles when category changes
   useEffect(() => {
     if (selectedCategory) {
       const category = roleCategories.find(cat => cat.value === selectedCategory);
@@ -176,19 +172,16 @@ const JobDescriptionPage: React.FC = () => {
     }
   }, [selectedCategory]);
   
-  // Job description validation
   useEffect(() => {
-    // Reset validation when job description changes
     if (jobDescription) {
       setIsJobDescriptionValid(true);
     }
   }, [jobDescription]);
   
-  // Enhanced job description validation
   const validateJobDescription = (text: string): boolean => {
-    if (!text || text.length < 50) return false;
+    if (!text || text.length < 30) return false;
     
-    return validateExtractedText(text, 'jobDescription');
+    return true;
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -199,10 +192,9 @@ const JobDescriptionPage: React.FC = () => {
       return;
     }
     
-    // Validate job description
     if (!validateJobDescription(jobDescription)) {
       setIsJobDescriptionValid(false);
-      toast.warning('The job description appears to be invalid or is too short. Please check and update it.');
+      toast.warning('Please provide a more detailed job description.');
       return;
     }
     
@@ -214,7 +206,6 @@ const JobDescriptionPage: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      // Store role title in local storage for later use
       if (roleTitle.trim()) {
         localStorage.setItem('jobRoleTitle', roleTitle.trim());
       }
@@ -236,7 +227,6 @@ const JobDescriptionPage: React.FC = () => {
       return;
     }
     
-    // Check if we need a custom role name
     const needsCustomRole = selectedRole === 'other' || 
                            selectedRole.includes('other_');
                            
@@ -257,7 +247,6 @@ const JobDescriptionPage: React.FC = () => {
         setJobDescription(result.consolidatedDescription);
         setActiveTab('jobDescription');
         
-        // Set the role title based on the selection
         let roleLabel = '';
         if (needsCustomRole) {
           roleLabel = customRole;
@@ -307,7 +296,6 @@ const JobDescriptionPage: React.FC = () => {
     }
   };
   
-  // Determine if the selected role needs a custom role input
   const showCustomRoleInput = selectedRole === 'other' || selectedRole.includes('other_');
   
   return (
@@ -354,7 +342,7 @@ const JobDescriptionPage: React.FC = () => {
                   onChange={(e) => {
                     setJobDescription(e.target.value);
                     if (!e.target.value.trim()) {
-                      setIsJobDescriptionValid(true); // Reset validation for empty field
+                      setIsJobDescriptionValid(true);
                     }
                   }}
                   placeholder="Paste the job description here..."
@@ -496,7 +484,6 @@ const JobDescriptionPage: React.FC = () => {
   );
 };
 
-// Need to import cn for classname conditionals
 const cn = (...args: any[]) => args.filter(Boolean).join(' ');
 
 export default JobDescriptionPage;
