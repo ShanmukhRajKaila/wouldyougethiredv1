@@ -6,6 +6,7 @@ import { useAppContext } from '@/context/AppContext';
 import OriginalResume from '@/components/resume/OriginalResume';
 import ImprovedResume from '@/components/resume/ImprovedResume';
 import { useSkillsAnalysis } from '@/hooks/useSkillsAnalysis';
+import { useImprovedResumeAnalysis } from '@/hooks/useImprovedResumeAnalysis';
 
 interface StarAnalysisItem {
   original: string;
@@ -28,6 +29,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
   const validStarAnalysis = Array.isArray(starAnalysis) ? starAnalysis : [];
   
   const { missingSkills } = useSkillsAnalysis(resumeText, jobDescription, analysisResults);
+  const { improvedText, updatedAlignmentScore } = useImprovedResumeAnalysis(resumeText, validStarAnalysis);
   
   useEffect(() => {
     const improvedMap: Record<string, StarAnalysisItem> = {};
@@ -72,6 +74,8 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
               improvedBullets={improvedBullets}
               missingSkills={missingSkills}
               recommendations={analysisResults?.recommendations}
+              improvedText={improvedText}
+              updatedAlignmentScore={updatedAlignmentScore}
             />
           </Card>
         </TabsContent>

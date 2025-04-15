@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import StrengthsCard from './StrengthsCard';
 import WeaknessesCard from './WeaknessesCard';
 import RecommendationsCard from './RecommendationsCard';
+import { useAppContext } from '@/context/AppContext';
 
 interface ResultsSummaryTabProps {
   strengths: string[];
@@ -18,6 +19,13 @@ const ResultsSummaryTab: React.FC<ResultsSummaryTabProps> = ({
   recommendations, 
   onReset 
 }) => {
+  const { setCurrentStage } = useAppContext();
+  
+  const handleTryAnother = () => {
+    // Reset to job description page instead of full reset
+    setCurrentStage('jobDescription');
+  };
+  
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -28,7 +36,7 @@ const ResultsSummaryTab: React.FC<ResultsSummaryTabProps> = ({
       
       <div className="mt-8 flex justify-center">
         <Button 
-          onClick={onReset}
+          onClick={handleTryAnother}
           className="bg-consulting-navy hover:bg-consulting-blue"
         >
           Try Another Application
