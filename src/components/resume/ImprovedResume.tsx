@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import MissingSkillsCard from './MissingSkillsCard';
 import EnhancedExperience from './EnhancedExperience';
 import RecommendedAdditions from './RecommendedAdditions';
@@ -28,8 +28,6 @@ const ImprovedResume: React.FC<ImprovedResumeProps> = ({
   improvedText,
   updatedAlignmentScore
 }) => {
-  const [showFullResume, setShowFullResume] = useState(false);
-  
   return (
     <div className="space-y-6">
       {updatedAlignmentScore && updatedAlignmentScore > 0 && (
@@ -60,24 +58,10 @@ const ImprovedResume: React.FC<ImprovedResumeProps> = ({
       
       {improvedText && (
         <div className="bg-white p-4 rounded-lg border border-blue-200 mt-4">
-          <h3 className="text-md font-medium text-consulting-navy mb-2 flex justify-between">
-            <span>Complete Enhanced Resume</span>
-            <button 
-              onClick={() => setShowFullResume(!showFullResume)}
-              className="text-sm text-consulting-blue hover:text-consulting-navy"
-            >
-              {showFullResume ? 'Show Less' : 'Show Full Resume'}
-            </button>
-          </h3>
-          {showFullResume ? (
-            <div className="bg-gray-50 p-4 rounded-md whitespace-pre-wrap text-sm text-gray-700">
-              {improvedText}
-            </div>
-          ) : (
-            <div className="bg-gray-50 p-4 rounded-md text-sm text-gray-700">
-              <p className="italic">Click "Show Full Resume" to view the complete enhanced version</p>
-            </div>
-          )}
+          <h3 className="text-md font-medium text-consulting-navy mb-2">Complete Enhanced Resume</h3>
+          <div className="bg-gray-50 p-4 rounded-md whitespace-pre-wrap text-sm text-gray-700">
+            {improvedText}
+          </div>
         </div>
       )}
       
