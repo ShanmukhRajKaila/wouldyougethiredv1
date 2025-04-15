@@ -35,11 +35,11 @@ const CompanySelector = () => {
     setExtractionAttempted(true);
     
     try {
+      console.log('Starting extraction process for job description only...');
       const extractionResult = await UrlExtractor.extractFromUrl(jobUrl);
       
       // Show detailed extraction status for debugging purposes
       console.log('Extraction completed:', {
-        companyName: extractionResult.companyName || 'Not found',
         jobDescriptionLength: extractionResult.jobDescription?.length || 0,
         jobUrl: jobUrl
       });
@@ -54,17 +54,11 @@ const CompanySelector = () => {
         setActiveTab('manual');
       }
 
-      // Update company name if available (but it's now optional)
-      if (extractionResult.companyName) {
-        setSelectedCompany({
-          id: 'extracted',
-          name: extractionResult.companyName,
-          logoUrl: ''
-        });
-        console.log('Company name extracted:', extractionResult.companyName);
-      }
+      // Don't update company name automatically - leave it empty for user to fill
+      // Clear any previous company selection to ensure user enters it manually
+      setSelectedCompany(null);
     } catch (error) {
-      console.error('Error extracting content:', error);
+      console.error('Error extracting content from URL:', error);
       toast.error('Failed to extract content from the URL');
       setActiveTab('manual');
     } finally {
@@ -128,17 +122,17 @@ const CompanySelector = () => {
             )}
           </div>
           
-          {/* Company name field (now optional) */}
+          {/* Company name field - always empty after extraction */}
           <div>
             <Label htmlFor="company-url" className="block text-gray-700 font-medium mb-2">
-              Company Name <span className="text-gray-500">(optional)</span>
+              Company Name <span className="text-gray-500">(please enter manually)</span>
             </Label>
             <Input
               id="company-url"
               type="text"
               value={selectedCompany?.name || ''}
               onChange={handleCompanyChange}
-              placeholder="Company name will appear here if extracted"
+              placeholder="Enter company name manually"
               className="w-full"
             />
           </div>
