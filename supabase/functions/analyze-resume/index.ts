@@ -236,7 +236,7 @@ Return a JSON object with:
     "strengths": Array of strings with good points (max 3),
     "weaknesses": Array of strings with issues (max 3),
     "recommendations": Array of strings with suggestions (max 3),
-    "companyInsights": Array of strings with at least 5 insights about the company based on the job description that would help the candidate in interviews and cover letter (be comprehensive),
+    "companyInsights": Array of strings with insights about the company based on the job description (max 3),
     "keyRequirements": Array of strings with the most important skills/experiences for this role (max 3),
     "suggestedPhrases": Array of strings with 3-5 tailored phrases to include in the cover letter
   },` : ''}
@@ -327,26 +327,6 @@ Return a JSON object with:
           // Ensure the new fields are always arrays even if not returned by the API
           analysisResult.coverLetterAnalysis.companyInsights = 
             analysisResult.coverLetterAnalysis.companyInsights || [];
-          
-          // Ensure we have at least 5 company insights if possible
-          if (analysisResult.coverLetterAnalysis.companyInsights.length < 5 && companyName) {
-            // Generate additional generic company insights
-            const additionalInsights = [
-              `${companyName}'s company culture emphasizes collaboration and innovation`,
-              `${companyName} values diversity and inclusion in their workplace`,
-              `${companyName} has a strong commitment to customer satisfaction`,
-              `${companyName}'s mission focuses on making a positive impact in their industry`,
-              `${companyName} encourages professional development and growth opportunities`
-            ];
-            
-            // Add enough additional insights to reach 5 total
-            const neededInsights = Math.min(5 - analysisResult.coverLetterAnalysis.companyInsights.length, 
-                                          additionalInsights.length);
-            
-            for (let i = 0; i < neededInsights; i++) {
-              analysisResult.coverLetterAnalysis.companyInsights.push(additionalInsights[i]);
-            }
-          }
           
           analysisResult.coverLetterAnalysis.keyRequirements = 
             analysisResult.coverLetterAnalysis.keyRequirements || [];

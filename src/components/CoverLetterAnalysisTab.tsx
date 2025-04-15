@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAppContext } from '@/context/AppContext';
@@ -56,7 +55,7 @@ const CoverLetterAnalysisTab: React.FC = () => {
   };
 
   // Check if the improved text contains the enhancement section
-  const hasEnhancementSection = improvedText?.includes("─────── Suggested Enhancements ───────");
+  const hasEnhancementSection = improvedText?.includes("==== SUGGESTED ENHANCEMENTS ====");
   
   return (
     <div className="space-y-6">
@@ -281,14 +280,6 @@ const CoverLetterAnalysisTab: React.FC = () => {
                     <span className="font-medium">Suggested Phrases:</span> Incorporate these phrases throughout 
                     your letter to align your language with the company's values and job description.
                   </li>
-                  <li>
-                    <span className="font-medium">Interview Preparation:</span> Use these insights to prepare for 
-                    potential interview questions about why you want to work for this company.
-                  </li>
-                  <li>
-                    <span className="font-medium">Cultural Fit:</span> Reflect on how your values align with 
-                    the company culture insights to demonstrate authentic interest.
-                  </li>
                 </ol>
               </CardContent>
             </Card>
@@ -323,13 +314,13 @@ const CoverLetterAnalysisTab: React.FC = () => {
             <div className="bg-blue-50 p-4 rounded-md mb-4 text-blue-800 text-sm">
               <p className="font-medium">How to use the enhanced letter:</p>
               <ol className="list-decimal pl-5 mt-2">
-                <li>Review the suggestions in the "Suggested Enhancements" section</li>
+                <li>Review the suggestions at the bottom of this section</li>
                 <li>Incorporate the suggestions into the appropriate sections of your cover letter</li>
-                <li>Use this guidance with your own judgment to maintain authenticity</li>
+                <li>Do not copy the entire enhanced section with the brackets</li>
               </ol>
             </div>
             
-            <div className="bg-gray-50 p-4 rounded-md shadow-sm whitespace-pre-wrap text-gray-700 mb-6">
+            <div className="bg-gray-50 p-4 rounded-md shadow-sm whitespace-pre-wrap text-gray-700">
               {improvedText || 'Enhanced cover letter could not be generated.'}
             </div>
             
