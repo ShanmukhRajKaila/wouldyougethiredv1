@@ -28,6 +28,7 @@ const ResumeUploadPage: React.FC = () => {
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [extractionWarning, setExtractionWarning] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [reducedMode, setReducedMode] = useState(false);
   
   useEffect(() => {
     // Initialize PDF extractor
@@ -136,7 +137,22 @@ const ResumeUploadPage: React.FC = () => {
             let attemptError = null;
             
             try {
-              analysisResults = await analyzeResume(resumeText, jobDescription);
+              // If we've already retried before, use reduced mode
+              const shouldUseReducedMode = retryCount > 0 || reducedMode;
+              
+              // In reduced mode, trim the resume text
+              if (shouldUseReducedMode) {
+                console.log('Using reduced mode for analysis');
+                resumeText = resumeText.substring(0, 4000) + "...";
+                // Also trim the job description
+                const trimmedJobDesc = jobDescription.length > 2000 ? 
+                  jobDescription.substring(0, 2000) + "..." : 
+                  jobDescription;
+                  
+                analysisResults = await analyzeResume(resumeText, trimmedJobDesc);
+              } else {
+                analysisResults = await analyzeResume(resumeText, jobDescription);
+              }
             } catch (error) {
               console.error('First analysis attempt failed:', error);
               attemptError = error;
@@ -147,15 +163,15 @@ const ResumeUploadPage: React.FC = () => {
                 
                 // Wait a moment before retrying
                 await new Promise(resolve => setTimeout(resolve, 1000));
-                toast.loading('Retrying analysis...');
+                toast.loading('Retrying analysis with reduced content...');
                 
                 try {
                   // Try with a shortened resume if the first attempt failed
-                  const shortenedResume = resumeText.length > 3000 
-                    ? resumeText.substring(0, 3000) + "..." 
-                    : resumeText;
+                  setReducedMode(true);
+                  const shortenedResume = resumeText.substring(0, 3000) + "...";
+                  const shortenedJobDesc = jobDescription.substring(0, 1500) + "...";
                     
-                  analysisResults = await analyzeResume(shortenedResume, jobDescription);
+                  analysisResults = await analyzeResume(shortenedResume, shortenedJobDesc);
                 } catch (retryError) {
                   console.error('Retry analysis attempt failed:', retryError);
                   // Use the original error
@@ -181,7 +197,7 @@ const ResumeUploadPage: React.FC = () => {
             } else {
               setCurrentStage('resumeUpload');
               setProcessingError('Failed to analyze your resume. The analysis service may be temporarily unavailable.');
-              toast.error('Failed to analyze your resume. Please try again later.');
+              toast.error('Failed to analyze your resume. Please try again with a shorter resume.');
               
               if (attemptError) {
                 console.error('Resume analysis error details:', attemptError);
@@ -225,7 +241,12 @@ const ResumeUploadPage: React.FC = () => {
             <h3 className="font-medium text-red-700 mb-2">Analysis Error</h3>
             <p className="text-sm text-red-600">{processingError}</p>
             <p className="text-sm text-gray-600 mt-2">
-              Try simplifying your resume or using a Word document (.docx) or plain text (.txt) format for better results.
+              For better results:
+              <ul className="list-disc pl-5 mt-1">
+                <li>Try using a Word document (.docx) or plain text (.txt) format</li>
+                <li>Reduce the size of your resume (2-3 pages maximum)</li>
+                <li>Remove any images or complex formatting</li>
+              </ul>
             </p>
           </div>
         )}

@@ -12,9 +12,13 @@ const corsHeaders = {
 interface AnalysisRequest {
   resumeText: string;
   jobDescription: string;
+  options?: {
+    useFastModel?: boolean;
+    prioritizeSpeed?: boolean;
+  };
 }
 
-// Function to truncate text to a specific token limit (approximate)
+// Simplified version to reduce token usage and processing time
 function truncateText(text: string, maxTokens: number): string {
   // Rough approximation: 1 token ≈ 4 characters for English text
   const maxChars = maxTokens * 4;
@@ -23,238 +27,31 @@ function truncateText(text: string, maxTokens: number): string {
     return text;
   }
   
-  // For resumes, keep beginning and end, truncate middle
-  if (maxChars > 3000) {
-    const firstPart = text.substring(0, Math.floor(maxChars * 0.7));
-    const lastPart = text.substring(text.length - Math.floor(maxChars * 0.3));
-    return `${firstPart}\n\n[... content truncated for length ...]\n\n${lastPart}`;
-  }
-  
-  // For shorter texts, just truncate at the end
   return text.substring(0, maxChars) + "\n[content truncated for length]";
 }
 
-// Clean up text that might contain binary data or PDF syntax
+// Simplified cleanup function
 function cleanupText(text: string): string {
-  // Remove any PDF-specific markers or syntax
-  let cleanText = text.replace(/%PDF[\s\S]*?(?=\w{3,})/g, '');
-  
-  // Remove common PDF syntax elements
-  cleanText = cleanText.replace(/<<\/[\w\/]+>>/g, '');
-  cleanText = cleanText.replace(/endobj/g, '');
-  cleanText = cleanText.replace(/obj/g, '');
-  
-  // Remove non-readable characters
-  cleanText = cleanText.replace(/[^\x20-\x7E\n\r\t]/g, ' ');
-  
-  // Remove excessive whitespace
-  cleanText = cleanText.replace(/\s+/g, ' ');
-  
-  return cleanText.trim();
+  // Remove excessive whitespace and non-printable characters
+  return text.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-// Enhanced function to extract skills and requirements from job description
-function extractJobRequirements(jobDescription: string): {
-  skills: string[];
-  technicalSkills: string[];
-  softSkills: string[];
-  education: string[];
-  experience: string[];
-} {
-  // Common stopwords to filter out
-  const stopwords = new Set([
-    "the", "and", "that", "this", "with", "for", "have", "not", "from", "but", "what", "about", 
-    "who", "which", "when", "will", "more", "would", "there", "their", "them", "these", "some", 
-    "your", "into", "has", "may", "such", "than", "its", "been", "were", "are", "our", "then",
-    "how", "well", "where", "why", "should", "could", "year", "years", "can", "able", "any"
-  ]);
+// Drastically simplified job requirements extraction
+function extractKeywords(text: string): string[] {
+  // Extract important looking phrases (3+ characters, not common words)
+  const commonWords = new Set(['the', 'and', 'that', 'this', 'with', 'for', 'have', 'from', 'about']);
+  const keywords = new Set<string>();
   
-  // Categorize soft skills that are often mentioned in job descriptions
-  // IMPORTANT: Make sure stakeholder management is included as a priority skill
-  const softSkillsDict = new Set([
-    "stakeholder management", "stakeholder engagement", "stakeholder relationship", "stakeholders",
-    "leadership", "communication", "teamwork", "collaboration", "problem solving", "problem-solving",
-    "critical thinking", "decision making", "time management", "adaptability", "flexibility",
-    "creativity", "interpersonal", "negotiation", "conflict resolution", "emotional intelligence", 
-    "presentation", "initiative", "strategic thinking", "analytical thinking", "detail oriented", 
-    "self motivation", "work ethic", "accountability", "resilience", "cultural awareness", 
-    "innovation", "mentoring", "coaching", "relationship building", "verbal communication", 
-    "written communication", "advocacy", "customer service", "project management", "change management", 
-    "facilitation", "influencing", "delegation", "strategic planning", "commercial acumen", 
-    "business acumen", "organizational"
-  ]);
+  // Simple regex to find potential skill terms
+  const skillTerms = text.match(/\b[A-Za-z][A-Za-z\-]{2,}\b/g) || [];
   
-  // Technical skills patterns
-  const technicalPatterns = [
-    /\b(?:python|java|javascript|typescript|c\+\+|ruby|php|swift|html|css|sql|nosql|react|angular|vue|node\.js|express|django|flask|aws|azure|gcp|docker|kubernetes|jenkins|terraform|ansible|git|agile|scrum|kanban|jira|confluence|excel|tableau|power\sbi|r|matlab|spss|hadoop|spark|tensorflow|pytorch|keras|scikit-learn)\b/i,
-    /\b(?:architecture|database|cloud|devops|frontend|backend|full-stack|mobile|web|security|network|system|data\s*science|machine\s*learning|artificial\s*intelligence|deep\s*learning|nlp|computer\s*vision|blockchain|iot|big\s*data|analytics|bi|business\s*intelligence|etl|data\s*engineering|data\s*warehouse|data\s*lake|data\s*mining|data\s*modeling|api|rest|graphql|microservices|serverless|ci\/cd)\b/i
-  ];
-  
-  // Education patterns
-  const educationPatterns = [
-    /\b(?:bachelor|master|phd|doctorate|mba|bs|ba|ms|ma|degree|certification)\b/i,
-    /\b(?:computer\s*science|information\s*technology|engineering|data\s*science|business\s*administration|finance|accounting|marketing|economics|mathematics|statistics|physics)\b/i
-  ];
-  
-  // Experience patterns
-  const experiencePatterns = [
-    /\b(\d+)(?:\+)?\s*(?:years?|yrs?)\s*(?:of)?\s*(?:experience|work)\b/i,
-    /\bexperienc(?:e|ed)\s*(?:in|with)\s*([^.,:;]+)/i,
-    /\bbackground\s*(?:in|with)\s*([^.,:;]+)/i
-  ];
-  
-  // Special pattern for stakeholder management (high priority skill)
-  const stakeholderPattern = /\b(?:stakeholder|stakeholders|client)\s*(?:management|engagement|relationship|communication|interaction|liaison)\b/i;
-  
-  // Check if stakeholder management is explicitly mentioned in the job description
-  let hasStakeholderManagement = stakeholderPattern.test(jobDescription.toLowerCase());
-  
-  // Extract all potential skills
-  const allWords = jobDescription.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
-  const allPhrases: string[] = [];
-  
-  // Extract 2-3 word phrases
-  const phraseRegex = /\b([a-z0-9]+(?:[-\s][a-z0-9]+){1,2})\b/gi;
-  let match;
-  while ((match = phraseRegex.exec(jobDescription.toLowerCase())) !== null) {
-    const phrase = match[1];
-    if (!phrase.split(/[-\s]/).every(word => stopwords.has(word))) {
-      allPhrases.push(phrase);
+  for (const term of skillTerms) {
+    if (!commonWords.has(term.toLowerCase()) && term.length > 2) {
+      keywords.add(term.toLowerCase());
     }
   }
   
-  // Extract education requirements
-  const education: string[] = [];
-  for (const pattern of educationPatterns) {
-    let match;
-    while ((match = pattern.exec(jobDescription)) !== null) {
-      const fullContext = jobDescription.substring(
-        Math.max(0, match.index - 30),
-        Math.min(jobDescription.length, match.index + match[0].length + 30)
-      );
-      education.push(fullContext.trim());
-      // Reset lastIndex to avoid infinite loops
-      pattern.lastIndex = match.index + 1;
-    }
-  }
-  
-  // Extract experience requirements
-  const experience: string[] = [];
-  for (const pattern of experiencePatterns) {
-    let match;
-    while ((match = pattern.exec(jobDescription)) !== null) {
-      const fullContext = jobDescription.substring(
-        Math.max(0, match.index - 20),
-        Math.min(jobDescription.length, match.index + match[0].length + 30)
-      );
-      experience.push(fullContext.trim());
-      // Reset lastIndex to avoid infinite loops
-      pattern.lastIndex = match.index + 1;
-    }
-  }
-  
-  // Categorize skills
-  const skills: string[] = [];
-  const technicalSkills: string[] = [];
-  const softSkills: string[] = [];
-  
-  // If stakeholder management is mentioned, make sure it's added to soft skills
-  if (hasStakeholderManagement) {
-    softSkills.push("stakeholder management");
-    skills.push("stakeholder management");
-  }
-  
-  // Check if management/leadership is mentioned, which often implies stakeholder management
-  if (jobDescription.toLowerCase().includes("management") || 
-      jobDescription.toLowerCase().includes("leader") ||
-      jobDescription.toLowerCase().includes("coordinate") ||
-      jobDescription.toLowerCase().includes("communication") ||
-      jobDescription.toLowerCase().includes("client") ||
-      jobDescription.toLowerCase().includes("relationship")) {
-    // Add stakeholder management if not already added
-    if (!softSkills.includes("stakeholder management")) {
-      softSkills.push("stakeholder management");
-      skills.push("stakeholder management");
-    }
-  }
-  
-  // Process phrases first (they're more valuable)
-  for (const phrase of allPhrases) {
-    // Check if it's a soft skill
-    if (softSkillsDict.has(phrase)) {
-      softSkills.push(phrase);
-      skills.push(phrase);
-      continue;
-    }
-    
-    // Check if it's a technical skill
-    if (technicalPatterns.some(pattern => pattern.test(phrase))) {
-      technicalSkills.push(phrase);
-      skills.push(phrase);
-      continue;
-    }
-    
-    // If phrase appears multiple times or in specific contexts, it's likely important
-    const phraseCount = (jobDescription.toLowerCase().match(new RegExp('\\b' + phrase + '\\b', 'gi')) || []).length;
-    const importantContexts = [
-      /experience/i, /knowledge/i, /proficien/i, /familiar/i,
-      /skill/i, /ability/i, /understand/i, /expert/i
-    ];
-    
-    const isInImportantContext = importantContexts.some(context => {
-      const contextWindow = 20; // characters
-      const occurrences = jobDescription.toLowerCase().indexOf(phrase);
-      if (occurrences !== -1) {
-        const contextStart = Math.max(0, occurrences - contextWindow);
-        const contextEnd = Math.min(jobDescription.length, occurrences + phrase.length + contextWindow);
-        const textContext = jobDescription.substring(contextStart, contextEnd).toLowerCase();
-        return context.test(textContext);
-      }
-      return false;
-    });
-    
-    if (phraseCount >= 2 || isInImportantContext) {
-      skills.push(phrase);
-    }
-  }
-  
-  // Process single words (less valuable, but still important)
-  for (const word of allWords) {
-    if (stopwords.has(word)) continue;
-    
-    // Check for technical terms
-    if (technicalPatterns.some(pattern => pattern.test(word))) {
-      if (!technicalSkills.includes(word)) {
-        technicalSkills.push(word);
-        skills.push(word);
-      }
-      continue;
-    }
-    
-    // Check for soft skills
-    if (softSkillsDict.has(word)) {
-      if (!softSkills.includes(word)) {
-        softSkills.push(word);
-        skills.push(word);
-      }
-      continue;
-    }
-  }
-  
-  // Cleanup and remove duplicates
-  const uniqueSkills = Array.from(new Set(skills)).slice(0, 30);
-  const uniqueTechnicalSkills = Array.from(new Set(technicalSkills)).slice(0, 15);
-  const uniqueSoftSkills = Array.from(new Set(softSkills)).slice(0, 15);
-  const uniqueEducation = Array.from(new Set(education)).slice(0, 5);
-  const uniqueExperience = Array.from(new Set(experience)).slice(0, 5);
-  
-  return {
-    skills: uniqueSkills,
-    technicalSkills: uniqueTechnicalSkills,
-    softSkills: uniqueSoftSkills,
-    education: uniqueEducation,
-    experience: uniqueExperience
-  };
+  return Array.from(keywords).slice(0, 30); // Limit to 30 keywords
 }
 
 serve(async (req) => {
@@ -266,7 +63,7 @@ serve(async (req) => {
   console.log("Starting resume analysis...");
 
   try {
-    const { resumeText, jobDescription } = await req.json() as AnalysisRequest;
+    const { resumeText, jobDescription, options = {} } = await req.json() as AnalysisRequest;
 
     if (!resumeText || !jobDescription) {
       return new Response(
@@ -277,41 +74,24 @@ serve(async (req) => {
 
     console.log('Analyzing resume against job description');
     
-    let cleanedResume = resumeText;
-    let truncatedResume;
-    let truncatedJobDesc;
+    // Use the most efficient model based on options
+    const model = options.useFastModel ? 'gpt-4o-mini' : 'gpt-4o-mini';
     
-    // Check if resume text appears to be PDF binary data
-    if (resumeText.includes('%PDF') || resumeText.includes('obj') || resumeText.includes('endobj')) {
-      console.warn('Resume text appears to contain PDF binary data or syntax');
-      
-      // Try to clean up the text before proceeding
-      cleanedResume = cleanupText(resumeText);
-      
-      if (cleanedResume.length < 200) {
-        return new Response(
-          JSON.stringify({ error: 'Unable to process the resume. The PDF appears to be image-based or contains unreadable text.' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      console.log('Cleaned resume text for processing');
-    }
+    // Truncate content more aggressively for speed
+    const maxResumeTokens = options.prioritizeSpeed ? 2000 : 4000;
+    const maxJobTokens = options.prioritizeSpeed ? 500 : 1000;
     
-    // Extract key requirements from job description
-    const jobRequirements = extractJobRequirements(jobDescription);
-    console.log(`Extracted ${jobRequirements.skills.length} skills, ${jobRequirements.softSkills.length} soft skills, and ${jobRequirements.technicalSkills.length} technical skills from job description`);
+    const truncatedResume = truncateText(cleanupText(resumeText), maxResumeTokens);
+    const truncatedJobDesc = truncateText(cleanupText(jobDescription), maxJobTokens);
     
-    // Further reduce token usage - use smaller limits for faster processing
-    truncatedResume = truncateText(cleanedResume, 4000); // Reduced from 8000
-    truncatedJobDesc = truncateText(jobDescription, 1000); // Reduced from 2000
+    console.log(`Truncated resume length: ${truncatedResume.length}, job description length: ${truncatedJobDesc.length}`);
     
-    console.log(`Original resume length: ${resumeText.length}, cleaned to: ${cleanedResume.length}, truncated to: ${truncatedResume.length}`);
-    console.log(`Original job description length: ${jobDescription.length}, truncated to: ${truncatedJobDesc.length}`);
+    // Extract important keywords to help guide the analysis
+    const jobKeywords = extractKeywords(jobDescription);
     
-    // Use a more efficient model and set a short timeout
+    // Use a short timeout to prevent function hanging
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 sec max for API call
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds max
     
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -321,19 +101,19 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini', // Using smaller model for speed
+          model: model,
           messages: [
             {
               role: 'system',
-              content: `You are an expert ATS (Applicant Tracking System) analyzer specializing in resume optimization. Your task is to analyze a resume against a job description and provide actionable feedback, focusing especially on STAKEHOLDER MANAGEMENT skills when they appear relevant to the role.
-
+              content: `You are an expert ATS analyzer that reviews resumes against job descriptions.
+              
 OUTPUT FORMAT:
 Return a valid JSON object with this structure:
 {
   "alignmentScore": Integer from 1-100 representing match percentage,
   "verdict": Boolean indicating if the candidate would pass ATS screening,
   "strengths": Array of strings highlighting matches (max 5),
-  "weaknesses": Array of strings identifying gaps (max 5),
+  "weaknesses": Array of strings identifying gaps (max 5), 
   "recommendations": Array of strings with specific improvements (max 5),
   "starAnalysis": Array of objects containing:
     {
@@ -343,13 +123,10 @@ Return a valid JSON object with this structure:
     }
 }
 
-IMPORTANT: If the job involves management, leadership, or client relationships, ALWAYS analyze stakeholder management capabilities, even if not explicitly mentioned in the job description.
-
-FOCUS ON THESE KEY REQUIREMENTS:
-Technical Skills: ${jobRequirements.technicalSkills.join(', ')}
-Soft Skills: ${jobRequirements.softSkills.join(', ')}
-Education: ${jobRequirements.education.join('; ')}
-Experience: ${jobRequirements.experience.join('; ')}`
+IMPORTANT GUIDELINES:
+1. For strengths and weaknesses, only include the skill name without phrases like "lacks specific mention of" or "which could be".
+2. Identify up to 5 bullet points from the resume and suggest improvements using the STAR method.
+3. Key job keywords: ${jobKeywords.join(', ')}`
             },
             {
               role: 'user',
@@ -357,7 +134,7 @@ Experience: ${jobRequirements.experience.join('; ')}`
             }
           ],
           temperature: 0.2,
-          max_tokens: 1000, // Reduced from 2000
+          max_tokens: 1000,
         }),
         signal: controller.signal
       });
@@ -377,7 +154,6 @@ Experience: ${jobRequirements.experience.join('; ')}`
       let analysisResult;
       try {
         const content = data.choices[0].message.content;
-        console.log('Raw OpenAI response received');
         
         // Try direct parsing
         try {
@@ -398,47 +174,35 @@ Experience: ${jobRequirements.experience.join('; ')}`
         
         console.log('Analysis complete');
         
-        // Ensure stakeholder management is addressed in the results if relevant
-        if (jobRequirements.softSkills.includes('stakeholder management') || 
-            jobDescription.toLowerCase().includes('stakeholder') || 
-            jobDescription.toLowerCase().includes('leadership') ||
-            jobDescription.toLowerCase().includes('management') ||
-            jobDescription.toLowerCase().includes('client')) {
-            
-          // If stakeholder management isn't mentioned in strengths/weaknesses, add a relevant note
-          let hasStakeholderFeedback = false;
-          
-          if (analysisResult.strengths) {
-            hasStakeholderFeedback = analysisResult.strengths.some(s => 
-              s.toLowerCase().includes('stakeholder')
-            );
-          }
-          
-          if (analysisResult.weaknesses) {
-            hasStakeholderFeedback = hasStakeholderFeedback || analysisResult.weaknesses.some(w => 
-              w.toLowerCase().includes('stakeholder')
-            );
-          }
-          
-          if (!hasStakeholderFeedback) {
-            // Add stakeholder management feedback based on if it's mentioned in the resume
-            const hasStakeholderInResume = truncatedResume.toLowerCase().includes('stakeholder');
-            
-            if (hasStakeholderInResume) {
-              if (analysisResult.strengths && analysisResult.strengths.length < 5) {
-                analysisResult.strengths.push("Demonstrates experience with stakeholder management which is crucial for this role");
-              }
-            } else {
-              if (analysisResult.weaknesses && analysisResult.weaknesses.length < 5) {
-                analysisResult.weaknesses.push("Resume lacks explicit mention of stakeholder management skills which appear relevant to this role");
-              }
-              
-              if (analysisResult.recommendations && analysisResult.recommendations.length < 5) {
-                analysisResult.recommendations.push("Highlight any experience with stakeholder management or client relationships, as these skills appear valuable for this position");
-              }
-            }
-          }
+        // Clean up any "lacks mention of" phrases in strengths/weaknesses
+        if (analysisResult.strengths) {
+          analysisResult.strengths = analysisResult.strengths.map((str: string) => {
+            return str.replace(/lacks (specific )?(mention of |experience in |knowledge of )?/ig, '')
+              .replace(/which (could|would|might|may) be /ig, '')
+              .replace(/important for this role\.?/ig, '')
+              .replace(/beneficial for this position\.?/ig, '')
+              .replace(/according to the job description\.?/ig, '')
+              .replace(/as mentioned in the job requirements\.?/ig, '')
+              .replace(/is not mentioned in your resume\.?/ig, '')
+              .replace(/not highlighted in your experience\.?/ig, '')
+              .trim();
+          });
         }
+        
+        if (analysisResult.weaknesses) {
+          analysisResult.weaknesses = analysisResult.weaknesses.map((str: string) => {
+            return str.replace(/lacks (specific )?(mention of |experience in |knowledge of )?/ig, '')
+              .replace(/which (could|would|might|may) be /ig, '')
+              .replace(/important for this role\.?/ig, '')
+              .replace(/beneficial for this position\.?/ig, '')
+              .replace(/according to the job description\.?/ig, '')
+              .replace(/as mentioned in the job requirements\.?/ig, '')
+              .replace(/is not mentioned in your resume\.?/ig, '')
+              .replace(/not highlighted in your experience\.?/ig, '')
+              .trim();
+          });
+        }
+        
       } catch (error) {
         console.error('Error parsing OpenAI response:', error);
         return new Response(

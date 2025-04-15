@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -189,6 +190,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const analyzeResume = async (resumeText: string, jobDescription: string): Promise<AnalysisResult | null> => {
     try {
+      console.log('Calling analyze-resume edge function...');
+      
+      // Trim the inputs if they're too long to avoid timeouts
+      const maxResumeLength = 8000;
+      const maxJobDescLength = 4000;
+      
+      const trimmedResume = resumeText.length > maxResumeLength 
+        ? resumeText.substring(0, maxResumeLength) + "... [trimmed for processing]" 
+        : resumeText;
+        
+      const trimmedJobDesc = jobDescription.length > maxJobDescLength
+        ? jobDescription.substring(0, maxJobDescLength) + "... [trimmed for processing]"
+        : jobDescription;
+      
       const { data: sessionData } = await supabase.auth.getSession();
       
       const response = await fetch('https://mqvstzxrxrmgdseepwzh.supabase.co/functions/v1/analyze-resume', {
@@ -198,17 +213,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           'Authorization': `Bearer ${sessionData?.session?.access_token || ''}`,
         },
         body: JSON.stringify({
-          resumeText,
-          jobDescription,
+          resumeText: trimmedResume,
+          jobDescription: trimmedJobDesc,
+          options: {
+            useFastModel: true, // Hint to use a faster model if possible
+            prioritizeSpeed: true // Hint to prioritize speed over detail
+          }
         }),
+        // Set a longer timeout for the fetch request
+        signal: AbortSignal.timeout(50000) // 50 second timeout
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to analyze resume');
+        console.error('Error response from analyze-resume:', response.status, response.statusText);
+        let errorMessage = 'Failed to analyze resume';
+        
+        try {
+          const errorData = await response.json();
+          console.error('Error details:', errorData);
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          console.error('Could not parse error response:', parseError);
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const analysisResult = await response.json();
+      console.log('Analysis result received:', analysisResult);
       setAnalysisResults(analysisResult);
       return analysisResult as AnalysisResult;
     } catch (error) {

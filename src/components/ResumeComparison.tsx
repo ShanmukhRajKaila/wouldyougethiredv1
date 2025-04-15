@@ -47,11 +47,9 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
               setResumeText(text);
               setExtractionError(null);
               
-              // Extract bullet points from resume
               const bullets = extractBulletPoints(text);
               setResumeBullets(bullets);
               
-              // Create mapping of original bullets to improved versions from starAnalysis
               const improvedMap: Record<string, StarAnalysisItem> = {};
               validStarAnalysis.forEach(item => {
                 improvedMap[item.original.trim()] = item;
@@ -77,9 +75,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
   }, [resumeFile, jobDescription, starAnalysis]);
   
   const identifyMissingSkills = (resumeText: string, jobDesc: string) => {
-    // Get missing skills from analysis results if available
     if (analysisResults?.weaknesses) {
-      // Extract skill-related weaknesses
       const skillWeaknesses = analysisResults.weaknesses.filter(weakness => 
         weakness.toLowerCase().includes('skill') || 
         weakness.toLowerCase().includes('experience') ||
@@ -87,21 +83,8 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
       );
       
       if (skillWeaknesses.length > 0) {
-        // Extract key terms from weaknesses while cleaning unnecessary phrases
         const extractedSkills = skillWeaknesses.flatMap(weakness => {
-          // Clean up the text to extract just the skill names
-          const cleaned = weakness
-            .replace(/lacks (specific )?(mention of |experience in |knowledge of )?/ig, '')
-            .replace(/which (could|would|might|may) be /ig, '')
-            .replace(/important for this role\.?/ig, '')
-            .replace(/beneficial for this position\.?/ig, '')
-            .replace(/according to the job description\.?/ig, '')
-            .replace(/as mentioned in the job requirements\.?/ig, '')
-            .replace(/is not mentioned in your resume\.?/ig, '')
-            .replace(/not highlighted in your experience\.?/ig, '')
-            .trim();
-          
-          // Split by commas or "and" to get individual skills
+          const cleaned = cleanSkillName(weakness);
           return cleaned.split(/(?:,|\sand\s)+/).map(s => s.trim()).filter(s => s.length > 2);
         });
         
@@ -109,8 +92,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
         return;
       }
     }
-
-    // Fallback to predefined skill detection if analysis results don't have useful weaknesses
+    
     const commonSkills = [
       { term: "stakeholder management", alias: ["stakeholder", "stakeholders", "relationship management"] },
       { term: "data science", alias: ["data scientist", "data analysis", "data analytics"] },
@@ -127,21 +109,30 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
     const resumeLower = resumeText.toLowerCase();
     const jobLower = jobDesc.toLowerCase();
     
-    // Check if these skills are mentioned in the job description but missing from resume
     const missing = commonSkills.filter(skill => {
-      // Check if skill or any alias appears in job description
       const inJobDesc = jobLower.includes(skill.term) || 
                          skill.alias.some(alias => jobLower.includes(alias));
       
-      // Check if skill or any alias appears in resume
       const inResume = resumeLower.includes(skill.term) || 
                        skill.alias.some(alias => resumeLower.includes(alias));
       
-      // Return true if it's in job description but not in resume
       return inJobDesc && !inResume;
     }).map(skill => skill.term);
     
     setMissingSkills(missing);
+  };
+  
+  const cleanSkillName = (skillText: string): string => {
+    return skillText
+      .replace(/lacks (specific )?(mention of |experience in |knowledge of )?/ig, '')
+      .replace(/which (could|would|might|may) be /ig, '')
+      .replace(/important for this role\.?/ig, '')
+      .replace(/beneficial for this position\.?/ig, '')
+      .replace(/according to the job description\.?/ig, '')
+      .replace(/as mentioned in the job requirements\.?/ig, '')
+      .replace(/is not mentioned in your resume\.?/ig, '')
+      .replace(/not highlighted in your experience\.?/ig, '')
+      .trim();
   };
   
   const renderImprovedResume = () => {
