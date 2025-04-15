@@ -4,9 +4,11 @@ import { useAppContext } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 
 const Header: React.FC = () => {
-  const { resetApplication, setCurrentStage } = useAppContext();
+  const { resetApplication, setCurrentStage, setJobDescription } = useAppContext();
   
   const handleReset = () => {
+    // Clear job description and return to job description page
+    setJobDescription('');
     // Return to job description page instead of full reset
     setCurrentStage('jobDescription');
   };

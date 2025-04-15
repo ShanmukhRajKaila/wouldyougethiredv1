@@ -19,9 +19,11 @@ const ResultsSummaryTab: React.FC<ResultsSummaryTabProps> = ({
   recommendations, 
   onReset 
 }) => {
-  const { setCurrentStage } = useAppContext();
+  const { setCurrentStage, setJobDescription } = useAppContext();
   
   const handleTryAnother = () => {
+    // Clear job description
+    setJobDescription('');
     // Reset to job description page instead of full reset
     setCurrentStage('jobDescription');
   };
