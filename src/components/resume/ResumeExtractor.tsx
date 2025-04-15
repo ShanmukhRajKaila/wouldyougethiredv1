@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import PDFExtractor from '@/utils/PDFExtractor';
 import { AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ResumeExtractorProps {
   resumeFile: File | null;
@@ -19,6 +21,8 @@ const ResumeExtractor: React.FC<ResumeExtractorProps> = ({
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [resumeText, setResumeText] = useState<string>('');
   const processedFileRef = useRef<File | null>(null);
+  const maxRetries = 2;
+  const [retryCount, setRetryCount] = useState(0);
   
   useEffect(() => {
     if (!resumeFile || (processedFileRef.current && 
@@ -30,11 +34,14 @@ const ResumeExtractor: React.FC<ResumeExtractorProps> = ({
     
     setIsLoading(true);
     setExtractionError(null);
+    setRetryCount(0);
     
     processedFileRef.current = resumeFile;
     
-    PDFExtractor.extractText(resumeFile)
-      .then(text => {
+    const extractText = async () => {
+      try {
+        const text = await PDFExtractor.extractText(resumeFile);
+        
         if (text) {
           if (text.includes('scanned document') || 
               text.includes('image-based PDF') || 
@@ -50,21 +57,36 @@ const ResumeExtractor: React.FC<ResumeExtractorProps> = ({
             onTextExtracted(text);
           }
         } else {
-          const errorMsg = "Could not extract text from the uploaded file.";
-          setExtractionError(errorMsg);
-          onExtractionError(errorMsg);
+          throw new Error("Could not extract text from the uploaded file.");
         }
-      })
-      .catch(err => {
+      } catch (err: any) {
         console.error("Error extracting text:", err);
+        
+        // Retry logic for transient errors
+        if (retryCount < maxRetries) {
+          console.log(`Retrying extraction (${retryCount + 1}/${maxRetries})...`);
+          setRetryCount(prev => prev + 1);
+          setTimeout(extractText, 1000); // Retry after 1 second
+          return;
+        }
+        
         const errorMsg = `Error extracting text: ${err.message}`;
         setExtractionError(errorMsg);
         onExtractionError(errorMsg);
-      })
-      .finally(() => {
+        
+        // Even on error, try to extract any text that might be available
+        if (err.partialText && typeof err.partialText === 'string' && err.partialText.length > 100) {
+          setResumeText(err.partialText);
+          onTextExtracted(err.partialText);
+          toast.warning("Partial resume content extracted. Some information might be missing.");
+        }
+      } finally {
         setIsLoading(false);
-      });
-  }, [resumeFile, onTextExtracted, onExtractionError, onBulletsExtracted]);
+      }
+    };
+    
+    extractText();
+  }, [resumeFile, onTextExtracted, onExtractionError, onBulletsExtracted, retryCount, maxRetries]);
 
   if (isLoading) {
     return <div className="p-4 text-center">Extracting resume content...</div>;

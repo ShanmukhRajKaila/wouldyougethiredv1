@@ -20,6 +20,11 @@ const ImprovedBulletPoint: React.FC<ImprovedBulletPointProps> = ({
 }) => {
   const [showImproved, setShowImproved] = useState(false);
   
+  // If no original bullet or it's empty
+  if (!originalBullet || originalBullet.trim() === '') {
+    return null;
+  }
+  
   // If no improved version available
   if (!improvedBullet) {
     return (

@@ -7,6 +7,7 @@ import OriginalResume from '@/components/resume/OriginalResume';
 import ImprovedResume from '@/components/resume/ImprovedResume';
 import { useSkillsAnalysis } from '@/hooks/useSkillsAnalysis';
 import { useImprovedResumeAnalysis } from '@/hooks/useImprovedResumeAnalysis';
+import ProcessingErrorDisplay from './resume/ProcessingErrorDisplay';
 
 interface StarAnalysisItem {
   original: string;
@@ -33,9 +34,13 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
   
   useEffect(() => {
     const improvedMap: Record<string, StarAnalysisItem> = {};
-    validStarAnalysis.forEach(item => {
-      improvedMap[item.original.trim()] = item;
-    });
+    if (Array.isArray(validStarAnalysis)) {
+      validStarAnalysis.forEach(item => {
+        if (item && item.original) {
+          improvedMap[item.original.trim()] = item;
+        }
+      });
+    }
     setImprovedBullets(improvedMap);
   }, [validStarAnalysis]);
 
@@ -53,6 +58,12 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
 
   return (
     <div className="mt-6">
+      {extractionError && (
+        <div className="mb-4">
+          <ProcessingErrorDisplay processingError={extractionError} />
+        </div>
+      )}
+      
       <Tabs defaultValue="original" onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="original">Original Resume</TabsTrigger>
@@ -64,6 +75,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
               resumeFile={resumeFile}
               onTextExtracted={handleTextExtracted}
               onBulletsExtracted={handleBulletsExtracted}
+              onExtractionError={handleExtractionError}
             />
           </Card>
         </TabsContent>
