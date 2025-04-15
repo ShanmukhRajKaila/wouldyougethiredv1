@@ -6,43 +6,16 @@ export function countJobKeywords(text: string): number {
   const keywords = [
     'experience', 'skills', 'requirements', 'qualifications', 
     'responsibilities', 'job', 'position', 'role', 'work',
-    'candidate', 'applicant', 'team', 'salary', 'benefits'
+    'candidate', 'applicant', 'team', 'salary', 'benefits',
+    'degree', 'education', 'bachelor', 'masters', 'phd',
+    'expertise', 'ability', 'duties', 'background', 'year',
+    'knowledge', 'understanding', 'proficiency', 'ability'
   ];
   
   const lowerText = text.toLowerCase();
   return keywords.reduce((count, keyword) => {
-    return count + (lowerText.match(new RegExp(keyword, 'g')) || []).length;
+    return count + (lowerText.match(new RegExp('\\b' + keyword + '\\b', 'g')) || []).length;
   }, 0);
-}
-
-/**
- * Convert HTML to plain text with better formatting
- */
-export function convertHtmlToText(html: string): string {
-  if (!html) return '';
-  
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<li\b[^>]*>([\s\S]*?)<\/li>/gi, '• $1\n')
-    .replace(/<\/p>\s*<p/gi, '</p>\n<p')
-    .replace(/<\/div>\s*<div/gi, '</div>\n<div')
-    .replace(/<\/h[1-6]>\s*<(?!h[1-6])/gi, '</h$1>\n<')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&rsquo;/g, "'")
-    .replace(/&lsquo;/g, "'")
-    .replace(/&rdquo;/g, '"')
-    .replace(/&ldquo;/g, '"')
-    .replace(/&ndash;/g, '-')
-    .replace(/&mdash;/g, '—')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
 }
 
 /**
@@ -68,96 +41,88 @@ export function detectContentPatterns(html: string) {
 }
 
 /**
- * Categorize text into sections like requirements, responsibilities, etc.
+ * Improved function to convert HTML to plain text with better formatting
  */
-export function categorizeSections(text: string) {
-  const sections: Record<string, string[]> = {
-    requirements: [],
-    responsibilities: [],
-    qualifications: [],
-    benefits: [],
-    about: [],
-    other: []
-  };
+export function convertHtmlToText(html: string): string {
+  if (!html) return '';
   
-  // Split by common section headers
-  const lines = text.split('\n');
-  let currentSection = 'other';
-  
-  for (const line of lines) {
-    const lowerLine = line.toLowerCase();
+  return html
+    // Preserve line breaks for certain elements
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>\s*<p/gi, '</p>\n<p')
+    .replace(/<\/div>\s*<div/gi, '</div>\n<div')
+    .replace(/<\/h[1-6]>\s*<(?!h[1-6])/gi, '</h$1>\n<')
     
-    // Detect section headers
-    if (lowerLine.includes('requirement') || lowerLine.includes('what you need')) {
-      currentSection = 'requirements';
-      continue;
-    } else if (lowerLine.includes('responsibilit') || lowerLine.includes('what you will do')) {
-      currentSection = 'responsibilities';
-      continue;
-    } else if (lowerLine.includes('qualif') || lowerLine.includes('skills') || lowerLine.includes('experience')) {
-      currentSection = 'qualifications';
-      continue;
-    } else if (lowerLine.includes('benefit') || lowerLine.includes('perks') || lowerLine.includes('what we offer')) {
-      currentSection = 'benefits';
-      continue;
-    } else if (lowerLine.includes('about') && (lowerLine.includes('us') || lowerLine.includes('company'))) {
-      currentSection = 'about';
-      continue;
-    }
+    // Format list items as bullet points
+    .replace(/<li\b[^>]*>([\s\S]*?)<\/li>/gi, '• $1\n')
     
-    // Add content to current section
-    if (line.trim()) {
-      sections[currentSection].push(line.trim());
-    }
-  }
-  
-  return sections;
+    // Preserve headers
+    .replace(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/gi, '\n$1\n')
+    
+    // Handle tables
+    .replace(/<\/tr>\s*<tr/gi, '</tr>\n<tr')
+    .replace(/<\/td>\s*<td/gi, '</td> | <td')
+    
+    // Remove all HTML tags
+    .replace(/<[^>]+>/g, '')
+    
+    // Fix common HTML entities
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&rsquo;/g, "'")
+    .replace(/&lsquo;/g, "'")
+    .replace(/&rdquo;/g, '"')
+    .replace(/&ldquo;/g, '"')
+    .replace(/&ndash;/g, '-')
+    .replace(/&mdash;/g, '—')
+    
+    // Remove consecutive line breaks and spaces
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\s{2,}/g, ' ')
+    
+    // Final trim
+    .trim();
 }
 
 /**
- * Extract the most relevant sections from multiple job descriptions
+ * Extract section from text using common section headers
  */
-export function extractRelevantSections(descriptions: string[]): Record<string, string> {
-  const allSections: Record<string, string[]> = {
-    requirements: [],
-    responsibilities: [],
-    qualifications: [],
-    benefits: [],
-    about: [],
-    summary: []
+export function extractSection(text: string, sectionName: string): string | null {
+  const sectionPatterns: Record<string, RegExp[]> = {
+    'responsibilities': [
+      /responsibilities:?([\s\S]*?)(?=\n\s*\n|\n[A-Z][^a-z]|\n[A-Z][a-z]+:|\n\d+\.|\nrequirements|\nqualifications|\nabout|\ncompany|\nbenefits|$)/i,
+      /duties:?([\s\S]*?)(?=\n\s*\n|\n[A-Z][^a-z]|\n[A-Z][a-z]+:|\n\d+\.|\nrequirements|\nqualifications|\nabout|\ncompany|\nbenefits|$)/i,
+      /what you['']?ll do:?([\s\S]*?)(?=\n\s*\n|\n[A-Z][^a-z]|\n[A-Z][a-z]+:|\n\d+\.|\nrequirements|\nqualifications|\nabout|\ncompany|\nbenefits|$)/i
+    ],
+    'requirements': [
+      /requirements:?([\s\S]*?)(?=\n\s*\n|\n[A-Z][^a-z]|\n[A-Z][a-z]+:|\n\d+\.|\nresponsibilities|\nduties|\nabout|\ncompany|\nbenefits|$)/i,
+      /qualifications:?([\s\S]*?)(?=\n\s*\n|\n[A-Z][^a-z]|\n[A-Z][a-z]+:|\n\d+\.|\nresponsibilities|\nduties|\nabout|\ncompany|\nbenefits|$)/i,
+      /what you['']?ll need:?([\s\S]*?)(?=\n\s*\n|\n[A-Z][^a-z]|\n[A-Z][a-z]+:|\n\d+\.|\nresponsibilities|\nduties|\nabout|\ncompany|\nbenefits|$)/i
+    ],
+    'skills': [
+      /skills:?([\s\S]*?)(?=\n\s*\n|\n[A-Z][^a-z]|\n[A-Z][a-z]+:|\n\d+\.|\nresponsibilities|\nduties|\nabout|\ncompany|\nbenefits|$)/i,
+      /expertise:?([\s\S]*?)(?=\n\s*\n|\n[A-Z][^a-z]|\n[A-Z][a-z]+:|\n\d+\.|\nresponsibilities|\nduties|\nabout|\ncompany|\nbenefits|$)/i
+    ],
+    'about': [
+      /about:?([\s\S]*?)(?=\n\s*\n|\n[A-Z][^a-z]|\n[A-Z][a-z]+:|\n\d+\.|\nresponsibilities|\nduties|\nrequirements|\nskills|$)/i,
+      /overview:?([\s\S]*?)(?=\n\s*\n|\n[A-Z][^a-z]|\n[A-Z][a-z]+:|\n\d+\.|\nresponsibilities|\nduties|\nrequirements|\nskills|$)/i,
+      /summary:?([\s\S]*?)(?=\n\s*\n|\n[A-Z][^a-z]|\n[A-Z][a-z]+:|\n\d+\.|\nresponsibilities|\nduties|\nrequirements|\nskills|$)/i
+    ]
   };
   
-  // Process each description and collect sections
-  for (const description of descriptions) {
-    const sections = categorizeSections(description);
-    
-    // Add sections to our collection
-    for (const [key, lines] of Object.entries(sections)) {
-      if (key in allSections && lines.length > 0) {
-        allSections[key].push(...lines);
-      }
-    }
-    
-    // Extract potential summary (first paragraph)
-    const firstParagraph = description.split('\n\n')[0];
-    if (firstParagraph && firstParagraph.length > 50 && firstParagraph.length < 500) {
-      allSections.summary.push(firstParagraph);
+  const patterns = sectionPatterns[sectionName.toLowerCase()];
+  if (!patterns) return null;
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match && match[1] && match[1].trim().length > 20) {
+      return match[1].trim();
     }
   }
   
-  // Deduplicate and select best content for each section
-  const result: Record<string, string> = {};
-  
-  for (const [key, lines] of Object.entries(allSections)) {
-    if (lines.length === 0) continue;
-    
-    // Remove duplicates and similar lines
-    const uniqueLines = [...new Set(lines)];
-    
-    // Limit section size
-    const selectedLines = uniqueLines.slice(0, 10);
-    result[key] = selectedLines.join('\n\n');
-  }
-  
-  return result;
+  return null;
 }

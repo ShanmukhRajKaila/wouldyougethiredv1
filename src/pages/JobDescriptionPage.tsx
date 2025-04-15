@@ -30,14 +30,79 @@ const JobDescriptionPage: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('jobDescription');
   
-  const roleOptions = [
-    { value: 'product_management', label: 'Product Management' },
-    { value: 'finance', label: 'Finance' },
-    { value: 'consulting', label: 'Consulting' },
-    { value: 'marketing', label: 'Marketing' },
-    { value: 'sustainability', label: 'Sustainability' },
-    { value: 'other', label: 'Other (Custom)' }
+  // Comprehensive list of specific roles organized by industry
+  const roleCategories = [
+    {
+      name: "Tech Management",
+      roles: [
+        { value: 'product_manager', label: 'Product Manager' },
+        { value: 'technical_program_manager', label: 'Technical Program Manager' },
+        { value: 'engineering_manager', label: 'Engineering Manager' },
+        { value: 'cto', label: 'Chief Technology Officer (CTO)' },
+        { value: 'director_of_engineering', label: 'Director of Engineering' }
+      ]
+    },
+    {
+      name: "Finance",
+      roles: [
+        { value: 'investment_banker', label: 'Investment Banker' },
+        { value: 'finance_manager', label: 'Finance Manager' },
+        { value: 'financial_analyst', label: 'Financial Analyst' },
+        { value: 'portfolio_manager', label: 'Portfolio Manager' },
+        { value: 'private_equity_associate', label: 'Private Equity Associate' }
+      ]
+    },
+    {
+      name: "Consulting",
+      roles: [
+        { value: 'management_consultant', label: 'Management Consultant' },
+        { value: 'strategy_consultant', label: 'Strategy Consultant' },
+        { value: 'operations_consultant', label: 'Operations Consultant' },
+        { value: 'technology_consultant', label: 'Technology Consultant' },
+        { value: 'healthcare_consultant', label: 'Healthcare Consultant' }
+      ]
+    },
+    {
+      name: "Marketing",
+      roles: [
+        { value: 'marketing_manager', label: 'Marketing Manager' },
+        { value: 'brand_manager', label: 'Brand Manager' },
+        { value: 'digital_marketing_director', label: 'Digital Marketing Director' },
+        { value: 'growth_marketing_manager', label: 'Growth Marketing Manager' },
+        { value: 'seo_manager', label: 'SEO Manager' }
+      ]
+    },
+    {
+      name: "Sustainability",
+      roles: [
+        { value: 'sustainability_manager', label: 'Sustainability Manager' },
+        { value: 'esg_director', label: 'ESG Director' },
+        { value: 'environmental_program_manager', label: 'Environmental Program Manager' },
+        { value: 'sustainable_business_consultant', label: 'Sustainable Business Consultant' },
+        { value: 'corporate_responsibility_manager', label: 'Corporate Responsibility Manager' }
+      ]
+    },
+    {
+      name: "Tech & Engineering",
+      roles: [
+        { value: 'software_engineer', label: 'Software Engineer' },
+        { value: 'data_scientist', label: 'Data Scientist' },
+        { value: 'ux_designer', label: 'UX Designer' },
+        { value: 'product_designer', label: 'Product Designer' },
+        { value: 'devops_engineer', label: 'DevOps Engineer' },
+        { value: 'ai_engineer', label: 'AI Engineer' }
+      ]
+    },
+    {
+      name: "Other",
+      roles: [
+        { value: 'other', label: 'Other (Specify)' }
+      ]
+    }
   ];
+  
+  // Flatten all roles for easier validation
+  const allRoles = roleCategories.flatMap(category => category.roles);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,14 +164,16 @@ const JobDescriptionPage: React.FC = () => {
         if (selectedRole === 'other') {
           roleLabel = customRole;
         } else {
-          const roleOption = roleOptions.find(option => option.value === selectedRole);
-          roleLabel = roleOption ? roleOption.label : '';
+          const role = allRoles.find(r => r.value === selectedRole);
+          roleLabel = role ? role.label : '';
         }
         
         setRoleTitle(roleLabel);
         localStorage.setItem('jobRoleTitle', roleLabel);
         
         toast.success('Role description loaded successfully');
+      } else {
+        toast.warning('Could not find detailed role descriptions. Please try a different role or enter manually.');
       }
     } catch (error) {
       console.error('Error searching for role descriptions:', error);
@@ -122,10 +189,12 @@ const JobDescriptionPage: React.FC = () => {
       return;
     }
     
-    toast.loading('Converting job description to role format...');
+    const loadingToast = toast.loading('Converting job description to role format...');
     
     try {
       const roleDescription = await convertJobToRoleDescription(jobDescription);
+      
+      toast.dismiss(loadingToast);
       
       if (roleDescription) {
         setJobDescription(roleDescription);
@@ -134,6 +203,7 @@ const JobDescriptionPage: React.FC = () => {
         toast.error('Could not convert job description to role format');
       }
     } catch (error) {
+      toast.dismiss(loadingToast);
       console.error('Error converting job description:', error);
       toast.error('Failed to convert job description');
     }
@@ -212,22 +282,27 @@ const JobDescriptionPage: React.FC = () => {
           
           <TabsContent value="roleSearch">
             <p className="text-consulting-gray mb-8">
-              Search for descriptions of standard roles. This will help you understand typical requirements and responsibilities.
+              Search for descriptions of specific roles. This will help you understand typical requirements and responsibilities.
             </p>
             
             <div className="mb-6">
               <Label htmlFor="roleSelect" className="block text-consulting-charcoal font-medium mb-2">
-                Select Role <span className="text-red-500">*</span>
+                Role Category <span className="text-red-500">*</span>
               </Label>
               <Select value={selectedRole} onValueChange={setSelectedRole}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a role category" />
+                  <SelectValue placeholder="Select a specific role" />
                 </SelectTrigger>
-                <SelectContent>
-                  {roleOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
+                <SelectContent className="max-h-80">
+                  {roleCategories.map((category) => (
+                    <React.Fragment key={category.name}>
+                      <div className="px-2 py-1.5 text-sm font-medium text-gray-500 bg-gray-50">{category.name}</div>
+                      {category.roles.map((role) => (
+                        <SelectItem key={role.value} value={role.value}>
+                          {role.label}
+                        </SelectItem>
+                      ))}
+                    </React.Fragment>
                   ))}
                 </SelectContent>
               </Select>
@@ -256,7 +331,7 @@ const JobDescriptionPage: React.FC = () => {
                 disabled={!selectedRole || (selectedRole === 'other' && !customRole.trim()) || isSearching}
                 className="bg-consulting-navy hover:bg-consulting-blue w-full"
               >
-                {isSearching ? 'Searching...' : 'Search Role Descriptions'}
+                {isSearching ? 'Searching...' : 'Search Role Description'}
               </Button>
               <p className="text-sm text-gray-500 mt-2">
                 This will search for typical descriptions for this role from job postings online.
