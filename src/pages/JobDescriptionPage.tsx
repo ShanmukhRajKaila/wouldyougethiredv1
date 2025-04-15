@@ -12,6 +12,7 @@ import { searchRoleDescriptions, convertJobToRoleDescription } from '@/context/o
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useExtractorErrorHandling } from '@/hooks/useExtractorErrorHandling';
 
 const JobDescriptionPage: React.FC = () => {
   const { 
@@ -34,6 +35,12 @@ const JobDescriptionPage: React.FC = () => {
   const [availableRoles, setAvailableRoles] = useState<{value: string, label: string}[]>([]);
   const [isJobDescriptionValid, setIsJobDescriptionValid] = useState(true);
   
+  // Use the enhanced extractor error handling hook
+  const { validateExtractedText } = useExtractorErrorHandling({
+    setCurrentStage,
+    setIsSubmitting
+  });
+  
   // Define role categories and their specific roles
   const roleCategories = [
     {
@@ -49,7 +56,8 @@ const JobDescriptionPage: React.FC = () => {
         { value: 'technical_director', label: 'Technical Director' },
         { value: 'it_director', label: 'IT Director' },
         { value: 'chief_product_officer', label: 'Chief Product Officer (CPO)' },
-        { value: 'product_director', label: 'Product Director' }
+        { value: 'product_director', label: 'Product Director' },
+        { value: 'other_tech_management', label: 'Other Tech Management Role' }
       ]
     },
     {
@@ -67,7 +75,8 @@ const JobDescriptionPage: React.FC = () => {
         { value: 'cfo', label: 'Chief Financial Officer (CFO)' },
         { value: 'treasury_manager', label: 'Treasury Manager' },
         { value: 'corporate_finance_manager', label: 'Corporate Finance Manager' },
-        { value: 'fund_manager', label: 'Fund Manager' }
+        { value: 'fund_manager', label: 'Fund Manager' },
+        { value: 'other_finance', label: 'Other Finance Role' }
       ]
     },
     {
@@ -84,7 +93,8 @@ const JobDescriptionPage: React.FC = () => {
         { value: 'digital_transformation_consultant', label: 'Digital Transformation Consultant' },
         { value: 'sustainability_consultant', label: 'Sustainability Consultant' },
         { value: 'risk_consultant', label: 'Risk Consultant' },
-        { value: 'supply_chain_consultant', label: 'Supply Chain Consultant' }
+        { value: 'supply_chain_consultant', label: 'Supply Chain Consultant' },
+        { value: 'other_consulting', label: 'Other Consulting Role' }
       ]
     },
     {
@@ -101,7 +111,8 @@ const JobDescriptionPage: React.FC = () => {
         { value: 'cmo', label: 'Chief Marketing Officer (CMO)' },
         { value: 'social_media_manager', label: 'Social Media Manager' },
         { value: 'product_marketing_manager', label: 'Product Marketing Manager' },
-        { value: 'marketing_analyst', label: 'Marketing Analyst' }
+        { value: 'marketing_analyst', label: 'Marketing Analyst' },
+        { value: 'other_marketing', label: 'Other Marketing Role' }
       ]
     },
     {
@@ -117,7 +128,8 @@ const JobDescriptionPage: React.FC = () => {
         { value: 'chief_sustainability_officer', label: 'Chief Sustainability Officer' },
         { value: 'climate_change_specialist', label: 'Climate Change Specialist' },
         { value: 'sustainable_finance_manager', label: 'Sustainable Finance Manager' },
-        { value: 'circular_economy_specialist', label: 'Circular Economy Specialist' }
+        { value: 'circular_economy_specialist', label: 'Circular Economy Specialist' },
+        { value: 'other_sustainability', label: 'Other Sustainability Role' }
       ]
     },
     {
@@ -137,7 +149,8 @@ const JobDescriptionPage: React.FC = () => {
         { value: 'data_engineer', label: 'Data Engineer' },
         { value: 'machine_learning_engineer', label: 'Machine Learning Engineer' },
         { value: 'cloud_architect', label: 'Cloud Architect' },
-        { value: 'security_engineer', label: 'Security Engineer' }
+        { value: 'security_engineer', label: 'Security Engineer' },
+        { value: 'other_tech', label: 'Other Tech/Engineering Role' }
       ]
     },
     {
@@ -171,43 +184,11 @@ const JobDescriptionPage: React.FC = () => {
     }
   }, [jobDescription]);
   
-  // Validate job description content
+  // Enhanced job description validation
   const validateJobDescription = (text: string): boolean => {
     if (!text || text.length < 50) return false;
     
-    // Check for common non-job description content
-    const invalidPatterns = [
-      /log\s*in/i,
-      /sign\s*in/i,
-      /register/i,
-      /create\s*account/i,
-      /password/i,
-      /404/i,
-      /page\s*not\s*found/i,
-      /access\s*denied/i,
-      /subscription/i,
-    ];
-    
-    // If too many invalid patterns match, it's likely not a job description
-    const matchCount = invalidPatterns.filter(pattern => pattern.test(text)).length;
-    
-    // Check for job-related terms
-    const jobTerms = [
-      /responsibilities/i,
-      /requirements/i,
-      /qualifications/i,
-      /experience/i,
-      /skills/i,
-      /role/i,
-      /position/i,
-      /job\s*description/i
-    ];
-    
-    // Count how many job-related terms appear
-    const jobTermCount = jobTerms.filter(term => term.test(text)).length;
-    
-    // Valid if we have few invalid patterns and several job-related terms
-    return (matchCount < 3 && jobTermCount >= 2);
+    return validateExtractedText(text, 'jobDescription');
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -221,7 +202,7 @@ const JobDescriptionPage: React.FC = () => {
     // Validate job description
     if (!validateJobDescription(jobDescription)) {
       setIsJobDescriptionValid(false);
-      toast.warning('The job description appears to be invalid. Please check and update it manually.');
+      toast.warning('The job description appears to be invalid or is too short. Please check and update it.');
       return;
     }
     
@@ -255,8 +236,12 @@ const JobDescriptionPage: React.FC = () => {
       return;
     }
     
-    if (selectedRole === 'other' && !customRole.trim()) {
-      toast.error('Please enter a custom role');
+    // Check if we need a custom role name
+    const needsCustomRole = selectedRole === 'other' || 
+                           selectedRole.includes('other_');
+                           
+    if (needsCustomRole && !customRole.trim()) {
+      toast.error('Please enter a custom role name');
       return;
     }
     
@@ -265,7 +250,7 @@ const JobDescriptionPage: React.FC = () => {
     try {
       const result = await searchRoleDescriptions(
         selectedRole, 
-        selectedRole === 'other' ? customRole : undefined
+        needsCustomRole ? customRole : undefined
       );
       
       if (result && result.consolidatedDescription) {
@@ -274,7 +259,7 @@ const JobDescriptionPage: React.FC = () => {
         
         // Set the role title based on the selection
         let roleLabel = '';
-        if (selectedRole === 'other') {
+        if (needsCustomRole) {
           roleLabel = customRole;
         } else {
           const role = availableRoles.find(r => r.value === selectedRole);
@@ -322,6 +307,9 @@ const JobDescriptionPage: React.FC = () => {
     }
   };
   
+  // Determine if the selected role needs a custom role input
+  const showCustomRoleInput = selectedRole === 'other' || selectedRole.includes('other_');
+  
   return (
     <PageContainer>
       <div className="step-container animate-slide-in">
@@ -363,15 +351,20 @@ const JobDescriptionPage: React.FC = () => {
                 <Textarea
                   id="jobDescription"
                   value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
+                  onChange={(e) => {
+                    setJobDescription(e.target.value);
+                    if (!e.target.value.trim()) {
+                      setIsJobDescriptionValid(true); // Reset validation for empty field
+                    }
+                  }}
                   placeholder="Paste the job description here..."
-                  className={cn("min-h-[200px]", !isJobDescriptionValid && "border-red-500")}
+                  className={`min-h-[200px] ${!isJobDescriptionValid ? "border-red-500 focus-visible:ring-red-300" : ""}`}
                   required
                 />
                 
                 {!isJobDescriptionValid && (
                   <p className="text-red-500 text-sm mt-1">
-                    The job description appears to be invalid. Please check and update it.
+                    The job description appears to be invalid or contains login/registration text. Please check and update it.
                   </p>
                 )}
                 
@@ -414,11 +407,13 @@ const JobDescriptionPage: React.FC = () => {
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {roleCategories.map((category) => (
-                      <SelectItem key={category.value} value={category.value}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
+                    <ScrollArea className="h-72">
+                      {roleCategories.map((category) => (
+                        <SelectItem key={category.value} value={category.value}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </ScrollArea>
                   </SelectContent>
                 </Select>
               </div>
@@ -448,7 +443,7 @@ const JobDescriptionPage: React.FC = () => {
               </div>
             </div>
             
-            {selectedRole === 'other' && (
+            {showCustomRoleInput && (
               <div className="mt-6">
                 <Label htmlFor="customRole" className="block text-consulting-charcoal font-medium mb-2">
                   Custom Role <span className="text-red-500">*</span>
@@ -459,7 +454,7 @@ const JobDescriptionPage: React.FC = () => {
                   onChange={(e) => setCustomRole(e.target.value)}
                   placeholder="e.g., Data Scientist, UX Designer"
                   className="w-full"
-                  required={selectedRole === 'other'}
+                  required={showCustomRoleInput}
                 />
               </div>
             )}
@@ -468,7 +463,11 @@ const JobDescriptionPage: React.FC = () => {
               <Button 
                 type="button"
                 onClick={handleSearchRole}
-                disabled={!selectedRole || (selectedRole === 'other' && !customRole.trim()) || isSearching}
+                disabled={
+                  !selectedRole || 
+                  (showCustomRoleInput && !customRole.trim()) || 
+                  isSearching
+                }
                 className="bg-consulting-navy hover:bg-consulting-blue w-full"
               >
                 {isSearching ? 'Searching...' : 'Search Role Description'}

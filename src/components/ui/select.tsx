@@ -85,11 +85,14 @@ const SelectContent = React.forwardRef<
       <SelectScrollUpButton />
       <SelectPrimitive.Viewport
         className={cn(
-          "p-1 overflow-y-auto scrollbar-thin",  // Added overflow-y-auto and scrollbar styling
+          "p-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100",
           position === "popper" &&
             "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
         )}
-        style={{ maxHeight: "220px" }}  // Fixed max height for scrolling
+        style={{ 
+          maxHeight: "300px",  // Increased max height for more visible options
+          overscrollBehavior: "contain" // Prevent scroll chaining
+        }}
       >
         {children}
       </SelectPrimitive.Viewport>

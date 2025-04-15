@@ -1,3 +1,4 @@
+
 import * as cheerio from "https://esm.sh/cheerio@1.0.0-rc.12";
 import { convertHtmlToText, countJobKeywords } from "./html-utils.ts";
 
@@ -8,7 +9,7 @@ export function extractJobDescriptionWithCheerio($: cheerio.CheerioAPI, url: str
   const domain = new URL(url).hostname.toLowerCase();
   
   // Special handling for MBA Exchange
-  if (domain.includes('mbaexchange')) {
+  if (domain.includes('mbaexchange') || domain.includes('mba-exchange')) {
     return extractMBAExchangeJobDescription($);
   }
   
@@ -89,13 +90,34 @@ export function extractJobDescriptionWithCheerio($: cheerio.CheerioAPI, url: str
 export function extractMBAExchangeJobDescription($: cheerio.CheerioAPI): string | null {
   console.log("Using specialized MBA Exchange extraction method");
   
-  // First try to find job description in class="job-content"
-  const jobContent = $('.job-content').text().trim();
+  // First look for specific MBA Exchange job content structure
+  const jobDetailsTable = $('table.jobdetailtable');
+  if (jobDetailsTable.length) {
+    const tableText = jobDetailsTable.text().trim();
+    if (tableText.length > 300) {
+      return tableText;
+    }
+  }
+  
+  // Look for the main job content div (improved selector)
+  const jobContent = $('.jobscontent, .job-content, .jd').text().trim();
   if (jobContent && jobContent.length > 300) {
     return jobContent;
   }
   
-  // Try to find job details in a table
+  // Check for tbody that has job description content
+  const descriptionTbody = $('tbody:contains("Job Description"), tbody:contains("Position Description")');
+  if (descriptionTbody.length) {
+    const tbodyText = descriptionTbody.text().trim();
+    if (tbodyText.length > 300) {
+      // Filter out login/register links by checking for job-related content
+      if (tbodyText.match(/experience|requirements|responsibilities|qualifications|skills|role/gi)) {
+        return tbodyText;
+      }
+    }
+  }
+  
+  // Try to find specific job details in a table
   const jobTable = $('table:contains("Job Description"), table:contains("Position Description")');
   if (jobTable.length) {
     const tableContent = jobTable.text().trim();
@@ -123,7 +145,43 @@ export function extractMBAExchangeJobDescription($: cheerio.CheerioAPI): string 
         return parentContent;
       }
     }
+    
+    // Look for TD cells containing section headers
+    const tdHeader = $(`td:contains("${section}")`);
+    if (tdHeader.length) {
+      const row = tdHeader.closest('tr');
+      // Get the next row that might contain the actual content
+      const contentRow = row.next('tr');
+      if (contentRow.length) {
+        const content = contentRow.text().trim();
+        if (content.length > 300) {
+          return content;
+        }
+      }
+      
+      // Also try the next TD cell that might contain the content
+      const nextCell = tdHeader.next('td');
+      if (nextCell.length) {
+        const content = nextCell.text().trim();
+        if (content.length > 300) {
+          return content;
+        }
+      }
+    }
   }
+  
+  // Try to find job-related content in any TD cell that's not tiny
+  $('td').each((_, element) => {
+    const content = $(element).text().trim();
+    if (content.length > 500) {
+      // Check for job-related keywords
+      const jobKeywords = /experience|responsibilities|requirements|qualifications|skills|role/gi;
+      if (content.match(jobKeywords) && 
+          !content.match(/login|register|password|subscription|sign\s*in/gi)) {
+        return content;
+      }
+    }
+  });
   
   // Final attempt - try to find the job description in any content that contains job keywords
   let bestContent = { text: "", score: 0 };
@@ -131,13 +189,20 @@ export function extractMBAExchangeJobDescription($: cheerio.CheerioAPI): string 
   $('div, td, section').each((_, element) => {
     const content = $(element).text().trim();
     if (content.length > 300 && content.length < 5000) {
-      // Score based on presence of job-related keywords
+      // Score based on presence of job-related keywords and absence of login keywords
       let score = 0;
       
-      const keywords = ['responsibilities', 'requirements', 'qualifications', 'experience', 'skills', 'role'];
-      for (const keyword of keywords) {
+      const jobKeywords = ['responsibilities', 'requirements', 'qualifications', 'experience', 'skills', 'role'];
+      for (const keyword of jobKeywords) {
         if (content.toLowerCase().includes(keyword)) {
           score += 10;
+        }
+      }
+      
+      const loginKeywords = ['login', 'register', 'password', 'sign in', 'create account'];
+      for (const keyword of loginKeywords) {
+        if (content.toLowerCase().includes(keyword)) {
+          score -= 15; // Penalize login content heavily
         }
       }
       
@@ -182,6 +247,12 @@ export function extractJobDescription(html: string, url: string, debug = false):
     .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, '')
     .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, '')
     .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, '');
+  
+  // Special handling for MBA Exchange
+  if (domain.includes('mbaexchange') || domain.includes('mba-exchange')) {
+    // Use dedicated pattern matching for MBA Exchange
+    return extractMBAExchangeJobDescriptionFromHTML(cleanedHtml, debug);
+  }
   
   if (url.includes('linkedin.com')) {
     const linkedInPatterns = [
@@ -285,6 +356,101 @@ export function extractJobDescription(html: string, url: string, debug = false):
 }
 
 /**
+ * Special extraction function for MBA Exchange specifically from raw HTML
+ */
+function extractMBAExchangeJobDescriptionFromHTML(html: string, debug = false): string | null {
+  if (debug) {
+    console.log("Using specialized MBA Exchange HTML extraction method");
+  }
+  
+  // Target the main job details table
+  const jobDetailsPattern = /<table[^>]*class="[^"]*jobdetailtable[^"]*"[^>]*>([\s\S]*?)<\/table>/i;
+  const jobDetailsMatch = html.match(jobDetailsPattern);
+  
+  if (jobDetailsMatch && jobDetailsMatch[1]) {
+    const jobDetailsContent = convertHtmlToText(jobDetailsMatch[1]);
+    
+    // Validate that this actually looks like job content and not login garbage
+    if (jobDetailsContent.length > 300 && 
+        jobDetailsContent.match(/experience|responsibilities|requirements|qualifications|skills/gi) &&
+        !jobDetailsContent.match(/login|register|password|subscription|sign in/gi)) {
+      return jobDetailsContent;
+    }
+  }
+  
+  // Try to find the job content in specific table rows that contain job details
+  const tableRowPattern = /<tr[^>]*>\s*<td[^>]*>[^<]*(?:job\s*description|position\s*description|responsibilities|requirements)[^<]*<\/td>\s*<td[^>]*>([\s\S]*?)<\/td>\s*<\/tr>/gi;
+  let match;
+  let bestRowContent = { text: "", length: 0 };
+  
+  while ((match = tableRowPattern.exec(html)) !== null) {
+    if (match[1]) {
+      const content = convertHtmlToText(match[1]);
+      if (content.length > 200 && content.length > bestRowContent.length) {
+        bestRowContent = { text: content, length: content.length };
+      }
+    }
+  }
+  
+  if (bestRowContent.text) {
+    return bestRowContent.text;
+  }
+  
+  // Try to find a job detail section
+  const jobContentPattern = /<div[^>]*class="[^"]*(?:jobscontent|job-content|jd)[^"]*"[^>]*>([\s\S]*?)<\/div>/i;
+  const jobContentMatch = html.match(jobContentPattern);
+  
+  if (jobContentMatch && jobContentMatch[1]) {
+    const content = convertHtmlToText(jobContentMatch[1]);
+    if (content.length > 300) {
+      return content;
+    }
+  }
+  
+  // As a last resort, look for tables with substantial job-related content
+  const tablePattern = /<table[^>]*>([\s\S]*?)<\/table>/gi;
+  let tableMatch;
+  let bestTableContent = { text: "", score: 0 };
+  
+  while ((tableMatch = tablePattern.exec(html)) !== null) {
+    if (tableMatch[1]) {
+      const content = convertHtmlToText(tableMatch[1]);
+      if (content.length > 300) {
+        // Score based on job-related terms
+        const jobTerms = ['experience', 'responsibilities', 'requirements', 'qualifications', 'skills', 'job description'];
+        let score = 0;
+        
+        for (const term of jobTerms) {
+          const regex = new RegExp(term, 'gi');
+          const matches = content.match(regex);
+          if (matches) {
+            score += matches.length * 10;
+          }
+        }
+        
+        // Penalize login/register content
+        const loginTerms = ['login', 'sign in', 'register', 'password'];
+        for (const term of loginTerms) {
+          if (content.toLowerCase().includes(term)) {
+            score -= 25;
+          }
+        }
+        
+        if (score > bestTableContent.score) {
+          bestTableContent = { text: content, score };
+        }
+      }
+    }
+  }
+  
+  if (bestTableContent.score > 20) {
+    return bestTableContent.text;
+  }
+  
+  return null;
+}
+
+/**
  * Validate if the extracted text looks like a job description
  */
 export function validateJobDescription(text: string): boolean {
@@ -305,7 +471,7 @@ export function validateJobDescription(text: string): boolean {
   
   // If too many invalid patterns match, it's likely not a job description
   const matchCount = invalidPatterns.filter(pattern => pattern.test(text)).length;
-  if (matchCount >= 3) return false;
+  if (matchCount >= 2) return false;
   
   // Check for job-related terms
   const jobTerms = [
@@ -323,7 +489,7 @@ export function validateJobDescription(text: string): boolean {
   const jobTermCount = jobTerms.filter(term => term.test(text)).length;
   
   // Valid if we have job-related terms
-  return jobTermCount >= 2;
+  return jobTermCount >= 1;
 }
 
 /**
