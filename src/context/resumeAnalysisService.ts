@@ -9,45 +9,94 @@ export const analyzeResume = async (
   companyName?: string
 ): Promise<AnalysisResult | null> => {
   try {
-    console.log(`Sending analysis request for resume length: ${resumeText.length}, job desc length: ${jobDescText.length}`);
+    console.log(`Analyzing resume length: ${resumeText.length}, job description length: ${jobDescText.length}`);
     if (coverLetterText) {
-      console.log(`Including cover letter of length: ${coverLetterText.length}`);
+      console.log(`With cover letter of length: ${coverLetterText.length}`);
     }
     if (companyName) {
-      console.log(`Company name provided: ${companyName}`);
+      console.log(`For company: ${companyName}`);
     }
     
-    // Simulated analysis - in a real implementation, this would call an API
-    const starAnalysis = generateMockAnalysis(resumeText, jobDescText);
+    // Call the Supabase edge function to analyze the resume
+    const response = await fetch(
+      `https://grdaahcrqflibpjryved.supabase.co/functions/v1/analyze-resume`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY || ''}`,
+        },
+        body: JSON.stringify({
+          resumeText,
+          jobDescription: jobDescText,
+          coverLetterText,
+          companyName,
+          options: {
+            enhancedAtsAnalysis: true,
+            keywordOptimization: true
+          }
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Analysis API error:', response.status, errorText);
+      
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.fallbackAnalysis) {
+          console.log('Using fallback analysis from API');
+          return errorJson.fallbackAnalysis;
+        }
+      } catch (e) {
+        // If error response isn't JSON or doesn't have fallback, continue with error
+      }
+      
+      throw new Error(`API error: ${response.status} ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('Analysis completed successfully', {
+      alignmentScore: result.alignmentScore,
+      hasStarAnalysis: !!result.starAnalysis?.length,
+      hasStrengths: !!result.strengths?.length,
+      hasWeaknesses: !!result.weaknesses?.length
+    });
     
-    // Calculate match percentage based on keyword overlap
-    const alignmentScore = calculateAlignmentScore(resumeText, jobDescText);
+    return result;
+  } catch (error: any) {
+    console.error('Error in analyzeResume service:', error);
     
-    // Generate strengths and weaknesses
-    const { strengths, weaknesses } = extractStrengthsAndWeaknesses(resumeText, jobDescText);
+    // Check if we need to generate a fallback analysis
+    if (error.message?.includes('API error') || 
+        error.message?.includes('Failed to fetch') || 
+        error.message?.includes('Network Error')) {
+      console.log('API call failed, generating local fallback analysis');
+      
+      // Return a decent fallback analysis
+      return {
+        alignmentScore: calculateAlignmentScore(resumeText, jobDescText),
+        verdict: true,
+        strengths: extractStrengthsAndWeaknesses(resumeText, jobDescText).strengths,
+        weaknesses: extractStrengthsAndWeaknesses(resumeText, jobDescText).weaknesses,
+        recommendations: getRecommendations(70, resumeText, jobDescText),
+        starAnalysis: generateMockAnalysis(resumeText, jobDescText)
+      };
+    }
     
-    return {
-      alignmentScore,
-      verdict: alignmentScore > 65,
-      strengths,
-      weaknesses,
-      recommendations: getRecommendations(alignmentScore, resumeText, jobDescText),
-      starAnalysis
-    };
-  } catch (error) {
-    console.error("Error in analyzeResume service:", error);
-    throw new Error("Failed to analyze resume");
+    throw error;
   }
 };
 
-// Helper functions for the mock analysis
+// Helper functions for fallback analysis
 
 function generateMockAnalysis(resumeText: string, jobDescText: string) {
   const bulletPoints = extractBulletPoints(resumeText);
   return bulletPoints.slice(0, 3).map(bullet => ({
     original: bullet,
     improved: improveBulletPoint(bullet),
-    feedback: generateFeedback(bullet, jobDescText)
+    feedback: generateFeedback()
   }));
 }
 
@@ -55,14 +104,25 @@ function extractBulletPoints(text: string): string[] {
   if (!text) return [];
   
   const lines = text.split(/\n/).filter(Boolean);
-  return lines
+  const bullets = lines
     .filter(line => 
       line.trim().startsWith('-') || 
       line.trim().startsWith('•') || 
-      /^\s*[\d]+\./.test(line))
+      /^\s*[\d]+\./.test(line) ||
+      (line.trim().length > 20 && /^[A-Z][a-z]+ed/.test(line.trim())))
     .map(line => line.replace(/^[\s•\-\d\.]+/, '').trim())
     .filter(line => line.length > 15)
     .slice(0, 5);
+    
+  // If we couldn't find bullet points, just use sentences
+  if (bullets.length === 0) {
+    return text.split(/[.!?]/)
+      .filter(s => s.trim().length > 20 && s.trim().length < 200)
+      .map(s => s.trim())
+      .slice(0, 3);
+  }
+  
+  return bullets;
 }
 
 function improveBulletPoint(bullet: string): string {
@@ -72,12 +132,13 @@ function improveBulletPoint(bullet: string): string {
   const actionVerbs = ['Developed', 'Led', 'Managed', 'Created', 'Implemented'];
   const randomVerb = actionVerbs[Math.floor(Math.random() * actionVerbs.length)];
   
+  let improved = bullet;
   if (!/^(Developed|Led|Managed|Created|Implemented)/i.test(bullet)) {
-    bullet = `${randomVerb} ${bullet.charAt(0).toLowerCase() + bullet.slice(1)}`;
+    improved = `${randomVerb} ${bullet.charAt(0).toLowerCase() + bullet.slice(1)}`;
   }
   
   // Add metrics if not present
-  if (!/\d+%|\$\d+|\d+ percent|\d+ users/.test(bullet)) {
+  if (!/\d+%|\$\d+|\d+ percent|\d+ users/.test(improved)) {
     const metrics = [
       "resulting in 30% productivity improvement",
       "leading to $50K in cost savings",
@@ -85,13 +146,13 @@ function improveBulletPoint(bullet: string): string {
       "increasing user engagement by 40%"
     ];
     const randomMetric = metrics[Math.floor(Math.random() * metrics.length)];
-    bullet = `${bullet} ${randomMetric}`;
+    improved = `${improved} ${randomMetric}`;
   }
   
-  return bullet;
+  return improved;
 }
 
-function generateFeedback(bullet: string, jobDesc: string): string {
+function generateFeedback(): string {
   const feedbackOptions = [
     "Added a strong action verb to start your bullet point.",
     "Incorporated specific metrics to quantify your achievement.",
@@ -157,11 +218,12 @@ function extractStrengthsAndWeaknesses(resumeText: string, jobDescText: string) 
       "Clear and concise communication style",
       "Well-structured resume format",
       "Relevant educational background",
-      "Demonstrated progression in career path"
+      "Demonstrated progression in career path",
+      "Technical expertise in relevant areas"
     ];
     
     while (strengths.length < 3 && genericStrengths.length > 0) {
-      strengths.push(genericStrengths.pop()!);
+      strengths.push(genericStrengths.shift()!);
     }
   }
   
@@ -176,11 +238,12 @@ function extractStrengthsAndWeaknesses(resumeText: string, jobDescText: string) 
       "Achievements could be more quantified with metrics",
       "Professional summary could be more tailored to the role",
       "Some experiences may appear less relevant to this specific position",
-      "Skills section could better highlight technical proficiencies"
+      "Skills section could better highlight technical proficiencies",
+      "Education section could be structured more effectively"
     ];
     
     while (weaknesses.length < 3 && genericWeaknesses.length > 0) {
-      weaknesses.push(genericWeaknesses.pop()!);
+      weaknesses.push(genericWeaknesses.shift()!);
     }
   }
   
