@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -23,7 +22,7 @@ interface AnalysisRequest {
   };
 }
 
-// Function to fetch company insights from Google Search API
+// Enhanced function to fetch company insights using Google Search API
 async function fetchCompanyInsights(companyName: string): Promise<string[]> {
   if (!googleSearchApiKey || !googleSearchCx) {
     console.log("Google Search API keys not configured, skipping external company research");
@@ -31,21 +30,21 @@ async function fetchCompanyInsights(companyName: string): Promise<string[]> {
   }
   
   try {
-    console.log(`Fetching company insights for ${companyName}...`);
+    console.log(`Fetching comprehensive company insights for ${companyName}...`);
     
-    // Create search queries for company culture and values
+    // Expanded search queries for deeper company understanding
     const queries = [
       `${companyName} company culture values mission`,
-      `${companyName} corporate social responsibility`,
-      `${companyName} recent achievements news`,
-      `${companyName} work environment employee reviews`,
-      `${companyName} industry leadership innovation`
+      `${companyName} corporate social responsibility recent initiatives`,
+      `${companyName} leadership team strategic vision`,
+      `${companyName} recent achievements industry impact`,
+      `${companyName} employee experiences work environment`
     ];
     
     let allInsights: string[] = [];
     
-    // Only process first two queries to avoid rate limits
-    for (const query of queries.slice(0, 2)) {
+    // Process search queries to gather insights
+    for (const query of queries) {
       const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${googleSearchApiKey}&cx=${googleSearchCx}&q=${encodeURIComponent(query)}`;
       
       const response = await fetch(searchUrl);
@@ -57,19 +56,20 @@ async function fetchCompanyInsights(companyName: string): Promise<string[]> {
       
       const data = await response.json();
       
-      // Extract snippets and titles from search results
+      // Extract meaningful snippets from search results
       if (data.items && data.items.length > 0) {
         const insights = data.items.slice(0, 3).map((item: any) => {
+          // Prioritize meaningful context about company culture, mission, and values
           return item.snippet || item.title || "";
-        }).filter((text: string) => text.length > 0);
+        }).filter((text: string) => text.length > 50);
         
         allInsights = [...allInsights, ...insights];
       }
     }
     
-    // Deduplicate and limit results
+    // Deduplicate and limit insights
     const uniqueInsights = [...new Set(allInsights)].slice(0, 8);
-    console.log(`Retrieved ${uniqueInsights.length} company insights`);
+    console.log(`Retrieved ${uniqueInsights.length} comprehensive company insights`);
     
     return uniqueInsights;
   } catch (error) {

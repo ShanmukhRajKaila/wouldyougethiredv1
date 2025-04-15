@@ -1,12 +1,66 @@
-
 import { CoverLetterAnalysis } from '@/context/types';
 
 export const useCoverLetterRecommendations = () => {
+  // Action verbs library for ATS optimization
+  const actionVerbs = [
+    "Achieved", "Advanced", "Analyzed", "Authored", "Championed", 
+    "Collaborated", "Coordinated", "Created", "Delivered", "Developed", 
+    "Engineered", "Enhanced", "Established", "Executed", "Facilitated", 
+    "Generated", "Implemented", "Improved", "Increased", "Innovated", 
+    "Launched", "Led", "Managed", "Optimized", "Pioneered", 
+    "Recommended", "Refined", "Resolved", "Streamlined", "Transformed"
+  ];
+
   const applyRecommendations = (coverLetterText: string, analysis: CoverLetterAnalysis): string => {
-    if (!coverLetterText || !analysis || !analysis.recommendations || analysis.recommendations.length === 0) {
-      return coverLetterText;
-    }
-    
+    // Ensure cover letter insights are action verb-driven
+    const enhanceWithActionVerbs = (phrases: string[]): string[] => {
+      return phrases.map(phrase => {
+        // Check if phrase already starts with an action verb
+        const firstWord = phrase.split(' ')[0].replace(/[^\w]/g, '');
+        
+        if (!actionVerbs.includes(firstWord)) {
+          // Select a random action verb that makes sense
+          const verb = actionVerbs[Math.floor(Math.random() * actionVerbs.length)];
+          return `${verb} ${phrase.charAt(0).toLowerCase()}${phrase.slice(1)}`;
+        }
+        
+        return phrase;
+      });
+    };
+
+    // Enhance company insights with action verbs
+    const companyInsights = analysis.companyInsights 
+      ? enhanceWithActionVerbs(analysis.companyInsights)
+      : [
+          "Researched company's innovative approach and market positioning",
+          "Identified core values and strategic objectives",
+          "Analyzed company's recent achievements and industry impact",
+          "Explored corporate social responsibility initiatives",
+          "Examined leadership team's vision and growth strategy"
+        ];
+
+    // Enhance key requirements with action verb focus
+    const keyRequirements = analysis.keyRequirements 
+      ? enhanceWithActionVerbs(analysis.keyRequirements)
+      : [
+          "Demonstrate technical expertise in cutting-edge technologies",
+          "Highlight problem-solving skills through concrete examples",
+          "Showcase ability to collaborate across cross-functional teams",
+          "Illustrate leadership potential and strategic thinking",
+          "Prove adaptability in dynamic and challenging environments"
+        ];
+
+    // Enhance suggested phrases with action verb optimization
+    const suggestedPhrases = analysis.suggestedPhrases
+      ? enhanceWithActionVerbs(analysis.suggestedPhrases)
+      : [
+          "Engineered solutions that directly addressed critical business challenges",
+          "Delivered measurable results that exceeded key performance indicators",
+          "Transformed team dynamics through innovative leadership approaches",
+          "Developed strategic frameworks that optimized operational efficiency",
+          "Pioneered initiatives that generated significant competitive advantages"
+        ];
+
     let paragraphs = coverLetterText.split(/\n{2,}/);
     
     // Check if we have company insights to incorporate
@@ -152,10 +206,10 @@ export const useCoverLetterRecommendations = () => {
     const sampleVerb = analysis.suggestedPhrases?.[0]?.split(' ')[0] || "Implemented";
     
     enhancedText += `"Dear Hiring Manager,\n\nI am writing to express my strong interest in the [Position] role at ${companyName}. I'm particularly drawn to ${companyName}'s ${sampleInsight}, and I believe my background in ${sampleRequirement} would allow me to contribute effectively to your team. Throughout my career, I have ${sampleVerb.toLowerCase()} solutions that align perfectly with your company's goals."\n`;
-    
+
     return enhancedText;
   };
-  
+
   // Helper function to extract company name from insights
   const extractCompanyName = (insight: string): string => {
     const companyMatches = insight.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b/);
@@ -202,7 +256,7 @@ export const useCoverLetterRecommendations = () => {
     
     return updatedScore;
   };
-  
+
   return {
     applyRecommendations,
     calculateUpdatedRelevance
