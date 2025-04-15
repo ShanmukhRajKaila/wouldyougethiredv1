@@ -164,6 +164,41 @@ export type Database = {
           },
         ]
       }
+      role_descriptions: {
+        Row: {
+          created_at: string
+          custom_role: string | null
+          description: string
+          id: string
+          lead_id: string
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          custom_role?: string | null
+          description: string
+          id?: string
+          lead_id: string
+          role: string
+        }
+        Update: {
+          created_at?: string
+          custom_role?: string | null
+          description?: string
+          id?: string
+          lead_id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_descriptions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

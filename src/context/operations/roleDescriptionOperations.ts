@@ -66,7 +66,7 @@ export const getRoleDescriptionById = async (id: string): Promise<RoleDescriptio
       return null;
     }
 
-    return data;
+    return data as RoleDescription;
   } catch (error) {
     console.error('Exception fetching role description:', error);
     return null;
