@@ -100,11 +100,11 @@ export const useAnalysisSubmission = ({
       
       // Direct analysis without saving to database again
       try {
-        // Fixed function call - checking the argument requirements
+        // Pass the correct arguments according to the function signature
         const analysisResult = await analyzeResume(
           resumeText, 
           jobDescription,
-          isCoverLetterIncluded ? coverLetterText : undefined,
+          isCoverLetterIncluded && coverLetterText ? coverLetterText : undefined,
           selectedCompany?.name
         );
         
@@ -220,9 +220,16 @@ export const useAnalysisSubmission = ({
             setCoverLetterText(coverLetterText);
           }
           
-          // Proceed with analysis
+          // Proceed with analysis, passing all necessary parameters
           try {
-            await performAnalysis(resumeText, currentLeadId, resumeId, jobDescId);
+            await performAnalysis(
+              resumeText, 
+              currentLeadId, 
+              resumeId, 
+              jobDescId,
+              isCoverLetterIncluded ? coverLetterText : undefined,
+              selectedCompany?.name
+            );
           } catch (error) {
             console.error('Analysis error:', error);
             // Show processing error but don't prevent user from seeing results

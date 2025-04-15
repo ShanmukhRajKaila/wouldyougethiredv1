@@ -11,7 +11,12 @@ interface AnalysisOperationsProps {
     jobDescriptionId: string;
     results: AnalysisResult;
   }) => Promise<void>;
-  analyzeResume: (resumeText: string, jobDescText: string) => Promise<AnalysisResult | null>;
+  analyzeResume: (
+    resumeText: string, 
+    jobDescText: string,
+    coverLetterText?: string,
+    companyName?: string
+  ) => Promise<AnalysisResult | null>;
   jobDescription: string;
   setRetryCount: (value: (prev: number) => number) => void;
   setReducedMode: (value: boolean) => void;
@@ -35,7 +40,9 @@ export const useAnalysisOperations = ({
     resumeText: string, 
     currentLeadId: string, 
     resumeId: string, 
-    jobDescId: string
+    jobDescId: string,
+    coverLetterText?: string,
+    companyName?: string
   ): Promise<boolean> => {
     try {
       const loadingToast = toast.loading('Analyzing your documents...');
@@ -55,10 +62,17 @@ export const useAnalysisOperations = ({
           const trimmedJobDesc = jobDescription.length > 2000 ? 
             jobDescription.substring(0, 2000) + "..." : 
             jobDescription;
-            
-          analysisResults = await analyzeResume(trimmedResume, trimmedJobDesc);
+          
+          // Include optional parameters
+          analysisResults = await analyzeResume(
+            trimmedResume, 
+            trimmedJobDesc,
+            coverLetterText ? coverLetterText.substring(0, 3000) + "..." : undefined,
+            companyName
+          );
         } else {
-          analysisResults = await analyzeResume(resumeText, jobDescription);
+          // Include optional parameters
+          analysisResults = await analyzeResume(resumeText, jobDescription, coverLetterText, companyName);
         }
       } catch (error: any) {
         console.error('First analysis attempt failed:', error);
@@ -77,8 +91,16 @@ export const useAnalysisOperations = ({
             setReducedMode(true);
             const shortenedResume = resumeText.substring(0, 3000) + "...";
             const shortenedJobDesc = jobDescription.substring(0, 1500) + "...";
+            const shortenedCoverLetter = coverLetterText ? 
+              coverLetterText.substring(0, 2000) + "..." : 
+              undefined;
               
-            analysisResults = await analyzeResume(shortenedResume, shortenedJobDesc);
+            analysisResults = await analyzeResume(
+              shortenedResume, 
+              shortenedJobDesc,
+              shortenedCoverLetter,
+              companyName
+            );
           } catch (retryError) {
             console.error('Retry analysis attempt failed:', retryError);
             // Continue to use the fallback analysis

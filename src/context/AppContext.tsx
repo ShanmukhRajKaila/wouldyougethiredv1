@@ -57,12 +57,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saveResumeService(leadId, resumeFile);
   };
 
-  const analyzeResume = async (resumeText: string, jobDescText: string): Promise<AnalysisResult | null> => {
+  // Update the function signature to accept all 4 parameters
+  const analyzeResume = async (
+    resumeText: string, 
+    jobDescText: string,
+    coverLetterText?: string,
+    companyName?: string
+  ): Promise<AnalysisResult | null> => {
     const results = await analyzeResumeService(
       resumeText, 
       jobDescText, 
-      isCoverLetterIncluded ? coverLetterText : undefined,
-      selectedCompany?.name // Pass the company name to the analysis service
+      coverLetterText,
+      companyName
     );
     if (results) {
       setAnalysisResults(results);
