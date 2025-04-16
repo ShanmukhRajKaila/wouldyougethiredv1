@@ -1,4 +1,3 @@
-
 import { CoverLetterAnalysis } from '@/context/types';
 
 export const useCoverLetterRecommendations = () => {
@@ -54,6 +53,149 @@ export const useCoverLetterRecommendations = () => {
     return allActionVerbs.some(verb => verb.toLowerCase() === firstWord.toLowerCase());
   };
 
+  // Detect if there's a grammatical conflict between an action verb and what follows
+  const detectGrammaticalConflict = (phrase: string): boolean => {
+    if (!phrase || phrase.trim() === '') {
+      return false;
+    }
+    
+    const words = phrase.split(/\s+/);
+    if (words.length < 2) {
+      return false;
+    }
+    
+    const firstWord = words[0].toLowerCase();
+    const secondWord = words[1].toLowerCase().replace(/[^\w]/g, '');
+    
+    // Common action verbs that shouldn't be followed by other action verbs
+    const actionVerbs = [
+      'delivered', 'improved', 'increased', 'decreased', 'led', 'managed',
+      'developed', 'created', 'implemented', 'designed', 'analyzed', 
+      'established', 'executed', 'generated', 'maintained', 'presented',
+      'produced', 'reduced', 'resolved', 'achieved', 'built', 'conducted',
+      'coordinated', 'directed', 'engineered', 'evaluated', 'facilitated',
+      'initiated', 'launched', 'organized', 'oversaw', 'planned', 'prepared',
+      'provided', 'reviewed', 'spearheaded', 'streamlined', 'transformed'
+    ];
+    
+    // Check if both words are action verbs
+    if (actionVerbs.includes(firstWord) && 
+        (actionVerbs.includes(secondWord) || 
+         (secondWord.endsWith('ed') && secondWord.length > 4 && 
+          !['needed', 'exceeded', 'proceeded', 'agreed'].includes(secondWord)) ||
+         (secondWord.endsWith('ing') && secondWord.length > 5))) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  // Fix grammatical conflicts in phrases
+  const fixGrammaticalConflict = (phrase: string): string => {
+    if (!detectGrammaticalConflict(phrase)) {
+      return phrase;
+    }
+    
+    const words = phrase.split(/\s+/);
+    const firstWord = words[0];
+    const secondWord = words[1]?.toLowerCase().replace(/[^\w]/g, '');
+    const restOfContent = words.slice(2).join(' ');
+    
+    // Mapping of common action verb conflicts and their resolutions
+    const verbCorrectionMap: Record<string, Record<string, string>> = {
+      'Delivered': {
+        'presented': 'Delivered presentation on',
+        'managed': 'Managed delivery of',
+        'created': 'Created and delivered',
+        'developed': 'Developed and delivered',
+        'implemented': 'Implemented delivery of',
+        'presenting': 'Delivered presentations on',
+        'generated': 'Generated deliverables for'
+      },
+      'Improved': {
+        'presented': 'Improved presentation of',
+        'managed': 'Improved management of',
+        'created': 'Improved creation of',
+        'developed': 'Improved development of',
+        'implemented': 'Improved implementation of',
+        'analyzed': 'Improved analysis of'
+      },
+      'Increased': {
+        'improved': 'Increased and improved',
+        'developed': 'Increased development of',
+        'managed': 'Increased management efficiency of',
+        'created': 'Increased creation of'
+      },
+      'Led': {
+        'managed': 'Led management of',
+        'developed': 'Led development of',
+        'implemented': 'Led implementation of',
+        'created': 'Led creation of'
+      },
+      'Managed': {
+        'led': 'Managed leadership of',
+        'developed': 'Managed development of',
+        'created': 'Managed creation of',
+        'implemented': 'Managed implementation of'
+      },
+      'Developed': {
+        'created': 'Developed creation process for',
+        'implemented': 'Developed and implemented',
+        'managed': 'Developed management approach for'
+      },
+      'Created': {
+        'developed': 'Created development plan for',
+        'implemented': 'Created and implemented',
+        'managed': 'Created management structure for'
+      },
+      'Implemented': {
+        'developed': 'Implemented development of',
+        'created': 'Implemented creation of',
+        'designed': 'Implemented design of',
+        'managed': 'Implemented management of'
+      },
+      'Engineered': {
+        'presented': 'Engineered presentation system for',
+        'created': 'Engineered and created',
+        'developed': 'Engineered and developed',
+        'implemented': 'Engineered and implemented'
+      }
+    };
+    
+    // If we have a specific correction for this verb combination
+    if (verbCorrectionMap[firstWord] && verbCorrectionMap[firstWord][secondWord]) {
+      return `${verbCorrectionMap[firstWord][secondWord]} ${restOfContent}`;
+    }
+    
+    // Generic handling for past tense verb conflicts
+    if (secondWord && secondWord.endsWith('ed') && secondWord.length > 3) {
+      // Convert verb to noun form: e.g., "managed" → "management of"
+      const nounMap: Record<string, string> = {
+        'presented': 'presentation of',
+        'managed': 'management of',
+        'created': 'creation of',
+        'developed': 'development of',
+        'implemented': 'implementation of',
+        'designed': 'design of',
+        'analyzed': 'analysis of',
+        'established': 'establishment of',
+        'executed': 'execution of',
+        'generated': 'generation of',
+        'maintained': 'maintenance of',
+        'produced': 'production of',
+        'reduced': 'reduction of',
+        'resolved': 'resolution of',
+        'achieved': 'achievement of'
+      };
+      
+      const nounForm = nounMap[secondWord] || `${secondWord.replace(/ed$/, '')}ing of`;
+      return `${firstWord} ${nounForm} ${restOfContent}`;
+    }
+    
+    // If we can't find a specific fix, use a generic approach
+    return `${firstWord} work involving ${words.slice(1).join(' ')}`;
+  };
+
   // MANDATORY: Always ensure phrases start with a strong action verb
   const enforceActionVerbStart = (phrase: string): string => {
     // Skip if phrase is empty
@@ -63,7 +205,7 @@ export const useCoverLetterRecommendations = () => {
     
     // Check if phrase already starts with an action verb
     if (startsWithActionVerb(phrase)) {
-      return phrase;
+      return fixGrammaticalConflict(phrase);
     }
     
     // Select an appropriate action verb based on content and context
@@ -77,12 +219,16 @@ export const useCoverLetterRecommendations = () => {
     const firstWord = cleanedPhrase.split(' ')[0].toLowerCase();
     const commonPastTenseVerbs = ['worked', 'developed', 'created', 'managed', 'led', 'implemented', 'increased', 'improved'];
     
+    let result;
     if (commonPastTenseVerbs.includes(firstWord)) {
       // Replace the past tense verb with present tense action verb
-      return `${verb} ${cleanedPhrase.slice(firstWord.length + 1)}`;
+      result = `${verb} ${cleanedPhrase.slice(firstWord.length + 1)}`;
+    } else {
+      result = `${verb} ${cleanedPhrase.charAt(0).toLowerCase()}${cleanedPhrase.slice(1)}`;
     }
     
-    return `${verb} ${cleanedPhrase.charAt(0).toLowerCase()}${cleanedPhrase.slice(1)}`;
+    // Final grammar check before returning
+    return fixGrammaticalConflict(result);
   };
   
   // Select an action verb that matches the context of the phrase with improved grammar awareness

@@ -127,191 +127,272 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
     return "ATS systems prioritize specific, concrete language over general descriptions. Adding industry terminology and metrics substantially increases match scores with job requirement algorithms.";
   };
 
-  // Improved function to check if two verbs create an illogical grammatical sequence
-  const checkVerbConflict = (firstVerb: string, secondWord: string): boolean => {
-    // Convert to lowercase for comparison
-    const verb = firstVerb.toLowerCase();
-    const word = secondWord.toLowerCase();
+  // Detect problematic verb sequences like "Delivered presented" or "Improved managed"
+  const hasVerbSequenceIssue = (text: string): boolean => {
+    // Extract first two words and normalize
+    const words = text.split(/\s+/);
+    if (words.length < 2) return false;
     
-    // Check for verb tense conflicts (e.g., "Delivered presented", "Improved managed")
-    if (
-      // Past tense verb conflicts
-      (word.endsWith('ed') && !word.endsWith('need')) || 
-      // Common action verbs that shouldn't follow each other
-      ['present', 'develop', 'implement', 'manag', 'lead', 'creat', 'design', 'analyz'].some(
-        stem => word.startsWith(stem)
-      )
-    ) {
+    const firstWord = words[0].toLowerCase();
+    const secondWord = words[1].toLowerCase();
+    
+    // Common past tense action verbs that shouldn't be used together
+    const actionVerbs = [
+      'delivered', 'improved', 'increased', 'decreased', 'led', 'managed',
+      'developed', 'created', 'implemented', 'designed', 'analyzed', 
+      'established', 'executed', 'generated', 'maintained', 'presented',
+      'produced', 'reduced', 'resolved', 'achieved', 'built', 'conducted',
+      'coordinated', 'directed', 'engineered', 'evaluated', 'facilitated',
+      'initiated', 'launched', 'organized', 'oversaw', 'planned', 'prepared',
+      'provided', 'reviewed', 'spearheaded', 'streamlined', 'transformed'
+    ];
+    
+    // Check if both words are action verbs (either exact match or ends with 'ed' for past tense)
+    if (actionVerbs.includes(firstWord) && 
+        (actionVerbs.includes(secondWord) || 
+         (secondWord.endsWith('ed') && secondWord.length > 4))) {
       return true;
     }
     
-    // Check specific problematic verb combinations
-    const problematicCombinations: Record<string, string[]> = {
-      "delivered": ["presented", "reported", "showed", "displayed", "demonstrated"],
-      "improved": ["presented", "managed", "led", "created", "implemented", "enhanced", "increased"],
-      "increased": ["managed", "developed", "created", "implemented", "improved", "enhanced"],
-      "led": ["improved", "increased", "managed", "implemented", "directed", "guided", "headed"],
-      "developed": ["created", "implemented", "established", "designed", "built"],
-      "created": ["developed", "designed", "implemented", "established", "built"],
-      "implemented": ["established", "developed", "created", "designed", "deployed"],
-      "managed": ["led", "directed", "supervised", "oversaw", "handled"],
-      "designed": ["created", "developed", "established", "architected"],
-      "analyzed": ["researched", "studied", "examined", "evaluated"],
-      "executed": ["implemented", "performed", "conducted", "carried"]
-    };
+    // Additional check for any verb followed by another verb ending in -ed or -ing
+    if (actionVerbs.includes(firstWord) && 
+        (secondWord.endsWith('ed') || secondWord.endsWith('ing')) && 
+        secondWord.length > 4 && 
+        !['needed', 'exceeded', 'proceeded', 'agreed'].includes(secondWord)) {
+      return true;
+    }
     
-    return problematicCombinations[verb]?.includes(word) || false;
+    return false;
   };
-
-  // Function to correct verb conflicts by choosing more contextually appropriate alternatives
-  const resolveVerbConflict = (actionVerb: string, content: string): string => {
-    const words = content.split(' ');
-    const firstContentWord = words[0].toLowerCase();
+  
+  // Fix a bullet point with grammar issues
+  const fixGrammarIssues = (bullet: StarAnalysisItem): StarAnalysisItem => {
+    // If no grammar issue detected, return unchanged
+    if (!hasVerbSequenceIssue(bullet.improved)) {
+      return bullet;
+    }
     
-    // Word mapping based on context that fixes grammatical conflicts
-    const contextualReplacements: Record<string, Record<string, string>> = {
-      // When the first content word is "presented" or variations
-      "presented": { 
-        default: "Delivered",
-        alternative: "Conducted" 
+    const words = bullet.improved.split(/\s+/);
+    const firstWord = words[0];
+    const restOfContent = words.slice(1).join(' ');
+    
+    // Handle specific word combinations with appropriate fixes
+    const verbMapping: Record<string, Record<string, string>> = {
+      // Map first verb to common second verb patterns and their corrections
+      'Delivered': {
+        'presented': 'Delivered presentation on',
+        'managed': 'Managed delivery of',
+        'created': 'Created and delivered',
+        'developed': 'Developed and delivered',
+        'implemented': 'Implemented delivery of',
+        'established': 'Established delivery framework for',
+        'conducted': 'Conducted delivery of',
+        'generated': 'Generated deliverables for',
+        'prepared': 'Prepared and delivered',
+        'provided': 'Provided delivery of',
+        'produced': 'Produced and delivered',
+        'presenting': 'Delivered presentations on'
       },
-      "presentation": {
-        default: "Created",
-        alternative: "Developed"
+      'Improved': {
+        'presented': 'Improved presentation of',
+        'managed': 'Improved management of',
+        'increased': 'Improved and increased',
+        'created': 'Improved creation of',
+        'developed': 'Improved development of',
+        'implemented': 'Improved implementation of',
+        'analyzed': 'Improved analysis of',
+        'established': 'Improved establishment of',
+        'executed': 'Improved execution of',
+        'maintained': 'Improved maintenance of'
       },
-      // Management related conflicts
-      "managed": {
-        default: "Oversaw",
-        alternative: "Directed"
+      'Increased': {
+        'improved': 'Increased and improved',
+        'developed': 'Increased development of',
+        'managed': 'Increased management efficiency of',
+        'created': 'Increased creation of',
+        'implemented': 'Increased implementation of',
+        'analyzed': 'Increased analytical capabilities for',
+        'delivered': 'Increased delivery of'
       },
-      "managing": {
-        default: "Leading",
-        alternative: "Directing"  
+      'Led': {
+        'managed': 'Led management of',
+        'developed': 'Led development of',
+        'implemented': 'Led implementation of',
+        'created': 'Led creation of',
+        'designed': 'Led design of',
+        'established': 'Led establishment of',
+        'executed': 'Led execution of',
+        'presented': 'Led presentation of',
+        'coordinated': 'Led coordination of',
+        'provided': 'Led provision of'
       },
-      "management": {
-        default: "Leadership of",
-        alternative: "Direction of"
+      'Managed': {
+        'led': 'Managed leadership of',
+        'developed': 'Managed development of',
+        'created': 'Managed creation of',
+        'implemented': 'Managed implementation of',
+        'designed': 'Managed design of',
+        'analyzed': 'Managed analysis of',
+        'established': 'Managed establishment of',
+        'executed': 'Managed execution of',
+        'presented': 'Managed presentation of'
       },
-      // Creation related conflicts
-      "created": {
-        default: "Designed",
-        alternative: "Developed"
+      'Developed': {
+        'created': 'Developed creation process for',
+        'implemented': 'Developed and implemented',
+        'designed': 'Developed design for',
+        'analyzed': 'Developed analysis for',
+        'managed': 'Developed management approach for',
+        'led': 'Developed leadership framework for',
+        'established': 'Developed and established'
       },
-      "creating": {
-        default: "Designing",
-        alternative: "Developing"
+      'Created': {
+        'developed': 'Created development plan for',
+        'implemented': 'Created and implemented',
+        'designed': 'Created design for',
+        'analyzed': 'Created analysis framework for',
+        'managed': 'Created management structure for',
+        'established': 'Created and established'
       },
-      "creation": {
-        default: "Design",
-        alternative: "Development"
+      'Implemented': {
+        'developed': 'Implemented development of',
+        'created': 'Implemented creation of',
+        'designed': 'Implemented design of',
+        'implemented': 'Implemented implementation of',
+        'executed': 'Implemented execution of',
+        'managed': 'Implemented management of'
       },
-      // Implementation related conflicts
-      "implemented": {
-        default: "Deployed",
-        alternative: "Launched"
+      'Designed': {
+        'developed': 'Designed development of',
+        'created': 'Designed creation of',
+        'implemented': 'Designed implementation of',
+        'analyzed': 'Designed analysis of',
+        'established': 'Designed establishment of'
       },
-      "implementing": {
-        default: "Deploying",
-        alternative: "Launching"
+      'Analyzed': {
+        'developed': 'Analyzed development of',
+        'created': 'Analyzed creation of',
+        'implemented': 'Analyzed implementation of',
+        'designed': 'Analyzed design of',
+        'established': 'Analyzed establishment of',
+        'executed': 'Analyzed execution of'
       },
-      "implementation": {
-        default: "Deployment",
-        alternative: "Launch"
+      'Established': {
+        'developed': 'Established development of',
+        'created': 'Established creation of',
+        'implemented': 'Established implementation of',
+        'designed': 'Established design of',
+        'analyzed': 'Established analysis of',
+        'executed': 'Established execution of'
       },
-      // Analysis related conflicts
-      "analyzed": {
-        default: "Examined",
-        alternative: "Evaluated"
+      'Executed': {
+        'developed': 'Executed development of',
+        'created': 'Executed creation of',
+        'implemented': 'Executed implementation of',
+        'designed': 'Executed design of',
+        'analyzed': 'Executed analysis of',
+        'established': 'Executed establishment of',
+        'managed': 'Executed management of'
       },
-      "analyzing": {
-        default: "Examining",
-        alternative: "Evaluating"
+      'Engineered': {
+        'presented': 'Engineered presentation system for',
+        'created': 'Engineered and created',
+        'developed': 'Engineered and developed',
+        'implemented': 'Engineered and implemented',
+        'designed': 'Engineered design for',
+        'established': 'Engineered and established'
       },
-      "analysis": {
-        default: "Examination",
-        alternative: "Evaluation"
+      'Spearheaded': {
+        'managed': 'Spearheaded management of',
+        'created': 'Spearheaded creation of',
+        'developed': 'Spearheaded development of',
+        'implemented': 'Spearheaded implementation of',
+        'executed': 'Spearheaded execution of',
+        'led': 'Spearheaded and led'
+      },
+      'Generated': {
+        'created': 'Generated creation of',
+        'developed': 'Generated development plan for',
+        'implemented': 'Generated implementation strategy for',
+        'designed': 'Generated design for',
+        'analyzed': 'Generated analysis of'
       }
     };
     
-    // If we have a specific replacement for this content word
-    if (contextualReplacements[firstContentWord]) {
-      // Use default replacement or alternative if the default would create a conflict
-      const replacement = contextualReplacements[firstContentWord].default;
-      
-      // For the remaining text, remove the first word and join the rest
-      const remainingText = words.slice(1).join(' ');
-      return `${replacement} ${remainingText}`;
-    }
+    // Get the second word (without any punctuation)
+    const secondWord = words[1]?.toLowerCase().replace(/[^\w]/g, '');
     
-    // If the first content word is a past tense verb (likely ends with 'ed')
-    if (firstContentWord.endsWith('ed') && firstContentWord.length > 2) {
-      // Map past tense verbs to present context phrases
-      const pastTenseMap: Record<string, string> = {
-        "presented": "presentation",
-        "managed": "management of",
-        "developed": "development of",
-        "created": "creation of",
-        "implemented": "implementation of",
-        "designed": "design of",
-        "analyzed": "analysis of",
-        "increased": "improvement in",
-        "improved": "enhancement of",
-        "executed": "execution of",
-        "coordinated": "coordination of",
-        "led": "leadership of"
-      };
+    // Check if we have a known fix for this verb combination
+    if (verbMapping[firstWord] && verbMapping[firstWord][secondWord]) {
+      // Get the corrected phrasing
+      const correctedStart = verbMapping[firstWord][secondWord];
       
-      // Try to find a mapping for the past tense verb
-      let replacement = pastTenseMap[firstContentWord] || firstContentWord;
-      
-      // Generic approach for other past tense verbs
-      if (replacement === firstContentWord && firstContentWord.endsWith('ed')) {
-        // Remove the 'ed' and add 'ing of'
-        replacement = firstContentWord.slice(0, -2) + "ing of";
-      }
-      
-      // Replace the first word with our modified version
-      const remainingText = words.slice(1).join(' ');
-      return `${actionVerb} ${replacement} ${remainingText}`;
-    }
-    
-    // If no specific rule matched, keep the original content
-    return `${actionVerb} ${content}`;
-  };
-
-  // Enhanced function to fix grammatical issues in action verb bullet points
-  const fixGrammarInBulletPoint = (item: StarAnalysisItem): StarAnalysisItem => {
-    // Split the improved bullet into words
-    const words = item.improved.split(' ');
-    
-    // Check if we have at least two words to compare
-    if (words.length < 2) {
-      return item;
-    }
-    
-    const actionVerb = words[0];
-    const secondWord = words[1];
-    
-    // Check if there's a grammatical conflict between the action verb and what follows
-    if (checkVerbConflict(actionVerb, secondWord)) {
-      // Get content without the action verb
-      const content = words.slice(1).join(' ');
-      
-      // Resolve the conflict with better grammar
-      const correctedBullet = resolveVerbConflict(actionVerb, content);
+      // Remove the problematic second word and get the rest of the content
+      const contentAfterSecondWord = words.slice(2).join(' ');
       
       return {
-        ...item,
-        improved: correctedBullet,
-        feedback: item.feedback + " Grammar improved to ensure logical flow between action verb and description."
+        ...bullet,
+        improved: `${correctedStart} ${contentAfterSecondWord}`,
+        feedback: bullet.feedback + " (Grammar improved for better clarity and flow.)"
       };
     }
     
-    return item;
+    // Generic handling for other issues - convert second verb to a noun form
+    if (secondWord && secondWord.endsWith('ed') && secondWord.length > 3) {
+      // Convert verb to noun form: e.g., "managed" → "management of"
+      const nounMap: Record<string, string> = {
+        'presented': 'presentation of',
+        'managed': 'management of',
+        'created': 'creation of',
+        'developed': 'development of',
+        'implemented': 'implementation of',
+        'designed': 'design of',
+        'analyzed': 'analysis of',
+        'established': 'establishment of',
+        'executed': 'execution of',
+        'generated': 'generation of',
+        'maintained': 'maintenance of',
+        'produced': 'production of',
+        'reduced': 'reduction of',
+        'resolved': 'resolution of',
+        'achieved': 'achievement of',
+        'built': 'construction of',
+        'conducted': 'conduction of',
+        'coordinated': 'coordination of',
+        'directed': 'direction of',
+        'evaluated': 'evaluation of',
+        'facilitated': 'facilitation of',
+        'initiated': 'initiation of',
+        'launched': 'launch of',
+        'organized': 'organization of',
+        'planned': 'planning of',
+        'prepared': 'preparation of',
+        'provided': 'provision of',
+        'reviewed': 'review of',
+        'streamlined': 'streamlining of',
+        'transformed': 'transformation of'
+      };
+      
+      const nounForm = nounMap[secondWord] || `${secondWord.replace(/ed$/, '')}ing of`;
+      const contentAfterSecondWord = words.slice(2).join(' ');
+      
+      return {
+        ...bullet,
+        improved: `${firstWord} ${nounForm} ${contentAfterSecondWord}`,
+        feedback: bullet.feedback + " (Grammar improved for better clarity and flow.)"
+      };
+    }
+    
+    // If we can't find a specific fix, use a generic approach
+    return {
+      ...bullet,
+      improved: `${firstWord} work involving ${restOfContent}`,
+      feedback: bullet.feedback + " (Grammar adjusted for better readability.)"
+    };
   };
 
   // Apply grammar fixes to each item
-  const grammaticallyCorrectedAnalysis = validStarAnalysis.map(fixGrammarInBulletPoint);
+  const grammaticallyCorrectedAnalysis = validStarAnalysis.map(fixGrammarIssues);
   
   return (
     <div className="space-y-6">
