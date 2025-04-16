@@ -30,7 +30,7 @@ const JobDescriptionPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [isSearching, setIsSearching] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('jobDescription');
+  const [activeTab, setActiveTab] = useState<string>('roleSearch');
   const [availableRoles, setAvailableRoles] = useState<{value: string, label: string}[]>([]);
   const [isJobDescriptionValid, setIsJobDescriptionValid] = useState(true);
   
@@ -307,8 +307,8 @@ const JobDescriptionPage: React.FC = () => {
         
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid grid-cols-2 mb-6">
-            <TabsTrigger value="jobDescription">Enter Job Description</TabsTrigger>
             <TabsTrigger value="roleSearch">Search Role Description</TabsTrigger>
+            <TabsTrigger value="jobDescription">Enter Job Description</TabsTrigger>
           </TabsList>
           
           <TabsContent value="jobDescription">
