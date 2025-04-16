@@ -127,6 +127,62 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
     
     return "ATS systems prioritize specific, concrete language over general descriptions. Adding industry terminology and metrics substantially increases match scores with job requirement algorithms.";
   };
+
+  // Function to check if the improved version has proper grammar with the action verb
+  const validateActionVerbGrammar = (item: StarAnalysisItem): StarAnalysisItem => {
+    const improvedBullet = item.improved;
+    
+    // Split the bullet into words and check the first word against action verbs
+    const words = improvedBullet.split(' ');
+    const firstWord = words[0];
+    const secondWord = words.length > 1 ? words[1] : '';
+    
+    // List of common grammar mistakes to check for
+    const badCombinations = [
+      { verb: "Improved", badFollower: "presented" },
+      { verb: "Increased", badFollower: "managed" },
+      { verb: "Led", badFollower: "improved" },
+      { verb: "Developed", badFollower: "created" },
+      { verb: "Created", badFollower: "developed" },
+      { verb: "Implemented", badFollower: "established" },
+      { verb: "Managed", badFollower: "led" }
+    ];
+    
+    // Check if the first two words form a bad combination
+    const badCombo = badCombinations.find(
+      combo => firstWord.toLowerCase() === combo.verb.toLowerCase() && 
+               secondWord.toLowerCase() === combo.badFollower.toLowerCase()
+    );
+    
+    if (badCombo) {
+      // Fix the grammatical issue by replacing the first word with a more appropriate verb
+      const contextualVerbs = {
+        "presented": "Delivered",
+        "managed": "Optimized",
+        "improved": "Spearheaded",
+        "created": "Designed",
+        "developed": "Built",
+        "established": "Launched",
+        "led": "Directed"
+      };
+      
+      const betterVerb = contextualVerbs[badCombo.badFollower.toLowerCase()] || "Executed";
+      
+      // Create the corrected bullet point
+      const correctedBullet = `${betterVerb} ${words.slice(1).join(' ')}`;
+      
+      return {
+        ...item,
+        improved: correctedBullet,
+        feedback: item.feedback + " Grammar corrected to ensure the action verb flows naturally with the rest of the bullet point."
+      };
+    }
+    
+    return item;
+  };
+
+  // Process all star analysis items to ensure grammatical correctness
+  const processedStarAnalysis = validStarAnalysis.map(validateActionVerbGrammar);
   
   return (
     <div className="space-y-6">
@@ -150,14 +206,14 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
           <div className="flex flex-col space-y-1 mt-2 text-sm text-consulting-gray">
             <p className="font-medium text-consulting-navy">Key ATS Optimization Rules:</p>
             <p>1. <span className="font-medium">Start with action verbs</span> - Begin each bullet point with a strong action verb like "Led" or "Implemented"</p>
-            <p>2. <span className="font-medium">Quantify results</span> - Include specific numbers, percentages and metrics whenever possible</p>
-            <p>3. <span className="font-medium">Use complete STAR format</span> - Include the Situation/Task, Action, and Result in each bullet point</p>
-            <p>4. <span className="font-medium">Include keywords</span> - Incorporate relevant industry and role-specific terminology</p>
+            <p>2. <span className="font-medium">Use the STAR Method</span> - Include the Situation/Task, Action, and Result in each bullet point</p>
+            <p>3. <span className="font-medium">Quantify achievements</span> - Include specific numbers, percentages and metrics whenever possible</p>
+            <p>4. <span className="font-medium">Use contextually appropriate verbs</span> - Ensure the action verb makes grammatical sense with the rest of your statement</p>
           </div>
         </div>
       </div>
       
-      {validStarAnalysis.map((item, index) => (
+      {processedStarAnalysis.map((item, index) => (
         <div key={index} className="p-6 bg-white rounded-lg shadow mb-4">
           <div className="space-y-4">
             <div>

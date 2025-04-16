@@ -101,6 +101,47 @@ function extractKeyRequirements(jobDescription: string): string[] {
   return [];
 }
 
+// New function to check grammatical compatibility of action verbs with context
+function ensureGrammaticalCompatibility(actionVerb: string, phrase: string): string {
+  const lowerPhrase = phrase.toLowerCase();
+  const words = phrase.split(' ');
+  const firstWordLower = words.length > 0 ? words[0].toLowerCase() : '';
+  
+  // List of potentially problematic verb combinations
+  const problematicCombos: Record<string, string[]> = {
+    "improved": ["presented", "managed", "led", "created", "delivered", "executed"],
+    "increased": ["managed", "led", "delivered", "executed", "implemented"],
+    "led": ["improved", "increased", "executed", "implemented"],
+    "developed": ["created", "established", "implemented", "built"],
+    "created": ["developed", "designed", "established", "built"],
+    "implemented": ["established", "launched", "initiated", "deployed"],
+    "managed": ["led", "directed", "supervised", "oversaw"]
+  };
+  
+  // If the action verb and first word would create a problematic combination
+  if (problematicCombos[actionVerb.toLowerCase()] && 
+      problematicCombos[actionVerb.toLowerCase()].includes(firstWordLower)) {
+    
+    // Find a better alternative verb based on context
+    const contextualVerbs: Record<string, Record<string, string>> = {
+      "presented": { default: "Delivered" },
+      "managed": { default: "Oversaw" },
+      "led": { default: "Spearheaded" },
+      "improved": { default: "Enhanced" },
+      "created": { default: "Designed" },
+      "developed": { default: "Built" },
+      "established": { default: "Launched" },
+      "implemented": { default: "Deployed" }
+    };
+    
+    // Select a better verb based on the problematic first word
+    const betterVerb = contextualVerbs[firstWordLower]?.default || "Executed";
+    return betterVerb;
+  }
+  
+  return actionVerb;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -176,6 +217,7 @@ Analyze the resume against the job description in detailed depth, focusing on:
 
 CRITICAL ATS OPTIMIZATION RULES:
 - ALL bullet point improvements MUST start with a STRONG ACTION VERB (e.g., Led, Implemented, Developed, Achieved)
+- Action verbs MUST be grammatically compatible with the rest of the bullet point
 - Apply the STAR Method (Situation/Task, Action, Result) for each improved bullet point
 - Include quantifiable achievements with specific metrics (%, $, time periods) wherever possible
 - Ensure each improved bullet point clearly shows the impact and business value
@@ -189,7 +231,7 @@ For the cover letter analysis:
 3. Identify 5+ specific company insights that should be addressed (using provided company insights where available)
 4. Identify 5+ key requirements from the job description that should be emphasized
 5. Suggest 5+ specific phrases that would improve alignment with the job and company
-6. ALL suggested phrases MUST start with strong ACTION VERBS
+6. ALL suggested phrases MUST start with strong ACTION VERBS that are grammatically compatible with the rest of the phrase
 7. Optimize the overall structure for ATS scanning
 ` : ''}
 
@@ -220,7 +262,7 @@ MANDATORY: YOU MUST RETURN A VALID JSON OBJECT in this exact format:
   }` : ''}
 }
 
-You MUST provide complete analysis with all required fields, and ALL improved bullet points and suggested phrases MUST start with a strong action verb. This is critical for the application to function properly.`;
+You MUST provide complete analysis with all required fields, and ALL improved bullet points and suggested phrases MUST start with a strong action verb that is grammatically compatible with the rest of the sentence. This is critical for the application to function properly.`;
 
     try {
       console.log("Sending full content request to OpenAI GPT-4o...");
@@ -259,10 +301,10 @@ ${companyName ? `\nCompany: ${companyName}` : ''}`
         });
       }
       
-      // Add specific examples of strong ATS-optimized bullet points
+      // Add specific examples of strong ATS-optimized bullet points with proper grammar
       messages.push({
         role: 'user',
-        content: `IMPORTANT: Ensure all improved bullet points follow these examples for ATS optimization:
+        content: `IMPORTANT: Ensure all improved bullet points follow these examples for ATS optimization and grammatical correctness:
 1. Original: "Managed a team of developers for the website redesign project"
    Improved: "Led a cross-functional team of 8 developers to deliver a complete website redesign, resulting in 35% improved user engagement and 22% higher conversion rates"
 
@@ -272,7 +314,10 @@ ${companyName ? `\nCompany: ${companyName}` : ''}`
 3. Original: "Helped with marketing campaigns for new products"
    Improved: "Spearheaded 5 targeted marketing campaigns for product launches that generated $1.2M in revenue by analyzing customer data to identify key demographic segments"
 
-ALL optimized bullet points MUST start with a strong action verb and include quantifiable results.`
+4. Original: "Presented reports to management"
+   Improved: "Delivered comprehensive quarterly reports to executive leadership, highlighting key performance metrics that informed strategic decision-making and operational improvements"
+
+ALL optimized bullet points MUST start with a strong action verb and include quantifiable results. Ensure the action verb is grammatically compatible with the rest of the sentence (e.g., avoid combinations like "Improved presented" or "Increased managed").`
       });
       
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -314,7 +359,7 @@ ALL optimized bullet points MUST start with a strong action verb and include qua
           throw new Error("Invalid response structure from OpenAI");
         }
         
-        // Enforce action verbs at the start of all STAR analysis bullet points
+        // Enforce action verbs at the start of all STAR analysis bullet points with proper grammar
         if (analysisResult.starAnalysis) {
           const actionVerbs = ["Achieved", "Accelerated", "Accomplished", "Administered", "Advanced", "Advised", "Analyzed", 
                                "Built", "Championed", "Clarified", "Coached", "Collaborated", "Communicated", "Conceptualized", 
@@ -356,11 +401,36 @@ ALL optimized bullet points MUST start with a strong action verb and include qua
               
               // Format the phrase to start with the action verb
               const cleanedPhrase = item.improved.replace(/^(I |We |They |The team |The company )/i, '');
+              
+              // Check grammatical compatibility
+              const words = cleanedPhrase.split(' ');
+              const firstPhraseWord = words.length > 0 ? words[0] : '';
+              
+              // Ensure verb is grammatically compatible
+              verb = ensureGrammaticalCompatibility(verb, cleanedPhrase);
+              
               item.improved = `${verb} ${cleanedPhrase.charAt(0).toLowerCase()}${cleanedPhrase.slice(1)}`;
               
               // Update the feedback to mention the action verb improvement
               if (!item.feedback.includes("action verb")) {
                 item.feedback += " Starting with a strong action verb makes this bullet point more impactful and ATS-friendly.";
+              }
+            } else {
+              // Even if it starts with an action verb, check grammatical compatibility
+              const words = item.improved.split(' ');
+              if (words.length > 1) {
+                const verb = words[0];
+                const restOfPhrase = words.slice(1).join(' ');
+                
+                // Check and improve grammar if needed
+                const betterVerb = ensureGrammaticalCompatibility(verb, restOfPhrase);
+                
+                if (betterVerb !== verb) {
+                  item.improved = `${betterVerb} ${restOfPhrase}`;
+                  if (!item.feedback.includes("grammatical")) {
+                    item.feedback += " Action verb selected for better grammatical flow with the rest of the bullet point.";
+                  }
+                }
               }
             }
             
@@ -389,7 +459,7 @@ ALL optimized bullet points MUST start with a strong action verb and include qua
                 .slice(0, 8); // Limit to 8 insights
           }
           
-          // Ensure all suggested phrases start with action verbs
+          // Ensure all suggested phrases start with action verbs and are grammatically correct
           if (analysisResult.coverLetterAnalysis.suggestedPhrases) {
             const actionVerbs = ["Achieved", "Adapted", "Addressed", "Advanced", "Advised", "Advocated", 
                                "Analyzed", "Applied", "Appointed", "Approved", "Arbitrated", "Arranged", 
@@ -423,7 +493,7 @@ ALL optimized bullet points MUST start with a strong action verb and include qua
                                "Transformed", "Translated", "Troubleshot", "Unified", "Updated", "Upgraded", 
                                "Utilized", "Validated", "Verified", "Visualized", "Won", "Wrote"];
             
-            // Check if each phrase starts with an action verb, fix if not
+            // Check if each phrase starts with an action verb, fix if not with grammatical check
             analysisResult.coverLetterAnalysis.suggestedPhrases = 
               analysisResult.coverLetterAnalysis.suggestedPhrases.map((phrase: string) => {
                 const firstWord = phrase.split(' ')[0].replace(/[^\w]/g, '');
@@ -451,7 +521,25 @@ ALL optimized bullet points MUST start with a strong action verb and include qua
                   
                   // Remove any starting phrases like "I have", "I am", etc.
                   const cleanedPhrase = phrase.replace(/^(I have |I am |I |We have |We |They |The team |The company )/i, '');
+                  
+                  // Check grammatical compatibility
+                  verb = ensureGrammaticalCompatibility(verb, cleanedPhrase);
+                  
                   return `${verb} ${cleanedPhrase.charAt(0).toLowerCase()}${cleanedPhrase.slice(1)}`;
+                } else {
+                  // Even if it starts with an action verb, check grammatical compatibility
+                  const words = phrase.split(' ');
+                  if (words.length > 1) {
+                    const verb = words[0];
+                    const restOfPhrase = words.slice(1).join(' ');
+                    
+                    // Check and improve grammar if needed
+                    const betterVerb = ensureGrammaticalCompatibility(verb, restOfPhrase);
+                    
+                    if (betterVerb !== verb) {
+                      return `${betterVerb} ${restOfPhrase}`;
+                    }
+                  }
                 }
                 return phrase;
               });
