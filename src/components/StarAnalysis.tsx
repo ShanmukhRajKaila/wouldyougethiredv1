@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface StarAnalysisItem {
@@ -210,7 +211,7 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
   };
 
   // Apply grammar fixes to each item
-  const grammaticallyCorrectedAnalysis = validStarAnalysis.map(fixGrammarIssues);
+  const grammaticallyCorrectedAnalysis = validStarAnalysis.map(fixGrammaticalConflict);
   
   return (
     <div className="space-y-6">
