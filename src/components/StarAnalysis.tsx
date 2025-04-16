@@ -137,36 +137,66 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
     const firstWord = words[0];
     const secondWord = words.length > 1 ? words[1] : '';
     
-    // List of common grammar mistakes to check for
+    // More extensive list of bad grammar combinations
     const badCombinations = [
-      { verb: "Improved", badFollower: "presented" },
-      { verb: "Increased", badFollower: "managed" },
-      { verb: "Led", badFollower: "improved" },
-      { verb: "Developed", badFollower: "created" },
-      { verb: "Created", badFollower: "developed" },
-      { verb: "Implemented", badFollower: "established" },
-      { verb: "Managed", badFollower: "led" }
+      { verb: "Improved", badFollowers: ["presented", "managed", "led", "created", "implemented"] },
+      { verb: "Increased", badFollowers: ["managed", "developed", "created", "implemented"] },
+      { verb: "Led", badFollowers: ["improved", "increased", "managed", "implemented"] },
+      { verb: "Developed", badFollowers: ["created", "implemented", "established", "designed"] },
+      { verb: "Created", badFollowers: ["developed", "designed", "implemented", "established"] },
+      { verb: "Implemented", badFollowers: ["established", "developed", "created", "designed"] },
+      { verb: "Managed", badFollowers: ["led", "directed", "supervised", "oversaw"] },
+      { verb: "Designed", badFollowers: ["created", "developed", "established"] },
+      { verb: "Analyzed", badFollowers: ["researched", "studied", "examined"] },
+      { verb: "Executed", badFollowers: ["implemented", "performed", "conducted"] }
     ];
     
     // Check if the first two words form a bad combination
     const badCombo = badCombinations.find(
       combo => firstWord.toLowerCase() === combo.verb.toLowerCase() && 
-               secondWord.toLowerCase() === combo.badFollower.toLowerCase()
+               combo.badFollowers.includes(secondWord.toLowerCase())
     );
     
     if (badCombo) {
-      // Fix the grammatical issue by replacing the first word with a more appropriate verb
+      // More extensive contextual verb mapping for better grammar
       const contextualVerbs = {
+        // For presentation context
         "presented": "Delivered",
-        "managed": "Optimized",
-        "improved": "Spearheaded",
+        "presenting": "Conducting",
+        
+        // For management context
+        "managed": "Oversaw",
+        "managing": "Directing",
+        "led": "Spearheaded",
+        "leading": "Guiding",
+        "supervised": "Directed",
+        
+        // For development context
         "created": "Designed",
+        "creating": "Establishing",
         "developed": "Built",
-        "established": "Launched",
-        "led": "Directed"
+        "developing": "Constructing",
+        "designed": "Architected",
+        
+        // For implementation context
+        "implemented": "Launched",
+        "implementing": "Deploying",
+        "established": "Instituted",
+        "establishing": "Founding",
+        
+        // For research context
+        "researched": "Investigated",
+        "examining": "Analyzing",
+        "studied": "Assessed",
+        
+        // For execution context
+        "executed": "Carried out",
+        "performing": "Conducting",
+        "conducted": "Orchestrated"
       };
       
-      const betterVerb = contextualVerbs[badCombo.badFollower.toLowerCase()] || "Executed";
+      // Choose a better verb based on context
+      const betterVerb = contextualVerbs[secondWord.toLowerCase()] || "Executed";
       
       // Create the corrected bullet point
       const correctedBullet = `${betterVerb} ${words.slice(1).join(' ')}`;
@@ -181,8 +211,110 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
     return item;
   };
 
-  // Process all star analysis items to ensure grammatical correctness
-  const processedStarAnalysis = validStarAnalysis.map(validateActionVerbGrammar);
+  // Check for subject-verb agreement issues
+  const checkSubjectVerbAgreement = (item: StarAnalysisItem): StarAnalysisItem => {
+    const improvedBullet = item.improved;
+    const words = improvedBullet.split(' ');
+    
+    // Check for common plural subjects followed by singular verbs or vice versa
+    const pluralSubjects = ["teams", "groups", "members", "employees", "staff", "projects", "initiatives"];
+    const singularVerbs = ["was", "has", "does", "includes", "demonstrates"];
+    
+    const singularSubjects = ["team", "group", "member", "employee", "staff", "project", "initiative"];
+    const pluralVerbs = ["were", "have", "do", "include", "demonstrate"];
+    
+    // Look for patterns like "The teams was..." (should be "were")
+    for (let i = 1; i < words.length - 1; i++) {
+      const currentWord = words[i].toLowerCase().replace(/[,.;:]/g, '');
+      const nextWord = words[i + 1].toLowerCase().replace(/[,.;:]/g, '');
+      
+      if (pluralSubjects.includes(currentWord) && singularVerbs.includes(nextWord)) {
+        // Find the corresponding plural verb
+        const indexInSingular = singularVerbs.indexOf(nextWord);
+        if (indexInSingular >= 0) {
+          words[i + 1] = pluralVerbs[indexInSingular];
+          
+          return {
+            ...item,
+            improved: words.join(' '),
+            feedback: item.feedback + " Subject-verb agreement corrected for better grammar."
+          };
+        }
+      }
+      
+      if (singularSubjects.includes(currentWord) && pluralVerbs.includes(nextWord)) {
+        // Find the corresponding singular verb
+        const indexInPlural = pluralVerbs.indexOf(nextWord);
+        if (indexInPlural >= 0) {
+          words[i + 1] = singularVerbs[indexInPlural];
+          
+          return {
+            ...item,
+            improved: words.join(' '),
+            feedback: item.feedback + " Subject-verb agreement corrected for better grammar."
+          };
+        }
+      }
+    }
+    
+    return item;
+  };
+
+  // Enhanced function to ensure contextually appropriate action verb
+  const ensureContextualActionVerb = (item: StarAnalysisItem): StarAnalysisItem => {
+    const improvedBullet = item.improved;
+    const lowerBullet = improvedBullet.toLowerCase();
+    const firstWord = improvedBullet.split(' ')[0];
+    
+    // Map contexts to more appropriate action verbs
+    const contextMap = [
+      {
+        context: ["technical", "technology", "code", "software", "programming", "application", "system"],
+        betterVerbs: ["Developed", "Engineered", "Architected", "Programmed", "Implemented", "Designed"]
+      },
+      {
+        context: ["sales", "revenue", "client", "customer", "account", "market"],
+        betterVerbs: ["Generated", "Secured", "Acquired", "Negotiated", "Cultivated", "Expanded"]
+      },
+      {
+        context: ["problem", "challenge", "issue", "troubleshoot", "error", "bug", "defect"],
+        betterVerbs: ["Resolved", "Solved", "Addressed", "Troubleshot", "Fixed", "Remedied"]
+      },
+      {
+        context: ["strategy", "plan", "roadmap", "vision", "initiative"],
+        betterVerbs: ["Formulated", "Developed", "Crafted", "Established", "Spearheaded", "Orchestrated"]
+      },
+      {
+        context: ["team", "staff", "direct report", "employee", "member", "peer"],
+        betterVerbs: ["Led", "Managed", "Supervised", "Directed", "Mentored", "Guided"]
+      }
+    ];
+    
+    // Check if the bullet point context suggests a better action verb
+    for (const mapping of contextMap) {
+      const hasContext = mapping.context.some(term => lowerBullet.includes(term));
+      if (hasContext && !mapping.betterVerbs.includes(firstWord)) {
+        // Choose a better verb based on context
+        const betterVerb = mapping.betterVerbs[Math.floor(Math.random() * mapping.betterVerbs.length)];
+        const words = improvedBullet.split(' ');
+        const correctedBullet = `${betterVerb} ${words.slice(1).join(' ')}`;
+        
+        return {
+          ...item,
+          improved: correctedBullet,
+          feedback: item.feedback + " Action verb revised to be more contextually appropriate for this achievement."
+        };
+      }
+    }
+    
+    return item;
+  };
+
+  // Apply all grammar and context checks to each item
+  const processedStarAnalysis = validStarAnalysis
+    .map(validateActionVerbGrammar)
+    .map(checkSubjectVerbAgreement)
+    .map(ensureContextualActionVerb);
   
   return (
     <div className="space-y-6">

@@ -1,102 +1,226 @@
+
 import { CoverLetterAnalysis } from '@/context/types';
 
 export const useCoverLetterRecommendations = () => {
-  // Action verbs library for ATS optimization - expanded with more powerful leadership verbs
-  const actionVerbs = [
-    // Leadership verbs
-    "Led", "Spearheaded", "Managed", "Directed", "Oversaw", "Supervised", "Chaired", "Coordinated",
-    // Achievement verbs
-    "Achieved", "Attained", "Completed", "Delivered", "Exceeded", "Improved", "Increased", "Reduced",
-    // Initiative verbs
-    "Launched", "Created", "Developed", "Established", "Founded", "Implemented", "Initiated", "Introduced",
-    // Analysis verbs
-    "Analyzed", "Assessed", "Calculated", "Diagnosed", "Evaluated", "Examined", "Identified", "Researched",
-    // Communication verbs
-    "Authored", "Collaborated", "Consulted", "Educated", "Negotiated", "Presented", "Promoted", "Recommended",
-    // Technical verbs
-    "Administered", "Configured", "Designed", "Engineered", "Integrated", "Optimized", "Programmed", "Streamlined",
-    // Problem-solving verbs
-    "Resolved", "Solved", "Transformed", "Troubleshot", "Revamped", "Revitalized", "Pioneered", "Formulated"
-  ];
+  // Expanded action verbs library for ATS optimization with categorization
+  const actionVerbs = {
+    leadership: [
+      "Led", "Spearheaded", "Managed", "Directed", "Oversaw", "Supervised", "Chaired", "Coordinated",
+      "Guided", "Mentored", "Administered", "Championed", "Commanded", "Governed", "Stewarded"
+    ],
+    achievement: [
+      "Achieved", "Attained", "Completed", "Delivered", "Exceeded", "Improved", "Increased", "Reduced",
+      "Accelerated", "Accomplished", "Advanced", "Boosted", "Capitalized", "Maximized", "Outperformed"
+    ],
+    initiative: [
+      "Launched", "Created", "Developed", "Established", "Founded", "Implemented", "Initiated", "Introduced",
+      "Pioneered", "Spearheaded", "Conceived", "Formulated", "Instituted", "Originated", "Innovated"
+    ],
+    analysis: [
+      "Analyzed", "Assessed", "Calculated", "Diagnosed", "Evaluated", "Examined", "Identified", "Researched",
+      "Investigated", "Measured", "Quantified", "Surveyed", "Tested", "Tracked", "Validated"
+    ],
+    communication: [
+      "Authored", "Collaborated", "Consulted", "Educated", "Negotiated", "Presented", "Promoted", "Recommended",
+      "Articulated", "Communicated", "Conveyed", "Influenced", "Interpreted", "Persuaded", "Represented"
+    ],
+    technical: [
+      "Administered", "Configured", "Designed", "Engineered", "Integrated", "Optimized", "Programmed", "Streamlined",
+      "Automated", "Coded", "Customized", "Debugged", "Deployed", "Maintained", "Reengineered"
+    ],
+    problem_solving: [
+      "Resolved", "Solved", "Transformed", "Troubleshot", "Revamped", "Revitalized", "Pioneered", "Formulated",
+      "Addressed", "Alleviated", "Corrected", "Eliminated", "Fixed", "Rectified", "Remedied"
+    ]
+  };
+
+  // All verbs in a flat array for easier searching
+  const allActionVerbs = Object.values(actionVerbs).flat();
+
+  // Get a random verb from a specific category
+  const getRandomVerbFromCategory = (category: keyof typeof actionVerbs): string => {
+    const verbs = actionVerbs[category];
+    return verbs[Math.floor(Math.random() * verbs.length)];
+  };
+  
+  // Get a random verb from all categories
+  const getRandomVerb = (): string => {
+    return allActionVerbs[Math.floor(Math.random() * allActionVerbs.length)];
+  };
+
+  // Checks if a string starts with any of the action verbs (case-insensitive)
+  const startsWithActionVerb = (text: string): boolean => {
+    const firstWord = text.split(' ')[0].replace(/[^\w]/g, '');
+    return allActionVerbs.some(verb => verb.toLowerCase() === firstWord.toLowerCase());
+  };
 
   // MANDATORY: Always ensure phrases start with a strong action verb
   const enforceActionVerbStart = (phrase: string): string => {
-    // Check if phrase already starts with an action verb
-    const firstWord = phrase.split(' ')[0].replace(/[^\w]/g, '');
-    
-    if (!actionVerbs.includes(firstWord)) {
-      // Select an appropriate action verb based on content
-      let verb = selectContextualActionVerb(phrase);
-      
-      // Format the phrase to start with the action verb
-      // Remove any existing verb-like starts and capitalize first letter of remaining text
-      const cleanedPhrase = phrase.replace(/^(I |We |They |He |She |The team |The company |The department )/i, '');
-      return `${verb} ${cleanedPhrase.charAt(0).toLowerCase()}${cleanedPhrase.slice(1)}`;
+    // Skip if phrase is empty
+    if (!phrase || phrase.trim() === '') {
+      return phrase;
     }
     
-    return phrase;
+    // Check if phrase already starts with an action verb
+    if (startsWithActionVerb(phrase)) {
+      return phrase;
+    }
+    
+    // Select an appropriate action verb based on content and context
+    const verb = selectContextualActionVerb(phrase);
+    
+    // Format the phrase to start with the action verb
+    // Remove any existing verb-like starts and capitalize first letter of remaining text
+    const cleanedPhrase = phrase.replace(/^(I |We |They |He |She |The team |My |Our |The company |The department )/i, '');
+    
+    // Check if the first word is already a past tense verb
+    const firstWord = cleanedPhrase.split(' ')[0].toLowerCase();
+    const commonPastTenseVerbs = ['worked', 'developed', 'created', 'managed', 'led', 'implemented', 'increased', 'improved'];
+    
+    if (commonPastTenseVerbs.includes(firstWord)) {
+      // Replace the past tense verb with present tense action verb
+      return `${verb} ${cleanedPhrase.slice(firstWord.length + 1)}`;
+    }
+    
+    return `${verb} ${cleanedPhrase.charAt(0).toLowerCase()}${cleanedPhrase.slice(1)}`;
   };
   
-  // Select an action verb that matches the context of the phrase
+  // Select an action verb that matches the context of the phrase with improved grammar awareness
   const selectContextualActionVerb = (phrase: string): string => {
     const lowerPhrase = phrase.toLowerCase();
     
+    // Context-based verb selection with grammatical considerations
+    
     // Leadership context
-    if (lowerPhrase.includes("team") || lowerPhrase.includes("group") || lowerPhrase.includes("department")) {
-      return getRandomVerb(["Led", "Spearheaded", "Managed", "Directed", "Oversaw", "Supervised"]);
+    if (lowerPhrase.includes("team") || lowerPhrase.includes("group") || 
+        lowerPhrase.includes("department") || lowerPhrase.includes("staff") ||
+        lowerPhrase.includes("direct") || lowerPhrase.includes("supervis")) {
+      return getRandomVerbFromCategory("leadership");
     }
     
     // Achievement context
-    if (lowerPhrase.includes("achiev") || lowerPhrase.includes("accomplish") || lowerPhrase.includes("success")) {
-      return getRandomVerb(["Achieved", "Attained", "Delivered", "Exceeded", "Accomplished"]);
+    if (lowerPhrase.includes("achiev") || lowerPhrase.includes("accomplish") || 
+        lowerPhrase.includes("success") || lowerPhrase.includes("award") || 
+        lowerPhrase.includes("recognition") || lowerPhrase.includes("exceed")) {
+      return getRandomVerbFromCategory("achievement");
     }
     
-    // Improvement context
-    if (lowerPhrase.includes("improv") || lowerPhrase.includes("enhanc") || lowerPhrase.includes("increas") || 
-        lowerPhrase.includes("better") || lowerPhrase.includes("reduc")) {
-      return getRandomVerb(["Improved", "Enhanced", "Increased", "Optimized", "Strengthened", "Reduced"]);
+    // Improvement/optimization context
+    if (lowerPhrase.includes("improv") || lowerPhrase.includes("enhanc") || 
+        lowerPhrase.includes("increas") || lowerPhrase.includes("reduc") || 
+        lowerPhrase.includes("efficienc") || lowerPhrase.includes("better") || 
+        lowerPhrase.includes("optimi") || lowerPhrase.includes("streamlin")) {
+      return getRandomVerbFromCategory("achievement");
     }
     
-    // Creation context
-    if (lowerPhrase.includes("creat") || lowerPhrase.includes("develop") || lowerPhrase.includes("build") || 
-        lowerPhrase.includes("design") || lowerPhrase.includes("launch")) {
-      return getRandomVerb(["Created", "Developed", "Designed", "Established", "Launched", "Implemented"]);
+    // Creation/development context
+    if (lowerPhrase.includes("creat") || lowerPhrase.includes("develop") || 
+        lowerPhrase.includes("build") || lowerPhrase.includes("design") || 
+        lowerPhrase.includes("launch") || lowerPhrase.includes("invent") ||
+        lowerPhrase.includes("innovat") || lowerPhrase.includes("establish")) {
+      return getRandomVerbFromCategory("initiative");
     }
     
-    // Analysis context
-    if (lowerPhrase.includes("analyz") || lowerPhrase.includes("research") || lowerPhrase.includes("stud") || 
-        lowerPhrase.includes("examin") || lowerPhrase.includes("assess")) {
-      return getRandomVerb(["Analyzed", "Researched", "Assessed", "Evaluated", "Examined", "Identified"]);
+    // Analysis/research context
+    if (lowerPhrase.includes("analyz") || lowerPhrase.includes("research") || 
+        lowerPhrase.includes("stud") || lowerPhrase.includes("examin") || 
+        lowerPhrase.includes("assess") || lowerPhrase.includes("investigat") ||
+        lowerPhrase.includes("review") || lowerPhrase.includes("evaluat")) {
+      return getRandomVerbFromCategory("analysis");
     }
     
     // Problem-solving context
-    if (lowerPhrase.includes("solv") || lowerPhrase.includes("fix") || lowerPhrase.includes("resolv") || 
-        lowerPhrase.includes("problem") || lowerPhrase.includes("issue")) {
-      return getRandomVerb(["Resolved", "Solved", "Addressed", "Troubleshot", "Remedied"]);
+    if (lowerPhrase.includes("solv") || lowerPhrase.includes("fix") || 
+        lowerPhrase.includes("resolv") || lowerPhrase.includes("problem") || 
+        lowerPhrase.includes("issue") || lowerPhrase.includes("challeng") ||
+        lowerPhrase.includes("address") || lowerPhrase.includes("obstacle")) {
+      return getRandomVerbFromCategory("problem_solving");
     }
     
     // Communication context
-    if (lowerPhrase.includes("communicat") || lowerPhrase.includes("present") || lowerPhrase.includes("speak") || 
-        lowerPhrase.includes("report") || lowerPhrase.includes("writ")) {
-      return getRandomVerb(["Communicated", "Presented", "Authored", "Articulated", "Conveyed"]);
+    if (lowerPhrase.includes("communicat") || lowerPhrase.includes("present") || 
+        lowerPhrase.includes("speak") || lowerPhrase.includes("report") || 
+        lowerPhrase.includes("writ") || lowerPhrase.includes("document") ||
+        lowerPhrase.includes("publish") || lowerPhrase.includes("author")) {
+      return getRandomVerbFromCategory("communication");
     }
     
-    // Default to general strong verbs if no specific context is found
-    return getRandomVerb(["Implemented", "Developed", "Managed", "Executed", "Coordinated", "Delivered"]);
+    // Technical context
+    if (lowerPhrase.includes("system") || lowerPhrase.includes("technolog") || 
+        lowerPhrase.includes("software") || lowerPhrase.includes("program") || 
+        lowerPhrase.includes("implement") || lowerPhrase.includes("code") ||
+        lowerPhrase.includes("develop") || lowerPhrase.includes("architect")) {
+      return getRandomVerbFromCategory("technical");
+    }
+    
+    // Default to general strong verbs that are grammatically sound with what follows
+    // Check the next word to determine appropriate verb
+    const words = phrase.split(' ');
+    if (words.length > 1) {
+      const secondWord = words[1].toLowerCase();
+      
+      // If second word is a verb, use a verb that pairs well with it
+      if (secondWord.endsWith("ing")) {
+        // For -ing words, use verbs like "Started", "Continued", "Began"
+        return "Continued";
+      } else if (secondWord.endsWith("ed")) {
+        // For past tense verbs, better to completely replace them
+        return "Executed";
+      }
+    }
+    
+    return getRandomVerb();
   };
-  
-  // Get a random verb from the specific category
-  const getRandomVerb = (verbs: string[]): string => {
-    return verbs[Math.floor(Math.random() * verbs.length)];
+
+  // Add grammatical validation for subject-verb agreement
+  const validateGrammar = (text: string): string => {
+    // Basic subject-verb agreement fixes
+    return text
+      .replace(/team are/gi, "team is")
+      .replace(/teams is/gi, "teams are")
+      .replace(/staff are/gi, "staff is")
+      .replace(/company are/gi, "company is")
+      .replace(/department are/gi, "department is");
+  };
+
+  // Ensure consistent tense throughout the sentence
+  const ensureConsistentTense = (text: string): string => {
+    const words = text.split(' ');
+    const firstWord = words[0];
+    
+    // If it starts with a past tense verb, ensure consistency
+    if (/ed$/.test(firstWord) && !["Led", "Exceeded"].includes(firstWord)) {
+      // Convert present tense verbs in the sentence to past tense
+      return words.map((word, index) => {
+        if (index === 0) return word; // Keep the first word
+        
+        // Simple present to past tense conversion for common verbs
+        if (word === "increase") return "increased";
+        if (word === "improve") return "improved";
+        if (word === "reduce") return "reduced";
+        if (word === "develop") return "developed";
+        if (word === "implement") return "implemented";
+        if (word === "create") return "created";
+        if (word === "manage") return "managed";
+        
+        return word;
+      }).join(' ');
+    }
+    
+    return text;
   };
 
   const applyRecommendations = (coverLetterText: string, analysis: CoverLetterAnalysis): string => {
-    // Ensure cover letter insights are action verb-driven
+    // Ensure cover letter insights are action verb-driven with grammar checks
     const enhanceWithActionVerbs = (phrases: string[]): string[] => {
-      return phrases.map(phrase => enforceActionVerbStart(phrase));
+      return phrases.map(phrase => {
+        const withActionVerb = enforceActionVerbStart(phrase);
+        const withGrammarChecked = validateGrammar(withActionVerb);
+        return ensureConsistentTense(withGrammarChecked);
+      });
     };
 
-    // Enhance company insights with action verbs
+    // Enhance company insights with action verbs and grammar checks
     const companyInsights = analysis.companyInsights 
       ? enhanceWithActionVerbs(analysis.companyInsights)
       : [
@@ -107,7 +231,7 @@ export const useCoverLetterRecommendations = () => {
           "Examined leadership team's vision and growth strategy"
         ];
 
-    // Enhance key requirements with action verb focus
+    // Enhance key requirements with action verb focus and grammar checks
     const keyRequirements = analysis.keyRequirements 
       ? enhanceWithActionVerbs(analysis.keyRequirements)
       : [
@@ -118,7 +242,7 @@ export const useCoverLetterRecommendations = () => {
           "Proved adaptability in dynamic and challenging environments"
         ];
 
-    // Enhance suggested phrases with action verb optimization and STAR method
+    // Enhance suggested phrases with action verb optimization, grammar checks, and STAR method
     const suggestedPhrases = analysis.suggestedPhrases
       ? enhanceWithActionVerbs(analysis.suggestedPhrases)
       : [
@@ -153,7 +277,8 @@ export const useCoverLetterRecommendations = () => {
       companyInsights: [],
       keyRequirements: [],
       suggestedPhrases: [],
-      tone: []
+      tone: [],
+      careerSpecific: [] // New section for career-specific advice
     };
 
     // Add tone suggestions
@@ -176,6 +301,20 @@ export const useCoverLetterRecommendations = () => {
     // STAR method explanation for ATS optimization
     enhancementSections.tone.push(`• Apply the STAR method (Situation, Task, Action, Result) in your accomplishments`);
     enhancementSections.tone.push(`• Quantify achievements with specific numbers and percentages where possible`);
+    
+    // Career field alignment - new section
+    if (analysis.careerFieldMatch) {
+      enhancementSections.careerSpecific.push(`• Alignment with job field: ${analysis.careerFieldMatch}`);
+      
+      // If there's a career field mismatch, provide specific guidance
+      if (analysis.careerFieldMatch.toLowerCase().includes('misalign') || 
+          analysis.careerFieldMatch.toLowerCase().includes('low') || 
+          analysis.careerFieldMatch.toLowerCase().includes('weak')) {
+        enhancementSections.careerSpecific.push(`• Emphasize transferable skills relevant to this specific field`);
+        enhancementSections.careerSpecific.push(`• Address potential career transition explicitly in your opening paragraph`);
+        enhancementSections.careerSpecific.push(`• Highlight any projects or experiences most relevant to this specific industry`);
+      }
+    }
     
     // Generate company insight enhancement - ensure we have at least 5 insights
     if (hasCompanyInsights) {
@@ -229,11 +368,13 @@ export const useCoverLetterRecommendations = () => {
       ];
     }
     
-    // Generate suggested phrases enhancement - ensure all phrases start with action verbs and include STAR elements
+    // Generate suggested phrases enhancement - ensure all phrases start with action verbs, are grammatically correct, and include STAR elements
     if (hasSuggestedPhrases) {
       // Take the top phrases from analysis (up to 5) and ensure they all start with action verbs
       analysis.suggestedPhrases.slice(0, 5).forEach((phrase) => {
-        enhancementSections.suggestedPhrases.push(`• "${enforceActionVerbStart(phrase)}"`);
+        const enhancedPhrase = enforceActionVerbStart(phrase);
+        const grammarCheckedPhrase = validateGrammar(enhancedPhrase);
+        enhancementSections.suggestedPhrases.push(`• "${grammarCheckedPhrase}"`);
       });
     } else {
       // Use generic action-verb led phrases with STAR components if none provided
@@ -257,6 +398,12 @@ export const useCoverLetterRecommendations = () => {
       enhancedText += "\n\n";
     }
     
+    if (enhancementSections.careerSpecific.length > 0) {
+      enhancedText += `Career Field Alignment:\n`;
+      enhancedText += enhancementSections.careerSpecific.join("\n");
+      enhancedText += "\n\n";
+    }
+    
     enhancedText += "Company Insights (for first or second paragraph):\n";
     enhancedText += enhancementSections.companyInsights.join("\n");
     enhancedText += "\n\n";
@@ -276,7 +423,7 @@ export const useCoverLetterRecommendations = () => {
     // Create a sample paragraph using company insights, action verbs, and STAR method
     const sampleInsight = analysis.companyInsights?.[0]?.toLowerCase() || 'innovative approach and industry leadership';
     const sampleRequirement = analysis.keyRequirements?.[0] || 'the required skills';
-    const sampleVerb = actionVerbs[Math.floor(Math.random() * actionVerbs.length)];
+    const sampleVerb = getRandomVerbFromCategory("leadership");
     
     enhancedText += `"Dear Hiring Manager,\n\nI am writing to express my strong interest in the [Position] role at ${companyName}. After researching ${companyName}'s ${sampleInsight}, I'm particularly impressed by the company's commitment to innovation and excellence. Throughout my career, I have ${sampleVerb.toLowerCase()} projects that closely align with your requirements for ${sampleRequirement}, resulting in [specific measurable outcome] that demonstrates my ability to deliver value immediately to your team."\n`;
 
@@ -315,7 +462,7 @@ export const useCoverLetterRecommendations = () => {
       // Count how many phrases start with action verbs
       const actionVerbCount = analysis.suggestedPhrases.filter(phrase => {
         const firstWord = phrase.split(' ')[0];
-        return actionVerbs.includes(firstWord);
+        return allActionVerbs.includes(firstWord);
       }).length;
       
       improvementFactor += 0.02 * actionVerbCount; // +2% per action verb phrase
@@ -329,6 +476,14 @@ export const useCoverLetterRecommendations = () => {
     ).length || 0;
     
     improvementFactor += 0.03 * starMethodImplementation; // +3% per phrase with quantifiable results
+    
+    // Field alignment boost - if there's a good career field match
+    if (analysis.careerFieldMatch && 
+        (analysis.careerFieldMatch.toLowerCase().includes('strong') ||
+         analysis.careerFieldMatch.toLowerCase().includes('excellent') ||
+         analysis.careerFieldMatch.toLowerCase().includes('good'))) {
+      improvementFactor += 0.05; // +5% for strong field alignment
+    }
     
     // Cap the total improvement at 40%
     improvementFactor = Math.min(improvementFactor, 0.40);

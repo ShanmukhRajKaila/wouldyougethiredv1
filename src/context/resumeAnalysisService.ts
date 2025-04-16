@@ -35,7 +35,12 @@ export const analyzeResume = async (
           options: {
             forceFull: true, // Force full content analysis
             enhancedAtsAnalysis: true,
-            keywordOptimization: true
+            keywordOptimization: true,
+            grammarCheck: true, // Add grammar checking
+            contextCheck: true, // Add context validation
+            useGoogleSearch: true, // Use Google Search API when available
+            includeCompanyCulture: true, // Research company culture
+            careerFieldAwareness: true // Match career field appropriately
           }
         }),
       }
@@ -58,7 +63,8 @@ export const analyzeResume = async (
         hasCompanyInsights: !!result.coverLetterAnalysis.companyInsights?.length,
         hasKeyRequirements: !!result.coverLetterAnalysis.keyRequirements?.length,
         hasSuggestedPhrases: !!result.coverLetterAnalysis.suggestedPhrases?.length
-      } : 'No cover letter analysis'
+      } : 'No cover letter analysis',
+      careerFieldMatch: result.careerFieldMatch || 'Not analyzed'
     });
     
     return result;
