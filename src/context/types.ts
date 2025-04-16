@@ -1,4 +1,3 @@
-
 import { Dispatch, SetStateAction } from 'react';
 
 export type AppStage = 
@@ -25,6 +24,7 @@ export interface CoverLetterAnalysis {
   suggestedPhrases?: string[];
   improvedText?: string;
   updatedRelevance?: number;
+  careerFieldMatch?: string;
 }
 
 export interface AnalysisResult {
@@ -39,6 +39,7 @@ export interface AnalysisResult {
     feedback: string;
   }>;
   coverLetterAnalysis?: CoverLetterAnalysis;
+  careerFieldMatch?: string;
 }
 
 export interface AppContextType {
