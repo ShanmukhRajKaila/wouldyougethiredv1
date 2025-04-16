@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface StarAnalysisItem {
@@ -128,193 +127,191 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
     return "ATS systems prioritize specific, concrete language over general descriptions. Adding industry terminology and metrics substantially increases match scores with job requirement algorithms.";
   };
 
-  // Function to check if the improved version has proper grammar with the action verb
-  const validateActionVerbGrammar = (item: StarAnalysisItem): StarAnalysisItem => {
-    const improvedBullet = item.improved;
+  // Improved function to check if two verbs create an illogical grammatical sequence
+  const checkVerbConflict = (firstVerb: string, secondWord: string): boolean => {
+    // Convert to lowercase for comparison
+    const verb = firstVerb.toLowerCase();
+    const word = secondWord.toLowerCase();
     
-    // Split the bullet into words and check the first word against action verbs
-    const words = improvedBullet.split(' ');
-    const firstWord = words[0];
-    const secondWord = words.length > 1 ? words[1] : '';
+    // Check for verb tense conflicts (e.g., "Delivered presented", "Improved managed")
+    if (
+      // Past tense verb conflicts
+      (word.endsWith('ed') && !word.endsWith('need')) || 
+      // Common action verbs that shouldn't follow each other
+      ['present', 'develop', 'implement', 'manag', 'lead', 'creat', 'design', 'analyz'].some(
+        stem => word.startsWith(stem)
+      )
+    ) {
+      return true;
+    }
     
-    // More extensive list of bad grammar combinations
-    const badCombinations = [
-      { verb: "Improved", badFollowers: ["presented", "managed", "led", "created", "implemented"] },
-      { verb: "Increased", badFollowers: ["managed", "developed", "created", "implemented"] },
-      { verb: "Led", badFollowers: ["improved", "increased", "managed", "implemented"] },
-      { verb: "Developed", badFollowers: ["created", "implemented", "established", "designed"] },
-      { verb: "Created", badFollowers: ["developed", "designed", "implemented", "established"] },
-      { verb: "Implemented", badFollowers: ["established", "developed", "created", "designed"] },
-      { verb: "Managed", badFollowers: ["led", "directed", "supervised", "oversaw"] },
-      { verb: "Designed", badFollowers: ["created", "developed", "established"] },
-      { verb: "Analyzed", badFollowers: ["researched", "studied", "examined"] },
-      { verb: "Executed", badFollowers: ["implemented", "performed", "conducted"] }
-    ];
+    // Check specific problematic verb combinations
+    const problematicCombinations: Record<string, string[]> = {
+      "delivered": ["presented", "reported", "showed", "displayed", "demonstrated"],
+      "improved": ["presented", "managed", "led", "created", "implemented", "enhanced", "increased"],
+      "increased": ["managed", "developed", "created", "implemented", "improved", "enhanced"],
+      "led": ["improved", "increased", "managed", "implemented", "directed", "guided", "headed"],
+      "developed": ["created", "implemented", "established", "designed", "built"],
+      "created": ["developed", "designed", "implemented", "established", "built"],
+      "implemented": ["established", "developed", "created", "designed", "deployed"],
+      "managed": ["led", "directed", "supervised", "oversaw", "handled"],
+      "designed": ["created", "developed", "established", "architected"],
+      "analyzed": ["researched", "studied", "examined", "evaluated"],
+      "executed": ["implemented", "performed", "conducted", "carried"]
+    };
     
-    // Check if the first two words form a bad combination
-    const badCombo = badCombinations.find(
-      combo => firstWord.toLowerCase() === combo.verb.toLowerCase() && 
-               combo.badFollowers.includes(secondWord.toLowerCase())
-    );
+    return problematicCombinations[verb]?.includes(word) || false;
+  };
+
+  // Function to correct verb conflicts by choosing more contextually appropriate alternatives
+  const resolveVerbConflict = (actionVerb: string, content: string): string => {
+    const words = content.split(' ');
+    const firstContentWord = words[0].toLowerCase();
     
-    if (badCombo) {
-      // More extensive contextual verb mapping for better grammar
-      const contextualVerbs = {
-        // For presentation context
-        "presented": "Delivered",
-        "presenting": "Conducting",
-        
-        // For management context
-        "managed": "Oversaw",
-        "managing": "Directing",
-        "led": "Spearheaded",
-        "leading": "Guiding",
-        "supervised": "Directed",
-        
-        // For development context
-        "created": "Designed",
-        "creating": "Establishing",
-        "developed": "Built",
-        "developing": "Constructing",
-        "designed": "Architected",
-        
-        // For implementation context
-        "implemented": "Launched",
-        "implementing": "Deploying",
-        "established": "Instituted",
-        "establishing": "Founding",
-        
-        // For research context
-        "researched": "Investigated",
-        "examining": "Analyzing",
-        "studied": "Assessed",
-        
-        // For execution context
-        "executed": "Carried out",
-        "performing": "Conducting",
-        "conducted": "Orchestrated"
+    // Word mapping based on context that fixes grammatical conflicts
+    const contextualReplacements: Record<string, Record<string, string>> = {
+      // When the first content word is "presented" or variations
+      "presented": { 
+        default: "Delivered",
+        alternative: "Conducted" 
+      },
+      "presentation": {
+        default: "Created",
+        alternative: "Developed"
+      },
+      // Management related conflicts
+      "managed": {
+        default: "Oversaw",
+        alternative: "Directed"
+      },
+      "managing": {
+        default: "Leading",
+        alternative: "Directing"  
+      },
+      "management": {
+        default: "Leadership of",
+        alternative: "Direction of"
+      },
+      // Creation related conflicts
+      "created": {
+        default: "Designed",
+        alternative: "Developed"
+      },
+      "creating": {
+        default: "Designing",
+        alternative: "Developing"
+      },
+      "creation": {
+        default: "Design",
+        alternative: "Development"
+      },
+      // Implementation related conflicts
+      "implemented": {
+        default: "Deployed",
+        alternative: "Launched"
+      },
+      "implementing": {
+        default: "Deploying",
+        alternative: "Launching"
+      },
+      "implementation": {
+        default: "Deployment",
+        alternative: "Launch"
+      },
+      // Analysis related conflicts
+      "analyzed": {
+        default: "Examined",
+        alternative: "Evaluated"
+      },
+      "analyzing": {
+        default: "Examining",
+        alternative: "Evaluating"
+      },
+      "analysis": {
+        default: "Examination",
+        alternative: "Evaluation"
+      }
+    };
+    
+    // If we have a specific replacement for this content word
+    if (contextualReplacements[firstContentWord]) {
+      // Use default replacement or alternative if the default would create a conflict
+      const replacement = contextualReplacements[firstContentWord].default;
+      
+      // For the remaining text, remove the first word and join the rest
+      const remainingText = words.slice(1).join(' ');
+      return `${replacement} ${remainingText}`;
+    }
+    
+    // If the first content word is a past tense verb (likely ends with 'ed')
+    if (firstContentWord.endsWith('ed') && firstContentWord.length > 2) {
+      // Map past tense verbs to present context phrases
+      const pastTenseMap: Record<string, string> = {
+        "presented": "presentation",
+        "managed": "management of",
+        "developed": "development of",
+        "created": "creation of",
+        "implemented": "implementation of",
+        "designed": "design of",
+        "analyzed": "analysis of",
+        "increased": "improvement in",
+        "improved": "enhancement of",
+        "executed": "execution of",
+        "coordinated": "coordination of",
+        "led": "leadership of"
       };
       
-      // Choose a better verb based on context
-      const betterVerb = contextualVerbs[secondWord.toLowerCase()] || "Executed";
+      // Try to find a mapping for the past tense verb
+      let replacement = pastTenseMap[firstContentWord] || firstContentWord;
       
-      // Create the corrected bullet point
-      const correctedBullet = `${betterVerb} ${words.slice(1).join(' ')}`;
+      // Generic approach for other past tense verbs
+      if (replacement === firstContentWord && firstContentWord.endsWith('ed')) {
+        // Remove the 'ed' and add 'ing of'
+        replacement = firstContentWord.slice(0, -2) + "ing of";
+      }
+      
+      // Replace the first word with our modified version
+      const remainingText = words.slice(1).join(' ');
+      return `${actionVerb} ${replacement} ${remainingText}`;
+    }
+    
+    // If no specific rule matched, keep the original content
+    return `${actionVerb} ${content}`;
+  };
+
+  // Enhanced function to fix grammatical issues in action verb bullet points
+  const fixGrammarInBulletPoint = (item: StarAnalysisItem): StarAnalysisItem => {
+    // Split the improved bullet into words
+    const words = item.improved.split(' ');
+    
+    // Check if we have at least two words to compare
+    if (words.length < 2) {
+      return item;
+    }
+    
+    const actionVerb = words[0];
+    const secondWord = words[1];
+    
+    // Check if there's a grammatical conflict between the action verb and what follows
+    if (checkVerbConflict(actionVerb, secondWord)) {
+      // Get content without the action verb
+      const content = words.slice(1).join(' ');
+      
+      // Resolve the conflict with better grammar
+      const correctedBullet = resolveVerbConflict(actionVerb, content);
       
       return {
         ...item,
         improved: correctedBullet,
-        feedback: item.feedback + " Grammar corrected to ensure the action verb flows naturally with the rest of the bullet point."
+        feedback: item.feedback + " Grammar improved to ensure logical flow between action verb and description."
       };
     }
     
     return item;
   };
 
-  // Check for subject-verb agreement issues
-  const checkSubjectVerbAgreement = (item: StarAnalysisItem): StarAnalysisItem => {
-    const improvedBullet = item.improved;
-    const words = improvedBullet.split(' ');
-    
-    // Check for common plural subjects followed by singular verbs or vice versa
-    const pluralSubjects = ["teams", "groups", "members", "employees", "staff", "projects", "initiatives"];
-    const singularVerbs = ["was", "has", "does", "includes", "demonstrates"];
-    
-    const singularSubjects = ["team", "group", "member", "employee", "staff", "project", "initiative"];
-    const pluralVerbs = ["were", "have", "do", "include", "demonstrate"];
-    
-    // Look for patterns like "The teams was..." (should be "were")
-    for (let i = 1; i < words.length - 1; i++) {
-      const currentWord = words[i].toLowerCase().replace(/[,.;:]/g, '');
-      const nextWord = words[i + 1].toLowerCase().replace(/[,.;:]/g, '');
-      
-      if (pluralSubjects.includes(currentWord) && singularVerbs.includes(nextWord)) {
-        // Find the corresponding plural verb
-        const indexInSingular = singularVerbs.indexOf(nextWord);
-        if (indexInSingular >= 0) {
-          words[i + 1] = pluralVerbs[indexInSingular];
-          
-          return {
-            ...item,
-            improved: words.join(' '),
-            feedback: item.feedback + " Subject-verb agreement corrected for better grammar."
-          };
-        }
-      }
-      
-      if (singularSubjects.includes(currentWord) && pluralVerbs.includes(nextWord)) {
-        // Find the corresponding singular verb
-        const indexInPlural = pluralVerbs.indexOf(nextWord);
-        if (indexInPlural >= 0) {
-          words[i + 1] = singularVerbs[indexInPlural];
-          
-          return {
-            ...item,
-            improved: words.join(' '),
-            feedback: item.feedback + " Subject-verb agreement corrected for better grammar."
-          };
-        }
-      }
-    }
-    
-    return item;
-  };
-
-  // Enhanced function to ensure contextually appropriate action verb
-  const ensureContextualActionVerb = (item: StarAnalysisItem): StarAnalysisItem => {
-    const improvedBullet = item.improved;
-    const lowerBullet = improvedBullet.toLowerCase();
-    const firstWord = improvedBullet.split(' ')[0];
-    
-    // Map contexts to more appropriate action verbs
-    const contextMap = [
-      {
-        context: ["technical", "technology", "code", "software", "programming", "application", "system"],
-        betterVerbs: ["Developed", "Engineered", "Architected", "Programmed", "Implemented", "Designed"]
-      },
-      {
-        context: ["sales", "revenue", "client", "customer", "account", "market"],
-        betterVerbs: ["Generated", "Secured", "Acquired", "Negotiated", "Cultivated", "Expanded"]
-      },
-      {
-        context: ["problem", "challenge", "issue", "troubleshoot", "error", "bug", "defect"],
-        betterVerbs: ["Resolved", "Solved", "Addressed", "Troubleshot", "Fixed", "Remedied"]
-      },
-      {
-        context: ["strategy", "plan", "roadmap", "vision", "initiative"],
-        betterVerbs: ["Formulated", "Developed", "Crafted", "Established", "Spearheaded", "Orchestrated"]
-      },
-      {
-        context: ["team", "staff", "direct report", "employee", "member", "peer"],
-        betterVerbs: ["Led", "Managed", "Supervised", "Directed", "Mentored", "Guided"]
-      }
-    ];
-    
-    // Check if the bullet point context suggests a better action verb
-    for (const mapping of contextMap) {
-      const hasContext = mapping.context.some(term => lowerBullet.includes(term));
-      if (hasContext && !mapping.betterVerbs.includes(firstWord)) {
-        // Choose a better verb based on context
-        const betterVerb = mapping.betterVerbs[Math.floor(Math.random() * mapping.betterVerbs.length)];
-        const words = improvedBullet.split(' ');
-        const correctedBullet = `${betterVerb} ${words.slice(1).join(' ')}`;
-        
-        return {
-          ...item,
-          improved: correctedBullet,
-          feedback: item.feedback + " Action verb revised to be more contextually appropriate for this achievement."
-        };
-      }
-    }
-    
-    return item;
-  };
-
-  // Apply all grammar and context checks to each item
-  const processedStarAnalysis = validStarAnalysis
-    .map(validateActionVerbGrammar)
-    .map(checkSubjectVerbAgreement)
-    .map(ensureContextualActionVerb);
+  // Apply grammar fixes to each item
+  const grammaticallyCorrectedAnalysis = validStarAnalysis.map(fixGrammarInBulletPoint);
   
   return (
     <div className="space-y-6">
@@ -345,7 +342,7 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
         </div>
       </div>
       
-      {processedStarAnalysis.map((item, index) => (
+      {grammaticallyCorrectedAnalysis.map((item, index) => (
         <div key={index} className="p-6 bg-white rounded-lg shadow mb-4">
           <div className="space-y-4">
             <div>

@@ -101,44 +101,111 @@ function extractKeyRequirements(jobDescription: string): string[] {
   return [];
 }
 
-// New function to check grammatical compatibility of action verbs with context
+// Improved function to check grammatical compatibility of action verbs with content
 function ensureGrammaticalCompatibility(actionVerb: string, phrase: string): string {
   const lowerPhrase = phrase.toLowerCase();
   const words = phrase.split(' ');
   const firstWordLower = words.length > 0 ? words[0].toLowerCase() : '';
   
-  // List of potentially problematic verb combinations
-  const problematicCombos: Record<string, string[]> = {
-    "improved": ["presented", "managed", "led", "created", "delivered", "executed"],
-    "increased": ["managed", "led", "delivered", "executed", "implemented"],
-    "led": ["improved", "increased", "executed", "implemented"],
-    "developed": ["created", "established", "implemented", "built"],
-    "created": ["developed", "designed", "established", "built"],
-    "implemented": ["established", "launched", "initiated", "deployed"],
-    "managed": ["led", "directed", "supervised", "oversaw"]
+  // Check if first word is a verb that would create grammatical conflicts
+  const isFirstWordVerb = firstWordLower.endsWith('ed') || 
+                         firstWordLower.endsWith('ing') || 
+                         ["manage", "lead", "develop", "create", "implement", 
+                          "design", "analyze", "present", "deliver", "conduct"].includes(firstWordLower);
+  
+  // List of problematic verb combinations with contextually appropriate replacements
+  const problematicCombos: Record<string, {alternates: string[], context?: string[]}> = {
+    "improved": {
+      alternates: ["Enhanced", "Optimized", "Elevated"],
+      context: ["process", "system", "metric", "performance", "efficiency"]
+    },
+    "increased": {
+      alternates: ["Expanded", "Grew", "Maximized"],
+      context: ["revenue", "sales", "performance", "efficiency", "productivity"]
+    },
+    "led": {
+      alternates: ["Directed", "Guided", "Managed"],
+      context: ["team", "project", "initiative", "department", "effort"]
+    },
+    "developed": {
+      alternates: ["Created", "Designed", "Architected"],
+      context: ["system", "solution", "application", "framework", "strategy"]
+    },
+    "created": {
+      alternates: ["Designed", "Built", "Established"],
+      context: ["system", "solution", "framework", "process", "tool"]
+    },
+    "implemented": {
+      alternates: ["Deployed", "Established", "Launched"],
+      context: ["system", "solution", "process", "framework", "initiative"]
+    },
+    "managed": {
+      alternates: ["Oversaw", "Supervised", "Directed"],
+      context: ["team", "project", "operation", "process", "department"]
+    },
+    "delivered": {
+      alternates: ["Presented", "Provided", "Communicated"],
+      context: ["presentation", "report", "result", "solution", "outcome"]
+    },
+    "analyzed": {
+      alternates: ["Examined", "Evaluated", "Assessed"],
+      context: ["data", "result", "performance", "trend", "metric"]
+    }
   };
   
-  // If the action verb and first word would create a problematic combination
-  if (problematicCombos[actionVerb.toLowerCase()] && 
-      problematicCombos[actionVerb.toLowerCase()].includes(firstWordLower)) {
+  // If the action verb might create a problematic combination with the first word
+  if (isFirstWordVerb && problematicCombos[actionVerb.toLowerCase()]) {
+    // Find contextually appropriate alternative verb
+    const alternatives = problematicCombos[actionVerb.toLowerCase()].alternates;
+    const contextHints = problematicCombos[actionVerb.toLowerCase()].context || [];
     
-    // Find a better alternative verb based on context
-    const contextualVerbs: Record<string, Record<string, string>> = {
-      "presented": { default: "Delivered" },
-      "managed": { default: "Oversaw" },
-      "led": { default: "Spearheaded" },
-      "improved": { default: "Enhanced" },
-      "created": { default: "Designed" },
-      "developed": { default: "Built" },
-      "established": { default: "Launched" },
-      "implemented": { default: "Deployed" }
-    };
+    // Check if any context hints match the phrase to choose more appropriate verb
+    for (const hint of contextHints) {
+      if (lowerPhrase.includes(hint)) {
+        // Randomly select from alternatives for variety
+        return alternatives[Math.floor(Math.random() * alternatives.length)];
+      }
+    }
     
-    // Select a better verb based on the problematic first word
-    const betterVerb = contextualVerbs[firstWordLower]?.default || "Executed";
-    return betterVerb;
+    // No context match found, use first alternative
+    return alternatives[0];
   }
   
+  // Special case: if first word is a past tense verb (ending in 'ed')
+  if (firstWordLower.endsWith('ed') && firstWordLower.length > 2) {
+    // Determine which verb to use based on context
+    const pastTenseContextMap: Record<string, string> = {
+      "presented": "Delivered",
+      "managed": "Oversaw",
+      "directed": "Led",
+      "developed": "Created",
+      "created": "Designed",
+      "implemented": "Deployed",
+      "analyzed": "Evaluated",
+      "improved": "Enhanced",
+      "increased": "Grew"
+    };
+    
+    return pastTenseContextMap[firstWordLower] || "Executed";
+  }
+  
+  // If phrase starts with "presenting" or other gerund form
+  if (firstWordLower.endsWith('ing') && firstWordLower.length > 3) {
+    const gerundContextMap: Record<string, string> = {
+      "presenting": "Delivered",
+      "managing": "Oversaw",
+      "directing": "Led",
+      "developing": "Created",
+      "creating": "Designed",
+      "implementing": "Deployed",
+      "analyzing": "Evaluated",
+      "improving": "Enhanced"
+    };
+    
+    return gerundContextMap[firstWordLower] || actionVerb;
+  }
+  
+  // No conflicts detected, return original verb
   return actionVerb;
 }
 
@@ -218,6 +285,7 @@ Analyze the resume against the job description in detailed depth, focusing on:
 CRITICAL ATS OPTIMIZATION RULES:
 - ALL bullet point improvements MUST start with a STRONG ACTION VERB (e.g., Led, Implemented, Developed, Achieved)
 - Action verbs MUST be grammatically compatible with the rest of the bullet point
+- AVOID GRAMMATICAL MISTAKES like "Delivered presented" or "Implemented managed" - these are incorrect verb combinations
 - Apply the STAR Method (Situation/Task, Action, Result) for each improved bullet point
 - Include quantifiable achievements with specific metrics (%, $, time periods) wherever possible
 - Ensure each improved bullet point clearly shows the impact and business value
@@ -233,6 +301,7 @@ For the cover letter analysis:
 5. Suggest 5+ specific phrases that would improve alignment with the job and company
 6. ALL suggested phrases MUST start with strong ACTION VERBS that are grammatically compatible with the rest of the phrase
 7. Optimize the overall structure for ATS scanning
+8. Evaluate and comment on career field alignment between the candidate's background and the position
 ` : ''}
 
 MANDATORY: YOU MUST RETURN A VALID JSON OBJECT in this exact format:
@@ -249,7 +318,8 @@ MANDATORY: YOU MUST RETURN A VALID JSON OBJECT in this exact format:
       "feedback": "explanation of improvements"
     },
     ... (exactly 3 items)
-  ]${coverLetterContent ? `,
+  ],
+  "careerFieldMatch": "string describing alignment between candidate's field and position"${coverLetterContent ? `,
   "coverLetterAnalysis": {
     "tone": string describing the overall tone (e.g., "professional", "enthusiastic"),
     "relevance": number from 1-100,
@@ -258,11 +328,12 @@ MANDATORY: YOU MUST RETURN A VALID JSON OBJECT in this exact format:
     "recommendations": [array of strings],
     "companyInsights": [array of 5+ strings with insights about the company that should be included],
     "keyRequirements": [array of 5+ strings identifying key job requirements to address],
-    "suggestedPhrases": [array of 5+ strings with ATS-optimized phrases ALL starting with action verbs]
+    "suggestedPhrases": [array of 5+ strings with ATS-optimized phrases ALL starting with action verbs],
+    "careerFieldMatch": "string describing alignment between candidate's field and position in cover letter"
   }` : ''}
 }
 
-You MUST provide complete analysis with all required fields, and ALL improved bullet points and suggested phrases MUST start with a strong action verb that is grammatically compatible with the rest of the sentence. This is critical for the application to function properly.`;
+You MUST provide complete analysis with all required fields. ALL improved bullet points and suggested phrases MUST start with a strong action verb that is grammatically compatible with the rest of the sentence. This is critical for the application to function properly.`;
 
     try {
       console.log("Sending full content request to OpenAI GPT-4o...");
@@ -317,7 +388,17 @@ ${companyName ? `\nCompany: ${companyName}` : ''}`
 4. Original: "Presented reports to management"
    Improved: "Delivered comprehensive quarterly reports to executive leadership, highlighting key performance metrics that informed strategic decision-making and operational improvements"
 
-ALL optimized bullet points MUST start with a strong action verb and include quantifiable results. Ensure the action verb is grammatically compatible with the rest of the sentence (e.g., avoid combinations like "Improved presented" or "Increased managed").`
+5. GRAMMAR MISTAKES TO AVOID:
+   - "Improved presented reports" - INCORRECT (verb conflict)
+   - "Delivered managed a team" - INCORRECT (verb conflict)
+   - "Led implemented a solution" - INCORRECT (verb conflict)
+   
+   Instead use contextually appropriate verbs:
+   - "Delivered presentations to leadership" - CORRECT
+   - "Oversaw team management for project X" - CORRECT
+   - "Spearheaded implementation of solution Y" - CORRECT
+
+ALL optimized bullet points MUST start with a strong action verb and include quantifiable results. The action verb MUST be grammatically compatible with the rest of the sentence.`
       });
       
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -359,7 +440,7 @@ ALL optimized bullet points MUST start with a strong action verb and include qua
           throw new Error("Invalid response structure from OpenAI");
         }
         
-        // Enforce action verbs at the start of all STAR analysis bullet points with proper grammar
+        // Enforce grammatically correct action verbs at the start of all STAR analysis bullet points
         if (analysisResult.starAnalysis) {
           const actionVerbs = ["Achieved", "Accelerated", "Accomplished", "Administered", "Advanced", "Advised", "Analyzed", 
                                "Built", "Championed", "Clarified", "Coached", "Collaborated", "Communicated", "Conceptualized", 
@@ -409,26 +490,93 @@ ALL optimized bullet points MUST start with a strong action verb and include qua
               // Ensure verb is grammatically compatible
               verb = ensureGrammaticalCompatibility(verb, cleanedPhrase);
               
-              item.improved = `${verb} ${cleanedPhrase.charAt(0).toLowerCase()}${cleanedPhrase.slice(1)}`;
+              // For past tense verbs at the start of the bullet, transform the structure
+              if (firstPhraseWord.endsWith('ed') && firstPhraseWord.length > 2) {
+                // Transform "Developed presented reports" to "Delivered presentations to..."
+                const transformedContent = cleanedPhrase
+                  .replace(/^presented/, 'presentations to')
+                  .replace(/^managed/, 'management of')
+                  .replace(/^developed/, 'development of')
+                  .replace(/^created/, 'creation of')
+                  .replace(/^implemented/, 'implementation of')
+                  .replace(/^analyzed/, 'analysis of');
+                  
+                item.improved = `${verb} ${transformedContent}`;
+              } else {
+                item.improved = `${verb} ${cleanedPhrase.charAt(0).toLowerCase()}${cleanedPhrase.slice(1)}`;
+              }
               
               // Update the feedback to mention the action verb improvement
               if (!item.feedback.includes("action verb")) {
                 item.feedback += " Starting with a strong action verb makes this bullet point more impactful and ATS-friendly.";
               }
             } else {
-              // Even if it starts with an action verb, check grammatical compatibility
+              // Even if it starts with an action verb, check grammatical compatibility with what follows
               const words = item.improved.split(' ');
               if (words.length > 1) {
                 const verb = words[0];
+                const secondWord = words[1].toLowerCase();
                 const restOfPhrase = words.slice(1).join(' ');
                 
-                // Check and improve grammar if needed
-                const betterVerb = ensureGrammaticalCompatibility(verb, restOfPhrase);
+                // Check for verb conflicts (e.g. "Delivered presented")
+                const verbConflicts = [
+                  { first: "delivered", second: ["present", "manag", "lead", "develop"] },
+                  { first: "improved", second: ["present", "manag", "lead", "develop", "creat"] },
+                  { first: "increased", second: ["manag", "develop", "creat", "implement"] },
+                  { first: "led", second: ["improv", "increas", "manag", "implement"] },
+                  { first: "developed", second: ["creat", "implement", "establish", "design"] },
+                  { first: "created", second: ["develop", "design", "implement", "establish"] },
+                  { first: "implemented", second: ["establish", "develop", "creat", "design"] },
+                  { first: "managed", second: ["lead", "direct", "supervis", "overs"] }
+                ];
                 
-                if (betterVerb !== verb) {
-                  item.improved = `${betterVerb} ${restOfPhrase}`;
-                  if (!item.feedback.includes("grammatical")) {
-                    item.feedback += " Action verb selected for better grammatical flow with the rest of the bullet point.";
+                const hasConflict = verbConflicts.some(conflict => 
+                  verb.toLowerCase() === conflict.first && 
+                  conflict.second.some(s => secondWord.startsWith(s))
+                );
+                
+                if (hasConflict) {
+                  // Get a better verb based on the context
+                  const betterVerb = ensureGrammaticalCompatibility(verb, restOfPhrase);
+                  
+                  if (betterVerb !== verb) {
+                    // Special case for past tense verbs as second word
+                    if (secondWord.endsWith('ed') && secondWord.length > 2) {
+                      // Transform content based on the second word
+                      let transformedContent;
+                      
+                      switch(secondWord) {
+                        case "presented":
+                          transformedContent = `presentations of ${words.slice(2).join(' ')}`;
+                          break;
+                        case "managed":
+                          transformedContent = `management of ${words.slice(2).join(' ')}`;
+                          break;
+                        case "developed":
+                          transformedContent = `development of ${words.slice(2).join(' ')}`;
+                          break;
+                        case "created":
+                          transformedContent = `creation of ${words.slice(2).join(' ')}`;
+                          break;
+                        case "implemented":
+                          transformedContent = `implementation of ${words.slice(2).join(' ')}`;
+                          break;
+                        case "analyzed":
+                          transformedContent = `analysis of ${words.slice(2).join(' ')}`;
+                          break;
+                        default:
+                          // Generic transformation for other past tense verbs
+                          transformedContent = `${secondWord.slice(0, -2)}ing of ${words.slice(2).join(' ')}`;
+                      }
+                      
+                      item.improved = `${betterVerb} ${transformedContent}`;
+                    } else {
+                      item.improved = `${betterVerb} ${restOfPhrase}`;
+                    }
+                    
+                    if (!item.feedback.includes("grammatical")) {
+                      item.feedback += " Grammar improved for better flow between action verb and description.";
+                    }
                   }
                 }
               }
@@ -525,22 +673,108 @@ ALL optimized bullet points MUST start with a strong action verb and include qua
                   // Check grammatical compatibility
                   verb = ensureGrammaticalCompatibility(verb, cleanedPhrase);
                   
+                  // Handle special case for past tense verbs
+                  const words = cleanedPhrase.split(' ');
+                  const firstWordLower = words[0].toLowerCase();
+                  
+                  if (firstWordLower.endsWith('ed') && firstWordLower.length > 2) {
+                    // Transform based on verb
+                    let transformedContent;
+                    
+                    switch(firstWordLower) {
+                      case "presented":
+                        transformedContent = `presentations of ${words.slice(1).join(' ')}`;
+                        break;
+                      case "managed":
+                        transformedContent = `management of ${words.slice(1).join(' ')}`;
+                        break;
+                      case "developed":
+                        transformedContent = `development of ${words.slice(1).join(' ')}`;
+                        break;
+                      case "created":
+                        transformedContent = `creation of ${words.slice(1).join(' ')}`;
+                        break;
+                      case "implemented":
+                        transformedContent = `implementation of ${words.slice(1).join(' ')}`;
+                        break;
+                      case "analyzed":
+                        transformedContent = `analysis of ${words.slice(1).join(' ')}`;
+                        break;
+                      default:
+                        // For other past tense verbs, try to convert to a noun form
+                        transformedContent = `${firstWordLower.slice(0, -2)}ment of ${words.slice(1).join(' ')}`;
+                    }
+                    
+                    return `${verb} ${transformedContent}`;
+                  }
+                  
                   return `${verb} ${cleanedPhrase.charAt(0).toLowerCase()}${cleanedPhrase.slice(1)}`;
                 } else {
                   // Even if it starts with an action verb, check grammatical compatibility
                   const words = phrase.split(' ');
                   if (words.length > 1) {
                     const verb = words[0];
+                    const secondWord = words[1].toLowerCase();
                     const restOfPhrase = words.slice(1).join(' ');
                     
-                    // Check and improve grammar if needed
-                    const betterVerb = ensureGrammaticalCompatibility(verb, restOfPhrase);
+                    // Check for verb conflicts
+                    const verbConflicts = [
+                      { first: "delivered", second: ["present", "manag", "lead", "develop"] },
+                      { first: "improved", second: ["present", "manag", "lead", "develop", "creat"] },
+                      { first: "increased", second: ["manag", "develop", "creat", "implement"] },
+                      { first: "led", second: ["improv", "increas", "manag", "implement"] },
+                      { first: "developed", second: ["creat", "implement", "establish", "design"] },
+                      { first: "created", second: ["develop", "design", "implement", "establish"] },
+                      { first: "implemented", second: ["establish", "develop", "creat", "design"] },
+                      { first: "managed", second: ["lead", "direct", "supervis", "overs"] }
+                    ];
                     
-                    if (betterVerb !== verb) {
-                      return `${betterVerb} ${restOfPhrase}`;
+                    const hasConflict = verbConflicts.some(conflict => 
+                      verb.toLowerCase() === conflict.first && 
+                      conflict.second.some(s => secondWord.startsWith(s))
+                    );
+                    
+                    if (hasConflict) {
+                      // Get a better verb based on the context
+                      const betterVerb = ensureGrammaticalCompatibility(verb, restOfPhrase);
+                      
+                      // Special case for past tense verbs
+                      if (secondWord.endsWith('ed') && secondWord.length > 2) {
+                        // Transform content based on the second word
+                        let transformedContent;
+                        
+                        switch(secondWord) {
+                          case "presented":
+                            transformedContent = `presentations of ${words.slice(2).join(' ')}`;
+                            break;
+                          case "managed":
+                            transformedContent = `management of ${words.slice(2).join(' ')}`;
+                            break;
+                          case "developed":
+                            transformedContent = `development of ${words.slice(2).join(' ')}`;
+                            break;
+                          case "created":
+                            transformedContent = `creation of ${words.slice(2).join(' ')}`;
+                            break;
+                          case "implemented":
+                            transformedContent = `implementation of ${words.slice(2).join(' ')}`;
+                            break;
+                          case "analyzed":
+                            transformedContent = `analysis of ${words.slice(2).join(' ')}`;
+                            break;
+                          default:
+                            // Generic transformation for other past tense verbs
+                            transformedContent = `${secondWord.slice(0, -2)}ing of ${words.slice(2).join(' ')}`;
+                        }
+                        
+                        return `${betterVerb} ${transformedContent}`;
+                      } else {
+                        return `${betterVerb} ${restOfPhrase}`;
+                      }
                     }
                   }
                 }
+                
                 return phrase;
               });
           }
