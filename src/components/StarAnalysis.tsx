@@ -80,18 +80,29 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
   // Generate ATS-specific advice based on the bullet point
   const generateAtsAdvice = (original: string, improved: string): string => {
     // Check what's missing from the original that was added to the improved version
+    
+    // Check if improved version starts with an action verb while original doesn't
+    const originalFirstWord = original.split(' ')[0].replace(/[^\w]/g, '');
+    const improvedFirstWord = improved.split(' ')[0].replace(/[^\w]/g, '');
+    const actionVerbs = ["Led", "Managed", "Developed", "Created", "Implemented", "Designed", "Increased", "Improved", 
+                         "Achieved", "Delivered", "Spearheaded", "Executed", "Coordinated", "Analyzed", "Resolved"];
+    
+    if (actionVerbs.includes(improvedFirstWord) && !actionVerbs.includes(originalFirstWord)) {
+      return "ATS systems are programmed to prioritize bullet points that start with strong action verbs. This simple formatting change significantly increases visibility to both algorithms and recruiters.";
+    }
+    
     if (improved.includes('%') && !original.includes('%')) {
-      return "ATS systems prioritize quantifiable achievements. Numbers grab attention and provide concrete evidence of your impact.";
+      return "ATS systems prioritize quantifiable achievements. Numbers grab attention and provide concrete evidence of your impact, making your resume stand out in keyword-based filtering.";
     }
     
     if ((improved.match(/\$\d+[k|K|M]?/) || improved.match(/\d+\s*(dollars|USD)/i)) && 
         !(original.match(/\$\d+[k|K|M]?/) || original.match(/\d+\s*(dollars|USD)/i))) {
-      return "ATS systems are trained to identify financial impact. Including dollar amounts helps your resume pass both algorithmic and human screening.";
+      return "ATS systems are trained to identify financial impact. Including dollar amounts helps your resume pass both algorithmic and human screening by demonstrating value creation.";
     }
     
     if ((improved.match(/\d+\s*(people|team members|employees|staff)/i)) && 
         !(original.match(/\d+\s*(people|team members|employees|staff)/i))) {
-      return "ATS systems look for management scope. Quantifying team size signals leadership capability and organizational impact.";
+      return "ATS systems look for management scope. Quantifying team size signals leadership capability and organizational impact, which are key factors in advanced keyword algorithms.";
     }
     
     if ((improved.toLowerCase().includes("result") || 
@@ -100,18 +111,21 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
         !(original.toLowerCase().includes("result") || 
         original.toLowerCase().includes("leading to") || 
         original.toLowerCase().includes("achieving"))) {
-      return "ATS systems are programmed to identify cause-effect relationships. Explicitly linking actions to outcomes significantly increases your resume's efficacy.";
+      return "ATS systems are programmed to identify cause-effect relationships using the STAR method. Explicitly linking actions to outcomes significantly increases your resume's ranking in applicant pools.";
     }
     
-    const actionVerbs = ["led", "managed", "developed", "created", "implemented", "designed", "increased", "improved"];
-    const hasActionVerb = actionVerbs.some(verb => improved.toLowerCase().startsWith(verb));
-    const originalHasActionVerb = actionVerbs.some(verb => original.toLowerCase().startsWith(verb));
-    
-    if (hasActionVerb && !originalHasActionVerb) {
-      return "ATS systems scan for strong action verbs at the beginning of bullet points. This formatting pattern signals achievement orientation.";
+    // Check for STAR method components
+    const hasSTAR = improved.toLowerCase().includes("after") || improved.toLowerCase().includes("when") || 
+                    improved.toLowerCase().includes("following") || improved.toLowerCase().includes("due to") ||
+                    improved.toLowerCase().includes("resulting in") || improved.toLowerCase().includes("which led to");
+                    
+    if (hasSTAR && !original.toLowerCase().includes("after") && !original.toLowerCase().includes("when") &&
+        !original.toLowerCase().includes("following") && !original.toLowerCase().includes("due to") &&
+        !original.toLowerCase().includes("resulting in") && !original.toLowerCase().includes("which led to")) {
+      return "ATS systems increasingly use semantic analysis to identify complete STAR method narratives (Situation, Task, Action, Result). Connecting your actions to specific contexts and outcomes boosts keyword relevance scores.";
     }
     
-    return "ATS systems prioritize specific, concrete language over general descriptions. Adding industry terminology and metrics substantially increases match scores.";
+    return "ATS systems prioritize specific, concrete language over general descriptions. Adding industry terminology and metrics substantially increases match scores with job requirement algorithms.";
   };
   
   return (
@@ -128,11 +142,18 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1 text-consulting-accent" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
-            What is STAR?
+            ATS Optimization Strategy
           </h3>
-          <p className="text-consulting-gray text-sm">
+          <p className="text-consulting-gray text-sm mb-2">
             <strong>S</strong>ituation, <strong>T</strong>ask, <strong>A</strong>ction, <strong>R</strong>esult - This framework helps reshape your experience into compelling narratives that pass ATS filters and resonate with hiring managers.
           </p>
+          <div className="flex flex-col space-y-1 mt-2 text-sm text-consulting-gray">
+            <p className="font-medium text-consulting-navy">Key ATS Optimization Rules:</p>
+            <p>1. <span className="font-medium">Start with action verbs</span> - Begin each bullet point with a strong action verb like "Led" or "Implemented"</p>
+            <p>2. <span className="font-medium">Quantify results</span> - Include specific numbers, percentages and metrics whenever possible</p>
+            <p>3. <span className="font-medium">Use complete STAR format</span> - Include the Situation/Task, Action, and Result in each bullet point</p>
+            <p>4. <span className="font-medium">Include keywords</span> - Incorporate relevant industry and role-specific terminology</p>
+          </div>
         </div>
       </div>
       

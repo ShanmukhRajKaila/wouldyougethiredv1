@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -162,8 +163,9 @@ serve(async (req) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 90000);
     
-    // Prepare the analysis prompt with enhanced instructions
-    const systemPrompt = `You are an expert ATS (Applicant Tracking System) analyst and career coach.
+    // Prepare the analysis prompt with enhanced instructions for ATS optimization
+    const systemPrompt = `You are an expert ATS (Applicant Tracking System) analyst and career coach specializing in optimizing resumes and cover letters for both automated screening systems and human reviewers.
+
 Analyze the resume against the job description in detailed depth, focusing on:
 
 1. Match percentage between resume and job requirements (ATS perspective)
@@ -171,6 +173,12 @@ Analyze the resume against the job description in detailed depth, focusing on:
 3. Areas for improvement (min 3, max 5) in the resume
 4. Specific recommendations (min 3, max 5) for improving the resume
 5. STAR analysis of 3 bullet points from the resume, with improved versions
+
+CRITICAL ATS OPTIMIZATION RULES:
+- ALL bullet point improvements MUST start with a STRONG ACTION VERB (e.g., Led, Implemented, Developed, Achieved)
+- Apply the STAR Method (Situation/Task, Action, Result) for each improved bullet point
+- Include quantifiable achievements with specific metrics (%, $, time periods) wherever possible
+- Ensure each improved bullet point clearly shows the impact and business value
 
 ${companyName ? `The candidate is applying to ${companyName}. Consider company culture, values and expectations in your analysis.` : ''}
 
@@ -181,7 +189,7 @@ For the cover letter analysis:
 3. Identify 5+ specific company insights that should be addressed (using provided company insights where available)
 4. Identify 5+ key requirements from the job description that should be emphasized
 5. Suggest 5+ specific phrases that would improve alignment with the job and company
-6. For any bullet points, ensure they start with strong ACTION VERBS
+6. ALL suggested phrases MUST start with strong ACTION VERBS
 7. Optimize the overall structure for ATS scanning
 ` : ''}
 
@@ -195,7 +203,7 @@ MANDATORY: YOU MUST RETURN A VALID JSON OBJECT in this exact format:
   "starAnalysis": [
     {
       "original": "original bullet point from resume",
-      "improved": "improved version with STAR method",
+      "improved": "improved version with action verb start and STAR method",
       "feedback": "explanation of improvements"
     },
     ... (exactly 3 items)
@@ -208,11 +216,11 @@ MANDATORY: YOU MUST RETURN A VALID JSON OBJECT in this exact format:
     "recommendations": [array of strings],
     "companyInsights": [array of 5+ strings with insights about the company that should be included],
     "keyRequirements": [array of 5+ strings identifying key job requirements to address],
-    "suggestedPhrases": [array of 5+ strings with ATS-optimized phrases starting with action verbs]
+    "suggestedPhrases": [array of 5+ strings with ATS-optimized phrases ALL starting with action verbs]
   }` : ''}
 }
 
-You MUST provide complete analysis with all required fields. This is critical for the application to function properly.`;
+You MUST provide complete analysis with all required fields, and ALL improved bullet points and suggested phrases MUST start with a strong action verb. This is critical for the application to function properly.`;
 
     try {
       console.log("Sending full content request to OpenAI GPT-4o...");
@@ -251,6 +259,22 @@ ${companyName ? `\nCompany: ${companyName}` : ''}`
         });
       }
       
+      // Add specific examples of strong ATS-optimized bullet points
+      messages.push({
+        role: 'user',
+        content: `IMPORTANT: Ensure all improved bullet points follow these examples for ATS optimization:
+1. Original: "Managed a team of developers for the website redesign project"
+   Improved: "Led a cross-functional team of 8 developers to deliver a complete website redesign, resulting in 35% improved user engagement and 22% higher conversion rates"
+
+2. Original: "Responsible for budget planning and cost reduction"
+   Improved: "Developed comprehensive budget strategies that reduced operational costs by $250K annually while maintaining service quality through strategic vendor negotiations"
+
+3. Original: "Helped with marketing campaigns for new products"
+   Improved: "Spearheaded 5 targeted marketing campaigns for product launches that generated $1.2M in revenue by analyzing customer data to identify key demographic segments"
+
+ALL optimized bullet points MUST start with a strong action verb and include quantifiable results.`
+      });
+      
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -288,6 +312,67 @@ ${companyName ? `\nCompany: ${companyName}` : ''}`
             !Array.isArray(analysisResult.weaknesses) || !Array.isArray(analysisResult.recommendations) ||
             !Array.isArray(analysisResult.starAnalysis)) {
           throw new Error("Invalid response structure from OpenAI");
+        }
+        
+        // Enforce action verbs at the start of all STAR analysis bullet points
+        if (analysisResult.starAnalysis) {
+          const actionVerbs = ["Achieved", "Accelerated", "Accomplished", "Administered", "Advanced", "Advised", "Analyzed", 
+                               "Built", "Championed", "Clarified", "Coached", "Collaborated", "Communicated", "Conceptualized", 
+                               "Conducted", "Consolidated", "Controlled", "Coordinated", "Created", "Cultivated", 
+                               "Delivered", "Demonstrated", "Designed", "Developed", "Directed", "Drove", 
+                               "Earned", "Enacted", "Established", "Evaluated", "Exceeded", "Excelled", "Executed", "Expanded", 
+                               "Facilitated", "Forecasted", "Formulated", "Generated", "Guided", "Headed", 
+                               "Identified", "Implemented", "Improved", "Increased", "Influenced", "Initiated", "Innovated", 
+                               "Led", "Leveraged", "Maintained", "Managed", "Maximized", "Mentored", "Modernized", 
+                               "Navigated", "Negotiated", "Operated", "Orchestrated", "Organized", "Outperformed", "Overhauled", 
+                               "Pioneered", "Planned", "Prepared", "Prioritized", "Processed", "Produced", 
+                               "Reduced", "Refined", "Reengineered", "Reorganized", "Revamped", "Revitalized", 
+                               "Secured", "Simplified", "Solved", "Spearheaded", "Standardized", "Steered", "Streamlined", 
+                               "Supervised", "Sustained", "Synchronized", "Targeted", "Trained", "Transformed", 
+                               "Upgraded", "Utilized", "Won"];
+                               
+          analysisResult.starAnalysis = analysisResult.starAnalysis.map((item: any) => {
+            // Check if the improved bullet already starts with an action verb
+            const firstWord = item.improved.split(' ')[0].replace(/[^\w]/g, '');
+            
+            if (!actionVerbs.includes(firstWord)) {
+              // Select a contextually appropriate action verb
+              let verb = "Led";
+              const lowerImproved = item.improved.toLowerCase();
+              
+              if (lowerImproved.includes("develop") || lowerImproved.includes("creat") || lowerImproved.includes("build")) {
+                verb = "Developed";
+              } else if (lowerImproved.includes("improv") || lowerImproved.includes("enhanc") || lowerImproved.includes("increas")) {
+                verb = "Improved";
+              } else if (lowerImproved.includes("reduc") || lowerImproved.includes("decreas") || lowerImproved.includes("cut")) {
+                verb = "Reduced";
+              } else if (lowerImproved.includes("manag") || lowerImproved.includes("lead") || lowerImproved.includes("direct")) {
+                verb = "Led";
+              } else if (lowerImproved.includes("implement") || lowerImproved.includes("deploy") || lowerImproved.includes("roll")) {
+                verb = "Implemented";
+              } else if (lowerImproved.includes("analyz") || lowerImproved.includes("research") || lowerImproved.includes("stud")) {
+                verb = "Analyzed";
+              }
+              
+              // Format the phrase to start with the action verb
+              const cleanedPhrase = item.improved.replace(/^(I |We |They |The team |The company )/i, '');
+              item.improved = `${verb} ${cleanedPhrase.charAt(0).toLowerCase()}${cleanedPhrase.slice(1)}`;
+              
+              // Update the feedback to mention the action verb improvement
+              if (!item.feedback.includes("action verb")) {
+                item.feedback += " Starting with a strong action verb makes this bullet point more impactful and ATS-friendly.";
+              }
+            }
+            
+            // Ensure the bullet contains quantifiable results if possible
+            if (!item.improved.match(/\d+%|\$\d+|\d+ percent|\d+ times/i)) {
+              if (!item.feedback.includes("quantifiable")) {
+                item.feedback += " Consider adding specific metrics (%, $, timeframes) to further strengthen this bullet point.";
+              }
+            }
+            
+            return item;
+          });
         }
         
         // Enhance cover letter analysis with our extracted insights if needed
@@ -340,12 +425,33 @@ ${companyName ? `\nCompany: ${companyName}` : ''}`
             
             // Check if each phrase starts with an action verb, fix if not
             analysisResult.coverLetterAnalysis.suggestedPhrases = 
-              analysisResult.coverLetterAnalysis.suggestedPhrases.map(phrase => {
+              analysisResult.coverLetterAnalysis.suggestedPhrases.map((phrase: string) => {
                 const firstWord = phrase.split(' ')[0].replace(/[^\w]/g, '');
                 if (!actionVerbs.includes(firstWord)) {
-                  // Pick a random action verb that makes sense
-                  const verb = actionVerbs[Math.floor(Math.random() * actionVerbs.length)];
-                  return `${verb} ${phrase.charAt(0).toLowerCase()}${phrase.slice(1)}`;
+                  // Pick a contextually appropriate action verb
+                  const lowerPhrase = phrase.toLowerCase();
+                  let verb = "Implemented"; // Default verb
+                  
+                  if (lowerPhrase.includes("develop") || lowerPhrase.includes("creat") || lowerPhrase.includes("build")) {
+                    verb = "Developed";
+                  } else if (lowerPhrase.includes("improv") || lowerPhrase.includes("enhanc") || lowerPhrase.includes("increas")) {
+                    verb = "Improved";
+                  } else if (lowerPhrase.includes("reduc") || lowerPhrase.includes("decreas") || lowerPhrase.includes("lower")) {
+                    verb = "Reduced";
+                  } else if (lowerPhrase.includes("manag") || lowerPhrase.includes("lead") || lowerPhrase.includes("direct")) {
+                    verb = "Led";
+                  } else if (lowerPhrase.includes("research") || lowerPhrase.includes("analyz") || lowerPhrase.includes("stud")) {
+                    verb = "Analyzed";
+                  } else if (lowerPhrase.includes("collaborat") || lowerPhrase.includes("partner") || lowerPhrase.includes("work with")) {
+                    verb = "Collaborated";
+                  } else {
+                    // Select a random verb if no context is found
+                    verb = actionVerbs[Math.floor(Math.random() * actionVerbs.length)];
+                  }
+                  
+                  // Remove any starting phrases like "I have", "I am", etc.
+                  const cleanedPhrase = phrase.replace(/^(I have |I am |I |We have |We |They |The team |The company )/i, '');
+                  return `${verb} ${cleanedPhrase.charAt(0).toLowerCase()}${cleanedPhrase.slice(1)}`;
                 }
                 return phrase;
               });
