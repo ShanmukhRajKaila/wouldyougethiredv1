@@ -31,7 +31,7 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
   const validStarAnalysis = Array.isArray(starAnalysis) ? starAnalysis : [];
   
   const { missingSkills } = useSkillsAnalysis(resumeText, jobDescription, analysisResults);
-  const { improvedText, updatedAlignmentScore } = useImprovedResumeAnalysis(resumeText, validStarAnalysis);
+  const { improvedText } = useImprovedResumeAnalysis(resumeText, validStarAnalysis);
   
   // Initialize analysis submission hooks for retry functionality
   const { handleAnalysisRetry } = useAnalysisSubmission({
@@ -110,7 +110,6 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
           missingSkills={missingSkills}
           recommendations={analysisResults?.recommendations}
           improvedText={improvedText}
-          updatedAlignmentScore={updatedAlignmentScore}
         />
       </Card>
     </div>

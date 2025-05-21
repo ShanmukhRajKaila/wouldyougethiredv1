@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Gauge from '@/components/Gauge';
 
@@ -6,6 +5,8 @@ interface AlignmentScoreCardProps {
   alignmentScore: number;
 }
 
+// This component is no longer being used in the app
+// Keeping the file for reference if needed later
 const AlignmentScoreCard: React.FC<AlignmentScoreCardProps> = ({ alignmentScore }) => {
   return (
     <div className="flex flex-col items-center justify-center bg-white p-4 rounded-lg shadow-md w-full md:w-auto md:min-w-[300px]">
@@ -18,9 +19,6 @@ const AlignmentScoreCard: React.FC<AlignmentScoreCardProps> = ({ alignmentScore 
             className="mb-1"
           />
         </div>
-        <p className="text-xs text-gray-500 italic mt-2">
-          View the "Enhanced Resume" tab to see your improved score
-        </p>
       </div>
     </div>
   );

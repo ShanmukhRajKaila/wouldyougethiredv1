@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/AppContext';
@@ -6,7 +5,6 @@ import PageContainer from '@/components/PageContainer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ResumeComparison from '@/components/ResumeComparison';
 import StarAnalysis from '@/components/StarAnalysis';
-import AlignmentScoreCard from '@/components/AlignmentScoreCard';
 import ResultsSummaryTab from '@/components/ResultsSummaryTab';
 import RoleSelectionDialog from '@/components/RoleSelectionDialog';
 import ResultsHeader from '@/components/ResultsHeader';
@@ -101,20 +99,18 @@ const ResultsPage: React.FC = () => {
   return (
     <PageContainer>
       <div className="animate-fade-in">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8">
+        <div className="mb-8">
           <ResultsHeader 
             selectedCompanyName={selectedCompany?.name}
             selectedRole={selectedRole}
           />
-          
-          <AlignmentScoreCard alignmentScore={alignmentScore} />
         </div>
         
         <Tabs defaultValue="summary">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="summary">Summary</TabsTrigger>
-            <TabsTrigger value="resume">Enhanced Resume</TabsTrigger>
             <TabsTrigger value="star">STAR Analysis</TabsTrigger>
+            <TabsTrigger value="resume">Enhanced Resume</TabsTrigger>
             <TabsTrigger value="coverletter" disabled={!hasCoverLetterAnalysis}>Cover Letter</TabsTrigger>
           </TabsList>
           
@@ -127,12 +123,12 @@ const ResultsPage: React.FC = () => {
             />
           </TabsContent>
           
-          <TabsContent value="resume">
-            <ResumeComparison starAnalysis={starAnalysis} />
-          </TabsContent>
-          
           <TabsContent value="star">
             <StarAnalysis starAnalysis={starAnalysis} />
+          </TabsContent>
+          
+          <TabsContent value="resume">
+            <ResumeComparison starAnalysis={starAnalysis} />
           </TabsContent>
 
           <TabsContent value="coverletter">
