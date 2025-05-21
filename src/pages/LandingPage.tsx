@@ -5,7 +5,7 @@ import { useAppContext } from '@/context/AppContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { LightningBolt, Sparkles } from 'lucide-react';
+import { Zap, Sparkles } from 'lucide-react';
 
 const LandingPage: React.FC = () => {
   const { 
@@ -53,7 +53,7 @@ const LandingPage: React.FC = () => {
             <div className="bg-white/10 backdrop-blur-sm p-5 rounded-full relative transition-all hover:shadow-lg hover:bg-white/15 group">
               <div className="absolute inset-0 rounded-full bg-gradient-to-r from-consulting-accent to-consulting-blue opacity-25 blur-sm group-hover:opacity-40"></div>
               <div className="relative flex items-center justify-center gap-1 p-4">
-                <LightningBolt className="w-6 h-6 text-consulting-accent" />
+                <Zap className="w-6 h-6 text-consulting-accent" />
                 <span className="text-3xl font-serif font-bold">CL</span>
                 <Sparkles className="w-4 h-4 text-white absolute -top-1 -right-1" />
               </div>
