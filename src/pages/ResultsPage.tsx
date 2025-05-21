@@ -113,7 +113,7 @@ const ResultsPage: React.FC = () => {
         <Tabs defaultValue="summary">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="summary">Summary</TabsTrigger>
-            <TabsTrigger value="resume">Resume Comparison</TabsTrigger>
+            <TabsTrigger value="resume">Enhanced Resume</TabsTrigger>
             <TabsTrigger value="star">STAR Analysis</TabsTrigger>
             <TabsTrigger value="coverletter" disabled={!hasCoverLetterAnalysis}>Cover Letter</TabsTrigger>
           </TabsList>

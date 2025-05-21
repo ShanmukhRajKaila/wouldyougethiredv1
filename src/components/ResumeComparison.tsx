@@ -1,14 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppContext } from '@/context/AppContext';
-import OriginalResume from '@/components/resume/OriginalResume';
 import ImprovedResume from '@/components/resume/ImprovedResume';
 import { useSkillsAnalysis } from '@/hooks/useSkillsAnalysis';
 import { useImprovedResumeAnalysis } from '@/hooks/useImprovedResumeAnalysis';
 import ProcessingErrorDisplay from './resume/ProcessingErrorDisplay';
 import { useAnalysisSubmission } from '@/hooks/useAnalysisSubmission';
+import OriginalResume from '@/components/resume/OriginalResume';
 
 interface StarAnalysisItem {
   original: string;
@@ -21,7 +20,6 @@ interface ResumeComparisonProps {
 }
 
 const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => {
-  const [activeTab, setActiveTab] = useState<string>('original');
   const { resumeFile, jobDescription, analysisResults } = useAppContext();
   const [resumeText, setResumeText] = useState<string>('');
   const [extractionError, setExtractionError] = useState<string | null>(null);
@@ -70,8 +68,19 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
     handleAnalysisRetry();
   };
 
+  // We need to extract text from original resume but not display it
   return (
     <div className="mt-6">
+      {/* Hidden component to extract text from the resume file */}
+      <div className="hidden">
+        <OriginalResume 
+          resumeFile={resumeFile}
+          onTextExtracted={handleTextExtracted}
+          onBulletsExtracted={handleBulletsExtracted}
+          onExtractionError={handleExtractionError}
+        />
+      </div>
+      
       {extractionError && (
         <div className="mb-4">
           <ProcessingErrorDisplay processingError={extractionError} />
@@ -93,34 +102,17 @@ const ResumeComparison: React.FC<ResumeComparisonProps> = ({ starAnalysis }) => 
         </div>
       )}
       
-      <Tabs defaultValue="original" onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="original">Original Resume</TabsTrigger>
-          <TabsTrigger value="tailored">Enhanced Resume</TabsTrigger>
-        </TabsList>
-        <TabsContent value="original">
-          <Card className="p-6">
-            <OriginalResume 
-              resumeFile={resumeFile}
-              onTextExtracted={handleTextExtracted}
-              onBulletsExtracted={handleBulletsExtracted}
-              onExtractionError={handleExtractionError}
-            />
-          </Card>
-        </TabsContent>
-        <TabsContent value="tailored">
-          <Card className="p-6">
-            <ImprovedResume 
-              resumeBullets={resumeBullets}
-              improvedBullets={improvedBullets}
-              missingSkills={missingSkills}
-              recommendations={analysisResults?.recommendations}
-              improvedText={improvedText}
-              updatedAlignmentScore={updatedAlignmentScore}
-            />
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <Card className="p-6">
+        <h2 className="text-xl font-serif font-bold mb-4">Enhanced Resume</h2>
+        <ImprovedResume 
+          resumeBullets={resumeBullets}
+          improvedBullets={improvedBullets}
+          missingSkills={missingSkills}
+          recommendations={analysisResults?.recommendations}
+          improvedText={improvedText}
+          updatedAlignmentScore={updatedAlignmentScore}
+        />
+      </Card>
     </div>
   );
 };
