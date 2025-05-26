@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/AppContext';
@@ -61,11 +60,15 @@ const LandingPage: React.FC = () => {
           </div>
           
           <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4">
-            CareerLens AI
+            CareerLens
           </h1>
           
-          <p className="text-xl mb-12 max-w-lg mx-auto">
+          <p className="text-xl mb-6 max-w-lg mx-auto">
             Get honest, data-driven resume feedback to boost your career.
+          </p>
+          
+          <p className="text-lg mb-12 max-w-2xl mx-auto text-white/90">
+            Get CV enhancement tailored to specific roles and job descriptions for maximum impact
           </p>
           
           <form 
@@ -109,11 +112,6 @@ const LandingPage: React.FC = () => {
             </Button>
           </form>
           
-          {/* USP Line */}
-          <p className="text-white/90 text-lg mb-16 max-w-2xl mx-auto">
-            Get CV enhancement tailored to specific roles and job descriptions for maximum impact
-          </p>
-          
           <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto text-center mb-16">
             <div className="text-white/80 text-sm">AI Analysis</div>
             <div className="text-white/80 text-sm">Personalized Feedback</div>
@@ -142,11 +140,9 @@ const LandingPage: React.FC = () => {
                   <Upload className="w-8 h-8 text-white" />
                 </div>
                 <div className="bg-white rounded-lg p-4 shadow-sm">
-                  <img 
-                    src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=250&fit=crop" 
-                    alt="Upload resume interface" 
-                    className="w-full h-32 object-cover rounded"
-                  />
+                  <div className="w-full h-32 bg-gray-100 rounded flex items-center justify-center text-gray-500 text-sm">
+                    Job Description Upload Screen
+                  </div>
                 </div>
               </div>
               <h3 className="text-xl font-serif font-bold text-consulting-navy mb-2">
@@ -164,11 +160,9 @@ const LandingPage: React.FC = () => {
                   <Search className="w-8 h-8 text-white" />
                 </div>
                 <div className="bg-white rounded-lg p-4 shadow-sm">
-                  <img 
-                    src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=250&fit=crop" 
-                    alt="AI analysis in progress" 
-                    className="w-full h-32 object-cover rounded"
-                  />
+                  <div className="w-full h-32 bg-gray-100 rounded flex items-center justify-center text-gray-500 text-sm">
+                    AI Analysis Processing Screen
+                  </div>
                 </div>
               </div>
               <h3 className="text-xl font-serif font-bold text-consulting-navy mb-2">
@@ -186,11 +180,9 @@ const LandingPage: React.FC = () => {
                   <BarChart3 className="w-8 h-8 text-white" />
                 </div>
                 <div className="bg-white rounded-lg p-4 shadow-sm">
-                  <img 
-                    src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&h=250&fit=crop" 
-                    alt="Results and insights dashboard" 
-                    className="w-full h-32 object-cover rounded"
-                  />
+                  <div className="w-full h-32 bg-gray-100 rounded flex items-center justify-center text-gray-500 text-sm">
+                    Results Dashboard Screen
+                  </div>
                 </div>
               </div>
               <h3 className="text-xl font-serif font-bold text-consulting-navy mb-2">
