@@ -5,7 +5,7 @@ import { useAppContext } from '@/context/AppContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Zap, Sparkles } from 'lucide-react';
+import { Zap, Sparkles, Upload, Search, BarChart3 } from 'lucide-react';
 
 const LandingPage: React.FC = () => {
   const { 
@@ -70,7 +70,7 @@ const LandingPage: React.FC = () => {
           
           <form 
             onSubmit={handleGetStarted}
-            className="bg-white/10 backdrop-blur-sm p-6 rounded-lg max-w-md mx-auto mb-12"
+            className="bg-white/10 backdrop-blur-sm p-6 rounded-lg max-w-md mx-auto mb-4"
           >
             <h2 className="text-2xl font-serif font-bold mb-4">Get Started</h2>
             <div className="space-y-4 mb-6">
@@ -109,13 +109,100 @@ const LandingPage: React.FC = () => {
             </Button>
           </form>
           
-          <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto text-center">
+          {/* USP Line */}
+          <p className="text-white/90 text-lg mb-16 max-w-2xl mx-auto">
+            Get CV enhancement tailored to specific roles and job descriptions for maximum impact
+          </p>
+          
+          <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto text-center mb-16">
             <div className="text-white/80 text-sm">AI Analysis</div>
             <div className="text-white/80 text-sm">Personalized Feedback</div>
             <div className="text-white/80 text-sm">Career Insights</div>
           </div>
         </div>
       </div>
+      
+      {/* How It Works Section */}
+      <section className="bg-white py-16 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-serif font-bold text-consulting-navy mb-4">
+              How It Works
+            </h2>
+            <p className="text-lg text-consulting-gray max-w-2xl mx-auto">
+              Transform your resume with AI-powered analysis in three simple steps
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Step 1 */}
+            <div className="text-center group">
+              <div className="bg-consulting-lightblue rounded-lg p-8 mb-6 transition-all hover:shadow-lg group-hover:bg-consulting-lightblue/80">
+                <div className="w-16 h-16 bg-consulting-navy rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Upload className="w-8 h-8 text-white" />
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <img 
+                    src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=250&fit=crop" 
+                    alt="Upload resume interface" 
+                    className="w-full h-32 object-cover rounded"
+                  />
+                </div>
+              </div>
+              <h3 className="text-xl font-serif font-bold text-consulting-navy mb-2">
+                1. Upload Your Resume
+              </h3>
+              <p className="text-consulting-gray">
+                Simply upload your current resume and paste the job description you're targeting
+              </p>
+            </div>
+            
+            {/* Step 2 */}
+            <div className="text-center group">
+              <div className="bg-consulting-lightblue rounded-lg p-8 mb-6 transition-all hover:shadow-lg group-hover:bg-consulting-lightblue/80">
+                <div className="w-16 h-16 bg-consulting-navy rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-8 h-8 text-white" />
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <img 
+                    src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=250&fit=crop" 
+                    alt="AI analysis in progress" 
+                    className="w-full h-32 object-cover rounded"
+                  />
+                </div>
+              </div>
+              <h3 className="text-xl font-serif font-bold text-consulting-navy mb-2">
+                2. AI Analysis
+              </h3>
+              <p className="text-consulting-gray">
+                Our AI analyzes your resume against the job requirements and industry standards
+              </p>
+            </div>
+            
+            {/* Step 3 */}
+            <div className="text-center group">
+              <div className="bg-consulting-lightblue rounded-lg p-8 mb-6 transition-all hover:shadow-lg group-hover:bg-consulting-lightblue/80">
+                <div className="w-16 h-16 bg-consulting-navy rounded-full flex items-center justify-center mx-auto mb-4">
+                  <BarChart3 className="w-8 h-8 text-white" />
+                </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <img 
+                    src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&h=250&fit=crop" 
+                    alt="Results and insights dashboard" 
+                    className="w-full h-32 object-cover rounded"
+                  />
+                </div>
+              </div>
+              <h3 className="text-xl font-serif font-bold text-consulting-navy mb-2">
+                3. Get Insights & Enhancements
+              </h3>
+              <p className="text-consulting-gray">
+                Receive detailed feedback, enhanced resume suggestions, and actionable improvements
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
       
       <footer className="bg-consulting-charcoal text-white py-3 text-center text-xs">
         © 2025 CareerLens AI
