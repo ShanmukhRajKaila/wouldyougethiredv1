@@ -135,16 +135,12 @@ const LandingPage: React.FC = () => {
                 <div className="w-16 h-16 bg-consulting-navy rounded-full flex items-center justify-center mx-auto mb-4">
                   <Upload className="w-8 h-8 text-white" />
                 </div>
-                <div className="bg-gray-50 rounded-lg p-6 shadow-sm border">
-                  <div className="bg-white rounded border-2 border-dashed border-gray-300 p-8 text-center">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">Drop your resume here</p>
-                    <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX</p>
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    <div className="bg-gray-200 h-2 rounded w-full"></div>
-                    <div className="bg-gray-200 h-2 rounded w-3/4"></div>
-                  </div>
+                <div className="bg-gray-50 rounded-lg p-6 shadow-sm border h-48 flex flex-col justify-center">
+                  <img 
+                    src="/lovable-uploads/0b8049cc-ea75-4641-b2ec-f2ca08768e89.png" 
+                    alt="Upload Resume Interface"
+                    className="w-full h-32 object-cover rounded border"
+                  />
                 </div>
               </div>
               <h3 className="text-xl font-serif font-bold text-consulting-navy mb-2">
@@ -161,20 +157,12 @@ const LandingPage: React.FC = () => {
                 <div className="w-16 h-16 bg-consulting-navy rounded-full flex items-center justify-center mx-auto mb-4">
                   <Search className="w-8 h-8 text-white" />
                 </div>
-                <div className="bg-gray-50 rounded-lg p-6 shadow-sm border">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-consulting-accent rounded-full animate-pulse"></div>
-                        <span className="text-sm text-gray-700">Analyzing keywords...</span>
-                      </div>
-                      <span className="text-xs text-gray-500">45%</span>
-                    </div>
-                    <div className="bg-gray-200 rounded-full h-2">
-                      <div className="bg-consulting-accent h-2 rounded-full w-[45%]"></div>
-                    </div>
-                    <div className="text-xs text-gray-500">Matching skills and experience</div>
-                  </div>
+                <div className="bg-gray-50 rounded-lg p-6 shadow-sm border h-48 flex flex-col justify-center">
+                  <img 
+                    src="/lovable-uploads/0b8049cc-ea75-4641-b2ec-f2ca08768e89.png" 
+                    alt="AI Analysis in Progress"
+                    className="w-full h-32 object-cover rounded border"
+                  />
                 </div>
               </div>
               <h3 className="text-xl font-serif font-bold text-consulting-navy mb-2">
@@ -191,18 +179,12 @@ const LandingPage: React.FC = () => {
                 <div className="w-16 h-16 bg-consulting-navy rounded-full flex items-center justify-center mx-auto mb-4">
                   <BarChart3 className="w-8 h-8 text-white" />
                 </div>
-                <div className="bg-gray-50 rounded-lg p-6 shadow-sm border">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-700">Match Score</span>
-                      <span className="text-lg font-bold text-consulting-accent">87%</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-green-100 text-green-700 p-2 rounded">5 Strengths</div>
-                      <div className="bg-yellow-100 text-yellow-700 p-2 rounded">3 Areas to improve</div>
-                    </div>
-                    <div className="text-xs text-gray-500">+ Enhanced resume ready</div>
-                  </div>
+                <div className="bg-gray-50 rounded-lg p-6 shadow-sm border h-48 flex flex-col justify-center">
+                  <img 
+                    src="/lovable-uploads/0b8049cc-ea75-4641-b2ec-f2ca08768e89.png" 
+                    alt="Analysis Results and Insights"
+                    className="w-full h-32 object-cover rounded border"
+                  />
                 </div>
               </div>
               <h3 className="text-xl font-serif font-bold text-consulting-navy mb-2">
