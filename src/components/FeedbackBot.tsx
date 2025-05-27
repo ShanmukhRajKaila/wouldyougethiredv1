@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MessageCircle, X, Send } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const FeedbackBot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,14 +23,25 @@ const FeedbackBot: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      // Here you would typically send the feedback to your backend
-      // For now, we'll just simulate the submission
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error } = await supabase
+        .from('feedback')
+        .insert([
+          {
+            message: feedback.trim()
+          }
+        ]);
+
+      if (error) {
+        console.error('Error submitting feedback:', error);
+        toast.error('Failed to submit feedback. Please try again.');
+        return;
+      }
       
       toast.success('Thank you for your feedback! We appreciate your input.');
       setFeedback('');
       setIsOpen(false);
     } catch (error) {
+      console.error('Error submitting feedback:', error);
       toast.error('Failed to submit feedback. Please try again.');
     } finally {
       setIsSubmitting(false);
