@@ -20,7 +20,7 @@ const Header: React.FC = () => {
           className="font-serif text-xl md:text-2xl font-bold cursor-pointer"
           onClick={handleReset}
         >
-          WouldYouGetHired.com
+          CareerLens
         </div>
         <Button 
           variant="outline" 

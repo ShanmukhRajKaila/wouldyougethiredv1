@@ -307,14 +307,20 @@ const JobDescriptionPage: React.FC = () => {
         
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid grid-cols-2 mb-6">
-            <TabsTrigger value="roleSearch">Search Role Description</TabsTrigger>
-            <TabsTrigger value="jobDescription">Enter Job Description</TabsTrigger>
+            <TabsTrigger value="roleSearch">Search by Role</TabsTrigger>
+            <TabsTrigger value="jobDescription">Search by Job</TabsTrigger>
           </TabsList>
           
           <TabsContent value="jobDescription">
-            <p className="text-consulting-gray mb-8">
+            <p className="text-consulting-gray mb-4">
               Paste the job description for the role you're applying to. You can enter company name and role title optionally.
             </p>
+            
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                💡 <strong>Pro tip:</strong> For best results with automatic extraction, use LinkedIn job URLs. Other job boards may have varying extraction quality.
+              </p>
+            </div>
             
             <form onSubmit={handleSubmit}>
               <CompanySelector />
