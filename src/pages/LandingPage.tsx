@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/AppContext';
@@ -64,7 +65,7 @@ const LandingPage: React.FC = () => {
           </h1>
           
           <p className="text-xl mb-12 max-w-2xl mx-auto">
-            Get honest, data-driven resume feedback to boost your career. Our AI analyzes your CV against specific roles and job descriptions for maximum impact.
+            Get honest, data-driven resume feedback to boost your career. AI-powered analysis tailors your CV to specific roles and job descriptions for maximum impact.
           </p>
           
           <form 
@@ -136,11 +137,11 @@ const LandingPage: React.FC = () => {
                   <Upload className="w-8 h-8 text-white" />
                 </div>
                 <div className="bg-gray-50 rounded-lg p-6 shadow-sm border h-48 flex flex-col justify-center">
-                  <img 
-                    src="/lovable-uploads/0b8049cc-ea75-4641-b2ec-f2ca08768e89.png" 
-                    alt="Upload Resume Interface"
-                    className="w-full h-32 object-cover rounded border"
-                  />
+                  <div className="bg-white rounded border-2 border-dashed border-gray-300 p-8 text-center">
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">Drop your resume here</p>
+                    <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX</p>
+                  </div>
                 </div>
               </div>
               <h3 className="text-xl font-serif font-bold text-consulting-navy mb-2">
@@ -158,18 +159,26 @@ const LandingPage: React.FC = () => {
                   <Search className="w-8 h-8 text-white" />
                 </div>
                 <div className="bg-gray-50 rounded-lg p-6 shadow-sm border h-48 flex flex-col justify-center">
-                  <img 
-                    src="/lovable-uploads/0b8049cc-ea75-4641-b2ec-f2ca08768e89.png" 
-                    alt="AI Analysis in Progress"
-                    className="w-full h-32 object-cover rounded border"
-                  />
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 bg-consulting-accent rounded-full animate-pulse"></div>
+                        <span className="text-sm text-gray-700">Analyzing keywords...</span>
+                      </div>
+                      <span className="text-xs text-gray-500">45%</span>
+                    </div>
+                    <div className="bg-gray-200 rounded-full h-2">
+                      <div className="bg-consulting-accent h-2 rounded-full w-[45%]"></div>
+                    </div>
+                    <div className="text-xs text-gray-500">Matching skills and experience</div>
+                  </div>
                 </div>
               </div>
               <h3 className="text-xl font-serif font-bold text-consulting-navy mb-2">
                 2. AI Analysis
               </h3>
               <p className="text-consulting-gray">
-                Our AI analyzes your resume against the job requirements and industry standards
+                CareerLens leverages AI to analyze your resume against job requirements and industry standards
               </p>
             </div>
             
@@ -180,11 +189,14 @@ const LandingPage: React.FC = () => {
                   <BarChart3 className="w-8 h-8 text-white" />
                 </div>
                 <div className="bg-gray-50 rounded-lg p-6 shadow-sm border h-48 flex flex-col justify-center">
-                  <img 
-                    src="/lovable-uploads/0b8049cc-ea75-4641-b2ec-f2ca08768e89.png" 
-                    alt="Analysis Results and Insights"
-                    className="w-full h-32 object-cover rounded border"
-                  />
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-green-100 text-green-700 p-2 rounded">5 Strengths</div>
+                      <div className="bg-yellow-100 text-yellow-700 p-2 rounded">3 Areas to improve</div>
+                    </div>
+                    <div className="bg-blue-100 text-blue-700 p-2 rounded text-xs mt-2">Enhanced resume ready</div>
+                    <div className="text-xs text-gray-500 mt-2">Actionable insights included</div>
+                  </div>
                 </div>
               </div>
               <h3 className="text-xl font-serif font-bold text-consulting-navy mb-2">
