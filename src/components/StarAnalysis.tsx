@@ -128,85 +128,66 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
     return "ATS systems prioritize specific, concrete language over general descriptions. Adding industry terminology and metrics substantially increases match scores with job requirement algorithms.";
   };
 
-  // Detect problematic verb sequences like "Delivered presented" or "Improved managed"
-  const hasVerbSequenceIssue = (text: string): boolean => {
-    // Extract first two words and normalize
-    const words = text.split(/\s+/);
-    if (words.length < 2) return false;
+  // Improved grammar correction function that ensures single action verbs
+  const fixGrammaticalConflict = (bullet: StarAnalysisItem): StarAnalysisItem => {
+    let improvedText = bullet.improved;
     
-    const firstWord = words[0].toLowerCase();
-    const secondWord = words[1].toLowerCase();
-    
-    // Common past tense action verbs that shouldn't be used together
-    const actionVerbs = [
-      'delivered', 'improved', 'increased', 'decreased', 'led', 'managed',
-      'developed', 'created', 'implemented', 'designed', 'analyzed', 
-      'established', 'executed', 'generated', 'maintained', 'presented',
-      'produced', 'reduced', 'resolved', 'achieved', 'built', 'conducted',
-      'coordinated', 'directed', 'engineered', 'evaluated', 'facilitated',
-      'initiated', 'launched', 'organized', 'oversaw', 'planned', 'prepared',
-      'provided', 'reviewed', 'spearheaded', 'streamlined', 'transformed'
+    // Common problematic patterns to fix
+    const grammarFixes = [
+      // Fix "Optimized presented" → "Optimized presentation of"
+      { pattern: /^(Optimized)\s+(presented)/i, replacement: '$1 presentation of' },
+      // Fix "Elevated resolved" → "Resolved elevated"
+      { pattern: /^(Elevated)\s+(resolved)/i, replacement: 'Resolved' },
+      // Fix "Managed implemented" → "Implemented management of"
+      { pattern: /^(Managed)\s+(implemented)/i, replacement: 'Implemented management of' },
+      // Fix "Led developed" → "Led development of"
+      { pattern: /^(Led)\s+(developed)/i, replacement: '$1 development of' },
+      // Fix "Created improved" → "Created improvements to"
+      { pattern: /^(Created)\s+(improved)/i, replacement: '$1 improvements to' },
+      // Fix "Designed analyzed" → "Designed analysis of"
+      { pattern: /^(Designed)\s+(analyzed)/i, replacement: '$1 analysis of' },
+      // Fix "Delivered presented" → "Delivered presentations on"
+      { pattern: /^(Delivered)\s+(presented)/i, replacement: '$1 presentations on' },
+      // Fix "Achieved increased" → "Achieved increases in"
+      { pattern: /^(Achieved)\s+(increased)/i, replacement: '$1 increases in' },
+      // General pattern: ActionVerb + past tense verb → ActionVerb + noun form
+      { pattern: /^(Led|Managed|Created|Designed|Delivered|Achieved|Implemented|Developed)\s+(elevated|optimized|presented|analyzed|improved|increased|managed|led|created)/i, 
+        replacement: (match: string, verb: string, problem: string) => {
+          const nounMap: Record<string, string> = {
+            'elevated': 'elevation of',
+            'optimized': 'optimization of',
+            'presented': 'presentation of',
+            'analyzed': 'analysis of',
+            'improved': 'improvements to',
+            'increased': 'increases in',
+            'managed': 'management of',
+            'led': 'leadership of',
+            'created': 'creation of'
+          };
+          return `${verb} ${nounMap[problem.toLowerCase()] || problem}`;
+        }
+      }
     ];
     
-    // Check if both words are action verbs (either exact match or ends with 'ed' for past tense)
-    if (actionVerbs.includes(firstWord) && 
-        (actionVerbs.includes(secondWord) || 
-         (secondWord.endsWith('ed') && secondWord.length > 4))) {
-      return true;
+    // Apply grammar fixes
+    for (const fix of grammarFixes) {
+      if (typeof fix.replacement === 'string') {
+        improvedText = improvedText.replace(fix.pattern, fix.replacement);
+      } else {
+        improvedText = improvedText.replace(fix.pattern, fix.replacement);
+      }
     }
     
-    // Additional check for any verb followed by another verb ending in -ed or -ing
-    if (actionVerbs.includes(firstWord) && 
-        (secondWord.endsWith('ed') || secondWord.endsWith('ing')) && 
-        secondWord.length > 4 && 
-        !['needed', 'exceeded', 'proceeded', 'agreed'].includes(secondWord)) {
-      return true;
-    }
+    // Additional cleanup: remove duplicate words that might have been created
+    improvedText = improvedText.replace(/\b(\w+)\s+\1\b/gi, '$1');
     
-    return false;
-  };
-  
-  // Fix a bullet point with grammar issues
-  const fixGrammaticalConflict = (bullet: StarAnalysisItem): StarAnalysisItem => {
-    // If no grammar issue detected, return unchanged
-    if (!hasVerbSequenceIssue(bullet.improved)) {
-      return bullet;
-    }
-    
-    const words = bullet.improved.split(/\s+/);
-    const firstWord = words[0];
-    const secondWord = words[1]?.toLowerCase().replace(/[^\w]/g, '');
-    const restOfContent = words.slice(2).join(' ');
-    
-    // Mapping of common action verb conflicts and their resolutions
-    const verbCorrectionMap: Record<string, Record<string, string>> = {
-      'Resolved': {
-        'elevated': 'Resolved critical',
-        'presented': 'Resolved presentation challenges',
-        // Add more specific mappings as needed
-      },
-      // Add more first verb categories as needed
-    };
-    
-    // If we have a specific correction for this verb combination
-    if (verbCorrectionMap[firstWord] && verbCorrectionMap[firstWord][secondWord]) {
-      const correctedStart = verbCorrectionMap[firstWord][secondWord];
-      return {
-        ...bullet,
-        improved: `${correctedStart} ${restOfContent}`.trim(),
-        feedback: bullet.feedback + " (Grammar improved for better clarity and flow.)"
-      };
-    }
-    
-    // Generic approach to handle unexpected word insertions
-    const cleanedPhrase = words
-      .filter((word, index) => index === 0 || !['elevated', 'optimized', 'presented'].includes(word.toLowerCase()))
-      .join(' ');
+    // Ensure proper sentence structure
+    improvedText = improvedText.trim();
     
     return {
       ...bullet,
-      improved: cleanedPhrase.trim(),
-      feedback: bullet.feedback + " (Grammar adjusted for better readability.)"
+      improved: improvedText,
+      feedback: bullet.feedback + (improvedText !== bullet.improved ? " (Grammar optimized for clarity.)" : "")
     };
   };
 
@@ -234,10 +215,10 @@ const StarAnalysis: React.FC<StarAnalysisProps> = ({ starAnalysis }) => {
           </p>
           <div className="flex flex-col space-y-1 mt-2 text-sm text-consulting-gray">
             <p className="font-medium text-consulting-navy">Key ATS Optimization Rules:</p>
-            <p>1. <span className="font-medium">Start with action verbs</span> - Begin each bullet point with a strong action verb like "Led" or "Implemented"</p>
+            <p>1. <span className="font-medium">Start with a single action verb</span> - Begin each bullet point with one strong action verb like "Led" or "Implemented"</p>
             <p>2. <span className="font-medium">Use the STAR Method</span> - Include the Situation/Task, Action, and Result in each bullet point</p>
             <p>3. <span className="font-medium">Quantify achievements</span> - Include specific numbers, percentages and metrics whenever possible</p>
-            <p>4. <span className="font-medium">Use contextually appropriate verbs</span> - Ensure the action verb makes grammatical sense with the rest of your statement</p>
+            <p>4. <span className="font-medium">Ensure grammatical flow</span> - Avoid multiple action verbs in sequence for better readability</p>
           </div>
         </div>
       </div>
